@@ -56,7 +56,7 @@ Because the chip-select pins mix active-high and active-low devices, the console
 - `relock` – reruns initialization for each MAX2871, reapplies the last frequency, and notes completion.
 - `info` – lists hardware pin assignments for technicians.
 - `atten <dB>` – validates 0.25 dB steps between 1.0 and 31.75 dB, programs the PE43711, echoes the value, and refreshes status.
-- `ifmode <lo1|lo2|lo3> <high|low>` – stores the desired injection sense per LO, recomputes the plan, and reports the change.
+- `ifmode <high|low>` – applies the requested injection mode to whichever LO is currently selected via `chip`. If no LO target is active the console reports an error instead of guessing.
 - `chip <lo1|lo2|lo3|atten|ref1|ref2|adc1|adc2|ram|flash>` – selects the manual SPI target using the polarity table above; new targets cover the reference enables plus ADC, RAM, and flash peripherals wired to the same bus.
 - `spi <hex32>` – requires a double-entry confirmation before the first write, then forwards the 32-bit word to the active target. MAX2871 writes go through the corresponding HAL; attenuator writes mask to 7 bits; other peripherals expect the technician to supply correctly formatted payloads.
 
