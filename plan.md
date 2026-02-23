@@ -41,6 +41,7 @@ User feedback <── Status Reporter <─────────────�
    - Drive the PE43711 digital attenuator chip-select/LATCH during `setup()` and verify on the scope; it supports 0.25 dB steps from 1.0 dB to 31.75 dB, so we need to confirm we have (or obtain) its SPI programming table—otherwise defer this feature.
    - Extend the command parser with `atten <dB>` to program the PE43711 and `ifmode <lo#> <high|low>` to select high- vs. low-side injection for each LO.
    - Include the current attenuator setting in status output and remind testers that 31.75 dB should measure ~51 Ω on a DVM for sanity checks.
+   - Add a raw SPI/CS control shell (e.g., `chip <lo|atten|aux>`, `spi <hex32>`) so technicians can poke any device; document risks and log every manual write.
 
 5. **Safety / Hardware Guards**
    - Wrap hardware-touching code (`SpecAnn::begin`, attenuator writes, lock-checks) with `#if !defined(SPECANN_CI_BUILD)` so CI builds run logic without requiring peripherals.
