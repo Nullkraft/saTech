@@ -241,6 +241,61 @@ extern LOInjectionMode desiredLo1Injection;
 extern LOInjectionMode desiredLo2Injection;
 extern LOInjectionMode desiredLo3Injection;
 
+const __FlashStringHelper* injectionLabel(LOInjectionMode mode)
+{
+    return (mode == LOInjectionMode::High) ? F("High") : F("Low");
+}
+
+void printInjectionSummary()
+{
+    Serial.print(F("Injection: LO1="));
+    Serial.print(injectionLabel(freqCalc.LO1InjectionMode));
+    Serial.print(F(" LO2="));
+    Serial.print(injectionLabel(freqCalc.LO2InjectionMode));
+    Serial.print(F(" LO3="));
+    Serial.println(injectionLabel(freqCalc.LO3InjectionMode));
+}
+
+void printSelectedLoSnapshot(ChipTarget target)
+{
+    const MAX2871* targetLo = nullptr;
+    const __FlashStringHelper* label = nullptr;
+    double freq = 0.0;
+    switch (target) {
+        case ChipTarget::LO1:
+            targetLo = &lo1;
+            label = F("LO1");
+            freq = freqCalc.FreqLO1;
+            break;
+        case ChipTarget::LO2:
+            targetLo = &lo2;
+            label = F("LO2");
+            freq = freqCalc.FreqLO2;
+            break;
+        case ChipTarget::LO3:
+            targetLo = &lo3;
+            label = F("LO3");
+            freq = freqCalc.FreqLO3;
+            break;
+        default:
+            return;
+    }
+    Serial.println();
+    Serial.print(label);
+    Serial.print(F("  : "));
+    Serial.print(freq, 3);
+    Serial.println(F(" MHz"));
+    Serial.print(label);
+    Serial.print(F(" M="));
+    Serial.print(targetLo->M);
+    Serial.print(F(" F="));
+    Serial.print(targetLo->Frac);
+    Serial.print(F(" N="));
+    Serial.print(targetLo->N);
+    Serial.print(F(" DIVA="));
+    Serial.println(targetLo->DIVA);
+}
+
 void tuneTo(double mhz);
 void printStatus();
 void initializeLo(MAX2871& lo);
@@ -394,7 +449,9 @@ void handleIfmodeCommand(const char* modeToken)
     Serial.print(chipTargetName(state.chipTarget));
     Serial.print(F(" -> "));
     Serial.println(highRequested ? F("HIGH-side injection") : F("LOW-side injection"));
-    printStatus();
+    printSelectedLoSnapshot(state.chipTarget);
+    printInjectionSummary();
+    Serial.println();
 }
 
 void handleLofreqCommand(const char* valueToken)
@@ -446,7 +503,9 @@ void handleLofreqCommand(const char* valueToken)
     Serial.print(F(" -> "));
     Serial.print(actual, 3);
     Serial.println(F(" MHz"));
-    printStatus();
+    printSelectedLoSnapshot(state.chipTarget);
+    printInjectionSummary();
+    Serial.println();
 }
 
 void handleChipCommand(const char* targetToken)
