@@ -1,4 +1,5 @@
 #include "command_interface.h"
+#include "console_state.h"
 
 #include <SPI.h>
 #include <arduino_hal.h>
@@ -13,12 +14,7 @@ namespace {
 
 char inputBuffer[INPUT_BUFFER_SIZE];
 size_t inputLength = 0;
-double currentAttenuatorDb = ATTEN_MIN_DB;
-ChipTarget currentChipTarget = ChipTarget::None;
-bool manualSpiArmed = false;
-bool pendingSpiConfirmation = false;
-uint32_t pendingSpiValue = 0;
-ChipTarget pendingSpiTarget = ChipTarget::None;
+ConsoleState& state = consoleState();
 
 bool equalsIgnoreCase(const char* lhs, const char* rhs)
 {
@@ -109,14 +105,14 @@ void programAttenuatorRaw(uint8_t code)
 #endif
     const double mappedDb = ATTEN_MIN_DB + (static_cast<double>(code) * ATTEN_STEP_DB);
     if (mappedDb >= ATTEN_MIN_DB && mappedDb <= (ATTEN_MAX_DB + 0.25)) {
-        currentAttenuatorDb = mappedDb;
+        state.attenuatorDb = mappedDb;
     }
 }
 
 void logManualWrite(uint32_t value)
 {
     Serial.print(F("[SPI] target="));
-    Serial.print(chipTargetName(currentChipTarget));
+    Serial.print(chipTargetName(state.chipTarget));
     Serial.print(F(" value=0x"));
     static const char hexDigits[] = "0123456789ABCDEF";
     for (int shift = 28; shift >= 0; shift -= 4) {
@@ -129,17 +125,17 @@ void logManualWrite(uint32_t value)
 
 void selectChip(ChipTarget target)
 {
-    if (target == currentChipTarget) {
+    if (target == state.chipTarget) {
         Serial.print(F("Manual target unchanged: "));
-        Serial.println(chipTargetName(currentChipTarget));
+        Serial.println(chipTargetName(state.chipTarget));
         return;
     }
-    deassertTargetInternal(currentChipTarget);
-    currentChipTarget = target;
-    manualSpiArmed = false;
-    pendingSpiConfirmation = false;
+    deassertTargetInternal(state.chipTarget);
+    state.chipTarget = target;
+    state.manualSpiArmed = false;
+    state.pendingSpiConfirmation = false;
     Serial.print(F("Manual target set to "));
-    Serial.println(chipTargetName(currentChipTarget));
+    Serial.println(chipTargetName(state.chipTarget));
 }
 
 void handleAttenuatorCommand(const char* valueToken);
@@ -208,17 +204,17 @@ void programAttenuatorDb(double db)
 {
     const uint8_t code = attenCodeFromDb(db);
     programAttenuatorRaw(code);
-    currentAttenuatorDb = ATTEN_MIN_DB + (static_cast<double>(code) * ATTEN_STEP_DB);
+    state.attenuatorDb = ATTEN_MIN_DB + (static_cast<double>(code) * ATTEN_STEP_DB);
 }
 
 double getCurrentAttenuatorDb()
 {
-    return currentAttenuatorDb;
+    return state.attenuatorDb;
 }
 
 ChipTarget getCurrentChipTarget()
 {
-    return currentChipTarget;
+    return state.chipTarget;
 }
 
 const __FlashStringHelper* chipTargetName(ChipTarget target)
@@ -260,7 +256,7 @@ void handleAttenuatorCommand(const char* valueToken)
 
     programAttenuatorDb(requestedDb);
     Serial.print(F("Attenuator set to "));
-    Serial.print(currentAttenuatorDb, 2);
+    Serial.print(state.attenuatorDb, 2);
     Serial.println(F(" dB"));
     Serial.println(F("Reminder: expect ~51 ohms at 31.75 dB."));
     printStatus();
@@ -324,7 +320,7 @@ void handleSpiCommand(const char* valueToken)
     if (valueToken == nullptr) {
         return;
     }
-    if (currentChipTarget == ChipTarget::None) {
+    if (state.chipTarget == ChipTarget::None) {
         Serial.println(F("No chip selected. Use 'chip <target>' first."));
         return;
     }
@@ -334,28 +330,28 @@ void handleSpiCommand(const char* valueToken)
         Serial.println(F("SPI value must be hexadecimal (e.g., 0x12345678 or 12345678)."));
         return;
     }
-    if (!manualSpiArmed) {
-        if (!pendingSpiConfirmation) {
-            pendingSpiConfirmation = true;
-            pendingSpiValue = value;
-            pendingSpiTarget = currentChipTarget;
+    if (!state.manualSpiArmed) {
+        if (!state.pendingSpiConfirmation) {
+            state.pendingSpiConfirmation = true;
+            state.pendingSpiValue = value;
+            state.pendingSpiTarget = state.chipTarget;
             Serial.println(F("Manual SPI writes locked. Re-enter the same command to arm manual writes."));
             return;
         }
-        if (pendingSpiValue != value || pendingSpiTarget != currentChipTarget) {
-            pendingSpiValue = value;
-            pendingSpiTarget = currentChipTarget;
+        if (state.pendingSpiValue != value || state.pendingSpiTarget != state.chipTarget) {
+            state.pendingSpiValue = value;
+            state.pendingSpiTarget = state.chipTarget;
             Serial.println(F("Confirmation mismatch. Re-enter desired value to arm manual writes."));
             return;
         }
-        pendingSpiConfirmation = false;
-        manualSpiArmed = true;
+        state.pendingSpiConfirmation = false;
+        state.manualSpiArmed = true;
         Serial.println(F("Manual SPI writes armed. Proceed with caution."));
     }
 
     logManualWrite(value);
 
-    switch (currentChipTarget) {
+    switch (state.chipTarget) {
         case ChipTarget::LO1:
 #if !defined(SPECANN_CI_BUILD)
             halLo1.spiWriteRegister(value);
