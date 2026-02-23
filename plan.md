@@ -53,97 +53,59 @@ User feedback <── Status Reporter <─────────────�
 ## File Layout
 ```
 src/
-├─ SpecAnn.cpp      ← main sketch entry (single translation unit)
-└─ main_entry.cpp   ← thin wrapper calling into SpecAnn.cpp (optional)
+└─ main_entry.cpp   ← primary sketch file (setup/loop plus helper functions)
 ```
 
 ## Implementation Sketch
 
-### Entry Point
+### Entry Point & Helpers
 ```cpp
-#include "SpecAnn.h"
+// Globals map 1:1 to hardware so technicians can tweak them directly.
+static ArduinoHAL halLo1(PIN_LE_LO1);
+static MAX2871   lo1(REF_MHZ, halLo1);
+static FrequencyCalculator freqCalc(lo1, lo2, lo3);
 
 void setup() {
-    SpecAnn::instance().begin();
+    Serial.begin(115200);
+    pinMode(PIN_ATTEN, OUTPUT);
+    halLo1.begin();
+    initializeLo(lo1);
+    freqCalc.set_LO_frequencies(startupMHz, freqCalc.RefClock1, 1);
+    printFrequencyPlan();
 }
 
 void loop() {
-    SpecAnn::instance().poll();
+    pollSerial();            // parse technician commands
+    heartbeat();             // toggle visible status pin
 }
-```
-
-### SpecAnn Singleton Outline
-```cpp
-class SpecAnn {
-public:
-    static SpecAnn& instance();
-
-    void begin();
-    void poll();
-
-private:
-    SpecAnn();
-
-    void handleCommand(const String& cmd);
-    void tune(double mhz);
-    void printStatus() const;
-
-    ArduinoHAL halLo1, halLo2, halLo3;
-    MAX2871 lo1, lo2, lo3;
-    FrequencyCalculator freqCalc;
-};
 ```
 
 ### Command Handling Example
 ```cpp
-void SpecAnn::handleCommand(const String& cmd) {
+static void handleCommand(const String& cmd) {
     if (cmd.equalsIgnoreCase("help")) {
-        Serial.println(F("Enter frequency MHz (23.5–6000) or commands: help, status, relock"));
+        Serial.println(F("Enter frequency MHz (23.5–6000) or commands: help, status, atten <dB>, ifmode <lo#> <high|low>"));
         return;
     }
-    char* end = nullptr;
     double mhz = cmd.toFloat();
     if (mhz >= 23.5 && mhz <= 6000.0) {
-        tune(mhz);
-    } else {
-        Serial.println(F("Invalid entry. Try e.g. 2412.5"));
+        freqCalc.set_LO_frequencies(mhz, freqCalc.RefClock1, 1);
+        printFrequencyPlan();
+        return;
     }
-}
-```
-
-### Tuning Routine Snippet
-```cpp
-void SpecAnn::tune(double mhz) {
-    freqCalc.set_LO_frequencies(mhz, freqCalc.RefClock1, 1);
-    printStatus();
-
-#if !defined(SPECANN_CI_BUILD)
-    halLo1.setCEPin(true);
-    halLo2.setCEPin(true);
-    halLo3.setCEPin(true);
-#endif
+    Serial.println(F("Invalid entry. Try e.g. 2412.5 or 'help'."));
 }
 ```
 
 ### Status Reporting
 ```cpp
-void SpecAnn::printStatus() const {
+static void printFrequencyPlan() {
     Serial.println(F("\nFrequency Plan"));
     Serial.print(F("RF In: ")); Serial.print(freqCalc.FreqRFin, 3); Serial.println(F(" MHz"));
     Serial.print(F("LO1 : ")); Serial.print(freqCalc.FreqLO1, 3);
     Serial.print(F("  IF1: ")); Serial.println(freqCalc.IF1, 3);
     Serial.print(F("LO2 : ")); Serial.print(freqCalc.FreqLO2, 3);
     Serial.print(F("LO3 : ")); Serial.println(freqCalc.FreqLO3, 3);
-
-    auto showLo = [&](const char* name, const MAX2871& lo) {
-        Serial.print(name);
-        Serial.print(F(" M=")); Serial.print(lo.M);
-        Serial.print(F(" F=")); Serial.print(lo.Frac);
-        Serial.print(F(" N=")); Serial.println(lo.N);
-    };
-    showLo("LO1", lo1);
-    showLo("LO2", lo2);
-    showLo("LO3", lo3);
 }
 ```
 
