@@ -264,6 +264,7 @@ void printBanner()
     Serial.println();
 }
 
+// cppcheck-suppress unusedFunction
 void pollSerial()
 {
     while (Serial.available() > 0) {
@@ -291,11 +292,13 @@ void programAttenuatorDb(double db)
     state.attenuatorDb = ATTEN_MIN_DB + (static_cast<double>(code) * ATTEN_STEP_DB);
 }
 
+// cppcheck-suppress unusedFunction
 double getCurrentAttenuatorDb()
 {
     return state.attenuatorDb;
 }
 
+// cppcheck-suppress unusedFunction
 ChipTarget getCurrentChipTarget()
 {
     return state.chipTarget;

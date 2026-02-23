@@ -33,6 +33,7 @@ LOInjectionMode desiredLo1Injection = LOInjectionMode::High;
 LOInjectionMode desiredLo2Injection = LOInjectionMode::High;
 LOInjectionMode desiredLo3Injection = LOInjectionMode::High;
 
+// cppcheck-suppress unusedFunction
 void initializeLo(MAX2871& lo)
 {
 #if !defined(SPECANN_CI_BUILD)

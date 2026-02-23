@@ -15,6 +15,7 @@ ConsoleState& consoleState()
     return state;
 }
 
+// cppcheck-suppress unusedFunction
 void resetConsoleState()
 {
     ConsoleState& state = consoleState();
