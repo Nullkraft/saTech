@@ -8,7 +8,11 @@ SpecAnn is a PlatformIO/Arduino sketch that turns a Metro Mini–class controlle
   - `uno` (default target) compiles for the Arduino Uno with `SPECANN_APP` and `SPECANN_TARGET_UNO`.
   - `ci` mirrors the Uno build but defines `SPECANN_CI_BUILD`, skipping hardware-touching code and turning off tests.
 - The MAX2871 driver lives in `../MAX2871_library_dev`, pulled in through `lib_deps`. That library supplies `ArduinoHAL`, `FrequencyCalculator`, and the `MAX2871` class used here.
-- `src/main_entry.cpp` is the single compilation unit. It includes Arduino core headers plus the external library components.
+- `src/main_entry.cpp` orchestrates hardware startup, frequency planning, and the Arduino `setup()/loop()` lifecycle, while `src/command_interface.cpp` implements the USB-serial technician console exposed via `command_interface.h`.
+
+## Module Layout
+- `main_entry.cpp` owns the MAX2871 instances, heartbeat bookkeeping, and frequency/IF helpers such as `printStatus`, `recomputePlan`, and `tuneTo`.
+- `command_interface.cpp` handles serial parsing, manual SPI safety gates, and attenuator control state while exposing the minimal surface (`printBanner`, `pollSerial`, `programAttenuatorDb`, `getCurrentAttenuatorDb`, `getCurrentChipTarget`, `chipTargetName`).
 
 ## Hardware Topology & Pin Map
 - Reference clock: 66.0 MHz shared by all three PLLs (`REF_MHZ`).
@@ -22,10 +26,8 @@ SpecAnn is a PlatformIO/Arduino sketch that turns a Metro Mini–class controlle
 ## Global State Model
 Key globals track operator-facing state:
 - `currentRfInputMhz` (double) remembers the last tuned RF input.
-- `currentAttenuatorDb` (double) caches the applied attenuation (1.0–31.75 dB).
 - `desiredLo?Injection` (three `LOInjectionMode` values) persist technician overrides for high/low-side injection.
-- Manual SPI management uses `currentChipTarget`, `manualSpiArmed`, and a `pendingSpi*` confirmation tuple.
-- `inputBuffer` (96 bytes) collects serial lines; overflow resets the buffer with a warning.
+- `command_interface.cpp` keeps console-local state: `currentAttenuatorDb` (1.0–31.75 dB), `currentChipTarget`, `manualSpiArmed`, the `pendingSpi*` confirmation tuple, and the 96-byte `inputBuffer` with overflow protection.
 - Heartbeat timing uses `lastHeartbeatToggleMs` and `heartbeatState`.
 
 ## Setup Sequence (`setup()`)
@@ -35,11 +37,11 @@ Key globals track operator-facing state:
    - Call `begin()` on each `ArduinoHAL`.
    - Set pin modes for attenuator and reference enables, establishing safe default levels (attenuator idle-high, reference 1 enabled, reference 2 disabled).
    - Initialize each MAX2871 with `MAX2871::begin`, enabling both RF outputs at +5 dBm.
-   - Program the attenuator to the minimum 1 dB setting and emit a reminder that the coding assumes PE43711 step tables.
+   - Call `programAttenuatorDb(getCurrentAttenuatorDb())` to seed the PE43711 with the default 1 dB value and emit a reminder that the coding assumes PE43711 step tables.
 4. Issue the initial tuning plan via `tuneTo(STARTUP_RF_MHZ)`, print the banner, and dump system status.
 
 ## Loop Responsibilities
-- `pollSerial()` consumes incoming characters, terminates on newline, sanitizes whitespace, tokenizes up to four arguments, and dispatches commands.
+- `pollSerial()` (implemented in `command_interface.cpp`) consumes incoming characters, terminates on newline, sanitizes whitespace, tokenizes up to four arguments, and dispatches commands.
 - `heartbeat()` flips the status LED every millisecond to provide a visual “alive” indicator.
 
 ## Command Interface
@@ -48,14 +50,15 @@ Numeric input (`23.5–6000 MHz`) tunes the synthesizers:
 - Valid entries call `tuneTo()` and then immediately display `printStatus()`.
 
 Keyword commands:
+Because the chip-select pins mix active-high and active-low devices, the console records each target’s polarity. LO1, LO2, LO3, attenuator, ref1, and ref2 assert HIGH; adc1, adc2, ram, and flash assert LOW. When the technician switches targets the firmware first drives every chip select back to its idle level before enabling the new one, guaranteeing only one device is active on the shared SPI bus.
 - `help` – prints the banner and command reference.
 - `status` – shows the RF input, LO frequencies, IF values, injection modes, attenuator setting, and current manual target.
 - `relock` – reruns initialization for each MAX2871, reapplies the last frequency, and notes completion.
 - `info` – lists hardware pin assignments for technicians.
 - `atten <dB>` – validates 0.25 dB steps between 1.0 and 31.75 dB, programs the PE43711, echoes the value, and refreshes status.
 - `ifmode <lo1|lo2|lo3> <high|low>` – stores the desired injection sense per LO, recomputes the plan, and reports the change.
-- `chip <lo1|lo2|lo3|atten|aux>` – selects the manual SPI target, deasserting the previous device before switching.
-- `spi <hex32>` – requires a double-entry confirmation before the first write, then forwards the 32-bit word to the active target. MAX2871 writes go through the corresponding HAL; attenuator writes mask to 7 bits; `aux` currently logs a stub.
+- `chip <lo1|lo2|lo3|atten|ref1|ref2|adc1|adc2|ram|flash>` – selects the manual SPI target using the polarity table above; new targets cover the reference enables plus ADC, RAM, and flash peripherals wired to the same bus.
+- `spi <hex32>` – requires a double-entry confirmation before the first write, then forwards the 32-bit word to the active target. MAX2871 writes go through the corresponding HAL; attenuator writes mask to 7 bits; other peripherals expect the technician to supply correctly formatted payloads.
 
 ## Frequency Planning & Injection Control
 - `recomputePlan()` drives the frequency calculator and hardware updates:
@@ -90,4 +93,3 @@ Keyword commands:
 - `Aux` chip target is a placeholder; wiring and HAL support need definition before use.
 - The console warns about attenuator code assumptions but does not yet verify hardware identity; technicians should validate the PE43711 or adjust constants.
 - Continuous heartbeat toggling at 1 ms may cut into loop budget if future features add heavy processing; consider making the interval configurable.
-
