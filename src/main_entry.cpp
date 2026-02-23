@@ -662,13 +662,9 @@ static void recomputePlan()
     lo3.setFrequency(freqCalc.FreqLO3);
 #endif
 
-#if !defined(SPECANN_CI_BUILD)
     freqCalc.FreqLO1 = lo1.fmn2freq();
     freqCalc.FreqLO2 = lo2.fmn2freq();
     freqCalc.FreqLO3 = lo3.fmn2freq();
-#else
-    Serial.println(F("(CI) Frequency plan recalculated (no hardware writes)."));
-#endif
 }
 
 static void logManualWrite(uint32_t value)
