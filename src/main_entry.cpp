@@ -53,6 +53,9 @@ static uint32_t pendingSpiValue = 0;
 static ChipTarget pendingSpiTarget = ChipTarget::None;
 static uint32_t lastHeartbeatToggleMs = 0;
 static bool heartbeatState = false;
+static LOInjectionMode desiredLo1Injection = LOInjectionMode::High;
+static LOInjectionMode desiredLo2Injection = LOInjectionMode::High;
+static LOInjectionMode desiredLo3Injection = LOInjectionMode::High;
 
 static void printBanner();
 static void initializeLo(MAX2871& lo)
@@ -69,6 +72,7 @@ static void printFrequencyPlan();
 static void printLoSummary(const __FlashStringHelper* label, const MAX2871& lo);
 static void printStatus();
 static void tuneTo(double mhz);
+static void recomputePlan();
 static void pollSerial();
 static void handleCommand(const char* line);
 static void trimWhitespace(char* text);
@@ -156,7 +160,7 @@ static void printBanner()
 static void tuneTo(double mhz)
 {
     currentRfInputMhz = mhz;
-    freqCalc.set_LO_frequencies(currentRfInputMhz, freqCalc.RefClock1, 1);
+    recomputePlan();
 }
 
 static void printFrequencyPlan()
@@ -389,6 +393,7 @@ static void handleAttenuatorCommand(const char* valueToken)
     Serial.print(currentAttenuatorDb, 2);
     Serial.println(F(" dB"));
     Serial.println(F("Reminder: expect ~51 ohms at 31.75 dB."));
+    printStatus();
 }
 
 static void handleIfmodeCommand(const char* loToken, const char* modeToken)
@@ -404,21 +409,21 @@ static void handleIfmodeCommand(const char* loToken, const char* modeToken)
     }
     const LOInjectionMode requestedMode = highRequested ? LOInjectionMode::High : LOInjectionMode::Low;
     if (equalsIgnoreCase(loToken, "lo1")) {
-        freqCalc.LO1InjectionMode = requestedMode;
+        desiredLo1Injection = requestedMode;
     } else if (equalsIgnoreCase(loToken, "lo2")) {
-        freqCalc.LO2InjectionMode = requestedMode;
+        desiredLo2Injection = requestedMode;
     } else if (equalsIgnoreCase(loToken, "lo3")) {
-        freqCalc.LO3InjectionMode = requestedMode;
+        desiredLo3Injection = requestedMode;
     } else {
         Serial.println(F("ifmode target must be lo1, lo2, or lo3."));
         return;
     }
-    tuneTo(currentRfInputMhz);
+    recomputePlan();
     Serial.print(F("IF mode updated for "));
     Serial.print(loToken);
     Serial.print(F(" -> "));
     Serial.println(highRequested ? F("HIGH-side injection") : F("LOW-side injection"));
-    printFrequencyPlan();
+    printStatus();
 }
 
 static void handleChipCommand(const char* targetToken)
@@ -523,6 +528,8 @@ static void selectChip(ChipTarget target)
     }
     deassertTarget(currentChipTarget);
     currentChipTarget = target;
+    manualSpiArmed = false;
+    pendingSpiConfirmation = false;
     Serial.print(F("Manual target set to "));
     Serial.println(chipTargetName(currentChipTarget));
 }
@@ -609,6 +616,53 @@ static void programAttenuatorRaw(uint8_t code)
     if (mappedDb >= ATTEN_MIN_DB && mappedDb <= (ATTEN_MAX_DB + 0.25)) {
         currentAttenuatorDb = mappedDb;
     }
+}
+
+static void recomputePlan()
+{
+    freqCalc.FreqRFin = currentRfInputMhz;
+    freqCalc.R = 1;
+
+    const double fpfd = freqCalc.RefClock1 / static_cast<double>(freqCalc.R);
+    const double if1Step = fpfd * round(freqCalc.IF1_center / fpfd);
+    const int sign = (desiredLo1Injection == LOInjectionMode::High) ? 1 : -1;
+
+    freqCalc.LO1InjectionMode = desiredLo1Injection;
+    freqCalc.FreqLO1 = fpfd * round((if1Step + static_cast<double>(sign) * currentRfInputMhz) / fpfd);
+    freqCalc.IF1 = freqCalc.FreqLO1 - (static_cast<double>(sign) * currentRfInputMhz);
+    if (freqCalc.IF1 < 0.0) {
+        freqCalc.IF1 = fabs(freqCalc.IF1);
+    }
+
+    freqCalc.LO2InjectionMode = desiredLo2Injection;
+    if (desiredLo2Injection == LOInjectionMode::High) {
+        freqCalc.FreqLO2 = freqCalc.IF1 + freqCalc.IF2;
+    } else {
+        freqCalc.FreqLO2 = freqCalc.IF1 - freqCalc.IF2;
+    }
+    if (freqCalc.FreqLO2 < 0.0) {
+        Serial.println(F("WARNING: Computed LO2 frequency negative. Check injection selection."));
+        freqCalc.FreqLO2 = fabs(freqCalc.FreqLO2);
+    }
+
+    freqCalc.LO3InjectionMode = desiredLo3Injection;
+    if (desiredLo3Injection == LOInjectionMode::High) {
+        freqCalc.FreqLO3 = freqCalc.IF2 + freqCalc.IF3;
+    } else {
+        freqCalc.FreqLO3 = freqCalc.IF2 - freqCalc.IF3;
+    }
+    if (freqCalc.FreqLO3 < 0.0) {
+        Serial.println(F("WARNING: Computed LO3 frequency negative. Check injection selection."));
+        freqCalc.FreqLO3 = fabs(freqCalc.FreqLO3);
+    }
+
+#if !defined(SPECANN_CI_BUILD)
+    lo1.setFrequency(freqCalc.FreqLO1);
+    lo2.setFrequency(freqCalc.FreqLO2);
+    lo3.setFrequency(freqCalc.FreqLO3);
+#else
+    Serial.println(F("(CI) Frequency plan recalculated (no hardware writes)."));
+#endif
 }
 
 static void logManualWrite(uint32_t value)
