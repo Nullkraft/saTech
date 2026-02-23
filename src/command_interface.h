@@ -7,8 +7,10 @@ constexpr uint8_t PIN_ATTEN   = A5;
 constexpr uint8_t PIN_LE_LO1  = A3;
 constexpr uint8_t PIN_LE_LO2  = 4;
 constexpr uint8_t PIN_LE_LO3  = A4;
+constexpr uint8_t PIN_REF_EN1 = 5;
+constexpr uint8_t PIN_REF_EN2 = 6;
 
-enum class ChipTarget { None, LO1, LO2, LO3, Attenuator, Aux };
+enum class ChipTarget { None, LO1, LO2, LO3, Attenuator, Ref1, Ref2, ADC1, ADC2, RAM, Flash };
 
 constexpr double MIN_RF_INPUT_MHZ = 23.5;
 constexpr double MAX_RF_INPUT_MHZ = 6000.0;

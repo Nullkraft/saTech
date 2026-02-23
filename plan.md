@@ -75,7 +75,7 @@ void setup() {
     pinMode(PIN_ATTEN, OUTPUT);
     halLo1.begin();
     initializeLo(lo1);
-    console_state.reset();   // set attenuator/chip defaults
+    resetConsoleState();     // set attenuator/chip defaults
     programAttenuatorDb(getCurrentAttenuatorDb());
     tuneTo(startupMHz);
     printBanner();
@@ -92,7 +92,7 @@ void loop() {
 ```cpp
 static void handleCommand(const String& cmd) {
     if (cmd.equalsIgnoreCase("help")) {
-        Serial.println(F("Enter frequency MHz (23.5–6000) or commands: help, status, atten <dB>, ifmode <lo#> <high|low>"));
+        Serial.println(F("Enter frequency MHz (23.5–6000) or commands: help, status, atten <dB>, ifmode <high|low>, lofreq <MHz>, chip <...>, spi <hex32>"));
         return;
     }
     double mhz = cmd.toFloat();

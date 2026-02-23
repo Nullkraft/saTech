@@ -8,7 +8,9 @@ ConsoleState& consoleState()
         false,
         false,
         0U,
-        ChipTarget::None
+        ChipTarget::None,
+        false,
+        false
     };
     return state;
 }
@@ -22,4 +24,6 @@ void resetConsoleState()
     state.pendingSpiConfirmation = false;
     state.pendingSpiValue = 0U;
     state.pendingSpiTarget = ChipTarget::None;
+    state.ref1Enabled = false;
+    state.ref2Enabled = false;
 }

@@ -8,10 +8,9 @@
 #include <max2871.h>
 #include <math.h>
 #include "command_interface.h"
+#include "console_state.h"
 
 // Metro Mini pinout (see MAX2871 examples/specAnn/specAnn.ino)
-static constexpr uint8_t PIN_REF_EN1 = 5;
-static constexpr uint8_t PIN_REF_EN2 = 6;
 static constexpr uint8_t PIN_STATUS  = 10;
 static constexpr double  REF_MHZ     = 66.0;
 static constexpr double  STARTUP_RF_MHZ = 1735.113;
@@ -63,6 +62,8 @@ void setup()
         // Wait briefly for USB serial on boards that need it.
     }
 
+    resetConsoleState();
+
     freqCalc.RefClock1 = REF_MHZ;
 
 #if !defined(SPECANN_CI_BUILD)
@@ -77,6 +78,8 @@ void setup()
     digitalWrite(PIN_ATTEN, HIGH); // Idle high so the attenuator is not latched unintentionally.
     digitalWrite(PIN_REF_EN1, HIGH);
     digitalWrite(PIN_REF_EN2, LOW);
+    consoleState().ref1Enabled = true;
+    consoleState().ref2Enabled = false;
 
     initializeLo(lo1);
     initializeLo(lo2);

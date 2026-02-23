@@ -11,9 +11,9 @@
 - [x] Implement a 96-byte line buffer that reads commands until newline, trims whitespace, and tokenizes up to four fields.
 - [x] Support numeric frequency inputs (23.5–6000 MHz) and report errors for out-of-range values.
 - [x] Implement keyword commands: `help`, `status`, `relock`, `info`.
-- [ ] Update command parsing to support `ifmode <high|low>` using the currently selected LO; emit an error if no LO target is active.
-- [ ] Add `lofreq <MHz>` to program the selected LO via the calculator/`setFrequency()` path, rejecting calls without an active LO.
-- [ ] Refresh the `help` banner text to list the new command signatures (`ifmode`, `lofreq`, expanded `chip` targets).
+- [x] Update command parsing to support `ifmode <high|low>` using the currently selected LO, rejecting calls without an active LO.
+- [x] Add `lofreq <MHz>` to program the selected LO via the calculator/`setFrequency()` path, rejecting calls without an active LO.
+- [x] Refresh the `help` banner text to list the new command signatures (`ifmode`, `lofreq`, expanded `chip` targets).
 - [x] Add heartbeat management inside `loop()` (status pin toggle) separate from command polling.
 
 ## Phase 3 — Diagnostics Helpers
@@ -24,13 +24,13 @@
 ## Phase 4 — Attenuation Control & LO Injection
 - [x] Validate availability of PE43711 programming information; if missing, document deferral in code comments.
 - [x] Implement `atten <dB>` command: parse 0.25 dB steps (1.0–31.75 dB), send SPI sequence to PE43711, update `ConsoleState`, and print the reminder about 31.75 dB ≈ 51 Ω.
-- [ ] Rework injection handling so `ifmode` flips the calculator mode for the active LO target before calling `recomputePlan()`.
+- [x] Rework injection handling so `ifmode` flips the calculator mode for the active LO target before calling `recomputePlan()`.
 - [x] Ensure status output includes the current attenuator dB value, injection modes, and manual chip target.
 
 ## Phase 5 — Manual SPI / Chip-Select Shell
-- [x] Implement `chip <lo1|lo2|lo3|atten|aux>` command that selects which device subsequent raw SPI writes target.
-- [ ] Expand `chip` support to include `ref1`, `ref2`, `adc1`, `adc2`, `ram`, `flash`, respecting HIGH/LOW polarity and keeping ref1/ref2 mutually exclusive while allowing one to stay asserted.
-- [x] Ensure the chip-selection helper always deasserts the previously active device before asserting the new one (only one SPI CS/LE active at a time).
+- [x] Implement `chip <lo1|lo2|lo3|atten>` command that selects to which device subsequent raw SPI writes target.
+- [x] Expand `chip` support to include `ref1`, `ref2`, `adc1`, `adc2`, `ram`, `flash`, respecting HIGH/LOW polarity and keeping ref1/ref2 mutually exclusive while allowing one to stay asserted.
+- [x] Ensure the chip-selection helper always deasserts all spi devices before asserting the new one (only one SPI CS/LE active at a time).
 - [x] Implement `spi <hex32>` to transmit raw 32-bit words to the selected device; log every transaction and require double-entry arming before the first write.
 - [x] Document onscreen that manual SPI writes can damage hardware if misused.
 - [x] Add double-entry confirmation requirement before manual writes become armed.

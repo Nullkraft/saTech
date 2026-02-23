@@ -9,6 +9,8 @@ struct ConsoleState {
     bool pendingSpiConfirmation;
     uint32_t pendingSpiValue;
     ChipTarget pendingSpiTarget;
+    bool ref1Enabled;
+    bool ref2Enabled;
 };
 
 ConsoleState& consoleState();

@@ -16,6 +16,74 @@ char inputBuffer[INPUT_BUFFER_SIZE];
 size_t inputLength = 0;
 ConsoleState& state = consoleState();
 
+bool isRefTarget(ChipTarget target)
+{
+    return (target == ChipTarget::Ref1) || (target == ChipTarget::Ref2);
+}
+
+bool isSpiPeripheral(ChipTarget target)
+{
+    switch (target) {
+        case ChipTarget::LO1:
+        case ChipTarget::LO2:
+        case ChipTarget::LO3:
+        case ChipTarget::Attenuator:
+        case ChipTarget::ADC1:
+        case ChipTarget::ADC2:
+        case ChipTarget::RAM:
+        case ChipTarget::Flash:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool hasHardwareChipSelect(ChipTarget target)
+{
+    switch (target) {
+        case ChipTarget::LO1:
+        case ChipTarget::LO2:
+        case ChipTarget::LO3:
+        case ChipTarget::Attenuator:
+        case ChipTarget::Ref1:
+        case ChipTarget::Ref2:
+            return true;
+        default:
+            return false;
+    }
+}
+
+void ensureRefSelection(ChipTarget target)
+{
+    if (target == ChipTarget::Ref1) {
+        if (state.ref2Enabled) {
+#if !defined(SPECANN_CI_BUILD)
+            digitalWrite(PIN_REF_EN2, LOW);
+#endif
+            state.ref2Enabled = false;
+        }
+        if (!state.ref1Enabled) {
+#if !defined(SPECANN_CI_BUILD)
+            digitalWrite(PIN_REF_EN1, HIGH);
+#endif
+            state.ref1Enabled = true;
+        }
+    } else if (target == ChipTarget::Ref2) {
+        if (state.ref1Enabled) {
+#if !defined(SPECANN_CI_BUILD)
+            digitalWrite(PIN_REF_EN1, LOW);
+#endif
+            state.ref1Enabled = false;
+        }
+        if (!state.ref2Enabled) {
+#if !defined(SPECANN_CI_BUILD)
+            digitalWrite(PIN_REF_EN2, HIGH);
+#endif
+            state.ref2Enabled = true;
+        }
+    }
+}
+
 bool equalsIgnoreCase(const char* lhs, const char* rhs)
 {
     while (*lhs != '\0' && *rhs != '\0') {
@@ -83,7 +151,12 @@ void deassertTargetInternal(ChipTarget target)
         case ChipTarget::Attenuator:
             digitalWrite(PIN_ATTEN, HIGH);
             break;
-        case ChipTarget::Aux:
+        case ChipTarget::Ref1:
+        case ChipTarget::Ref2:
+        case ChipTarget::ADC1:
+        case ChipTarget::ADC2:
+        case ChipTarget::RAM:
+        case ChipTarget::Flash:
         case ChipTarget::None:
         default:
             break;
@@ -134,12 +207,22 @@ void selectChip(ChipTarget target)
     state.chipTarget = target;
     state.manualSpiArmed = false;
     state.pendingSpiConfirmation = false;
+    if (isRefTarget(target)) {
+        ensureRefSelection(target);
+        Serial.print(F("Reference select set to "));
+        Serial.println(chipTargetName(state.chipTarget));
+        return;
+    }
     Serial.print(F("Manual target set to "));
     Serial.println(chipTargetName(state.chipTarget));
+    if (!hasHardwareChipSelect(target) && isSpiPeripheral(target)) {
+        Serial.println(F("Note: chip-select control not wired; SPI writes will only be logged."));
+    }
 }
 
 void handleAttenuatorCommand(const char* valueToken);
-void handleIfmodeCommand(const char* loToken, const char* modeToken);
+void handleIfmodeCommand(const char* modeToken);
+void handleLofreqCommand(const char* valueToken);
 void handleChipCommand(const char* targetToken);
 void handleSpiCommand(const char* valueToken);
 void handleCommand(const char* line);
@@ -174,8 +257,9 @@ void printBanner()
     Serial.println(F("  relock             Reinitialize MAX2871 devices"));
     Serial.println(F("  info               Show board pin assignments"));
     Serial.println(F("  atten <dB>         Program PE43711 attenuator (1.0 to 31.75 dB in 0.25 steps)"));
-    Serial.println(F("  ifmode <lo#> <high|low>  Set LO injection sense"));
-    Serial.println(F("  chip <lo1|lo2|lo3|atten|aux>  Select manual SPI target"));
+    Serial.println(F("  ifmode <high|low>  Set injection for the selected LO (use chip first)"));
+    Serial.println(F("  lofreq <MHz>       Program the selected LO directly"));
+    Serial.println(F("  chip <lo1|lo2|lo3|atten|ref1|ref2|adc1|adc2|ram|flash>  Select bus target"));
     Serial.println(F("  spi <hex32>        Send raw 32-bit word to selected device"));
     Serial.println();
 }
@@ -224,7 +308,12 @@ const __FlashStringHelper* chipTargetName(ChipTarget target)
         case ChipTarget::LO2: return F("LO2");
         case ChipTarget::LO3: return F("LO3");
         case ChipTarget::Attenuator: return F("Attenuator");
-        case ChipTarget::Aux: return F("Auxiliary");
+        case ChipTarget::Ref1: return F("REF1");
+        case ChipTarget::Ref2: return F("REF2");
+        case ChipTarget::ADC1: return F("ADC1");
+        case ChipTarget::ADC2: return F("ADC2");
+        case ChipTarget::RAM: return F("RAM");
+        case ChipTarget::Flash: return F("FLASH");
         case ChipTarget::None:
         default: return F("None");
     }
@@ -262,9 +351,10 @@ void handleAttenuatorCommand(const char* valueToken)
     printStatus();
 }
 
-void handleIfmodeCommand(const char* loToken, const char* modeToken)
+void handleIfmodeCommand(const char* modeToken)
 {
-    if (loToken == nullptr || modeToken == nullptr) {
+    if (modeToken == nullptr) {
+        Serial.println(F("Usage: ifmode <high|low>"));
         return;
     }
     const bool highRequested = equalsIgnoreCase(modeToken, "high");
@@ -273,22 +363,86 @@ void handleIfmodeCommand(const char* loToken, const char* modeToken)
         Serial.println(F("ifmode requires 'high' or 'low'."));
         return;
     }
-    const LOInjectionMode requestedMode = highRequested ? LOInjectionMode::High : LOInjectionMode::Low;
-    if (equalsIgnoreCase(loToken, "lo1")) {
-        desiredLo1Injection = requestedMode;
-    } else if (equalsIgnoreCase(loToken, "lo2")) {
-        desiredLo2Injection = requestedMode;
-    } else if (equalsIgnoreCase(loToken, "lo3")) {
-        desiredLo3Injection = requestedMode;
-    } else {
-        Serial.println(F("ifmode target must be lo1, lo2, or lo3."));
+    if (state.chipTarget != ChipTarget::LO1 && state.chipTarget != ChipTarget::LO2 && state.chipTarget != ChipTarget::LO3) {
+        Serial.println(F("Select lo1, lo2, or lo3 with 'chip' before using ifmode."));
         return;
     }
+    const LOInjectionMode requestedMode = highRequested ? LOInjectionMode::High : LOInjectionMode::Low;
+    LOInjectionMode* injectionPtr = nullptr;
+    switch (state.chipTarget) {
+        case ChipTarget::LO1:
+            injectionPtr = &desiredLo1Injection;
+            break;
+        case ChipTarget::LO2:
+            injectionPtr = &desiredLo2Injection;
+            break;
+        case ChipTarget::LO3:
+            injectionPtr = &desiredLo3Injection;
+            break;
+        default:
+            break;
+    }
+    if (injectionPtr == nullptr) {
+        return;
+    }
+    *injectionPtr = requestedMode;
     recomputePlan();
     Serial.print(F("IF mode updated for "));
-    Serial.print(loToken);
+    Serial.print(chipTargetName(state.chipTarget));
     Serial.print(F(" -> "));
     Serial.println(highRequested ? F("HIGH-side injection") : F("LOW-side injection"));
+    printStatus();
+}
+
+void handleLofreqCommand(const char* valueToken)
+{
+    if (valueToken == nullptr) {
+        Serial.println(F("Usage: lofreq <MHz>"));
+        return;
+    }
+    if (state.chipTarget != ChipTarget::LO1 && state.chipTarget != ChipTarget::LO2 && state.chipTarget != ChipTarget::LO3) {
+        Serial.println(F("Select lo1, lo2, or lo3 with 'chip' before using lofreq."));
+        return;
+    }
+    char* endPointer = nullptr;
+    const double requestedMhz = strtod(valueToken, &endPointer);
+    if (endPointer == nullptr || *endPointer != '\0' || !(requestedMhz > 0.0)) {
+        Serial.println(F("lofreq requires a positive frequency in MHz."));
+        return;
+    }
+    MAX2871* targetLo = nullptr;
+    double* reportedFreq = nullptr;
+    switch (state.chipTarget) {
+        case ChipTarget::LO1:
+            targetLo = &lo1;
+            reportedFreq = &freqCalc.FreqLO1;
+            break;
+        case ChipTarget::LO2:
+            targetLo = &lo2;
+            reportedFreq = &freqCalc.FreqLO2;
+            break;
+        case ChipTarget::LO3:
+            targetLo = &lo3;
+            reportedFreq = &freqCalc.FreqLO3;
+            break;
+        default:
+            break;
+    }
+    if (targetLo == nullptr || reportedFreq == nullptr) {
+        return;
+    }
+#if !defined(SPECANN_CI_BUILD)
+    targetLo->setFrequency(requestedMhz);
+    const double actual = targetLo->fmn2freq();
+#else
+    const double actual = requestedMhz;
+#endif
+    *reportedFreq = actual;
+    Serial.print(F("LO frequency set for "));
+    Serial.print(chipTargetName(state.chipTarget));
+    Serial.print(F(" -> "));
+    Serial.print(actual, 3);
+    Serial.println(F(" MHz"));
     printStatus();
 }
 
@@ -306,10 +460,20 @@ void handleChipCommand(const char* targetToken)
         target = ChipTarget::LO3;
     } else if (equalsIgnoreCase(targetToken, "atten")) {
         target = ChipTarget::Attenuator;
-    } else if (equalsIgnoreCase(targetToken, "aux")) {
-        target = ChipTarget::Aux;
+    } else if (equalsIgnoreCase(targetToken, "ref1")) {
+        target = ChipTarget::Ref1;
+    } else if (equalsIgnoreCase(targetToken, "ref2")) {
+        target = ChipTarget::Ref2;
+    } else if (equalsIgnoreCase(targetToken, "adc1")) {
+        target = ChipTarget::ADC1;
+    } else if (equalsIgnoreCase(targetToken, "adc2")) {
+        target = ChipTarget::ADC2;
+    } else if (equalsIgnoreCase(targetToken, "ram")) {
+        target = ChipTarget::RAM;
+    } else if (equalsIgnoreCase(targetToken, "flash")) {
+        target = ChipTarget::Flash;
     } else {
-        Serial.println(F("chip target must be lo1, lo2, lo3, atten, or aux."));
+        Serial.println(F("chip target must be lo1, lo2, lo3, atten, ref1, ref2, adc1, adc2, ram, or flash."));
         return;
     }
     selectChip(target);
@@ -376,8 +540,15 @@ void handleSpiCommand(const char* valueToken)
         case ChipTarget::Attenuator:
             programAttenuatorRaw(static_cast<uint8_t>(value & 0x7FU));
             break;
-        case ChipTarget::Aux:
-            Serial.println(F("Aux SPI target not yet wired; write skipped."));
+        case ChipTarget::Ref1:
+        case ChipTarget::Ref2:
+            Serial.println(F("Reference selects are not on the SPI bus; write skipped."));
+            break;
+        case ChipTarget::ADC1:
+        case ChipTarget::ADC2:
+        case ChipTarget::RAM:
+        case ChipTarget::Flash:
+            Serial.println(F("SPI control for the selected target is not wired; write skipped."));
             break;
         case ChipTarget::None:
         default:
@@ -459,16 +630,24 @@ void handleCommand(const char* line)
         return;
     }
     if (equalsIgnoreCase(tokens[0], "ifmode")) {
-        if (count < 3U) {
-            Serial.println(F("Usage: ifmode <lo1|lo2|lo3> <high|low>"));
+        if (count < 2U) {
+            Serial.println(F("Usage: ifmode <high|low>"));
             return;
         }
-        handleIfmodeCommand(tokens[1], tokens[2]);
+        handleIfmodeCommand(tokens[1]);
+        return;
+    }
+    if (equalsIgnoreCase(tokens[0], "lofreq")) {
+        if (count < 2U) {
+            Serial.println(F("Usage: lofreq <MHz>"));
+            return;
+        }
+        handleLofreqCommand(tokens[1]);
         return;
     }
     if (equalsIgnoreCase(tokens[0], "chip")) {
         if (count < 2U) {
-            Serial.println(F("Usage: chip <lo1|lo2|lo3|atten|aux>"));
+            Serial.println(F("Usage: chip <lo1|lo2|lo3|atten|ref1|ref2|adc1|adc2|ram|flash>"));
             return;
         }
         handleChipCommand(tokens[1]);
@@ -487,5 +666,4 @@ void handleCommand(const char* line)
     Serial.println(tokens[0]);
     Serial.println(F("Type 'help' for a list of commands."));
 }
-
 } // namespace
