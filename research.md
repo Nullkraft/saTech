@@ -50,7 +50,7 @@ Numeric input (`23.5–6000 MHz`) tunes the synthesizers:
 - Valid entries call `tuneTo()` and then immediately display `printStatus()`.
 
 Keyword commands:
-Because the chip-select pins mix active-high and active-low devices, the console records each target’s polarity. LO1, LO2, LO3, attenuator, ref1, and ref2 assert HIGH; adc1, adc2, ram, and flash assert LOW. When the technician switches targets the firmware first drives every chip select back to its idle level before enabling the new one, guaranteeing only one device is active on the shared SPI bus.
+Because the chip-select pins mix active-high and active-low devices, the console records each target’s polarity. LO1, LO2, LO3, attenuator, ref1, and ref2 assert HIGH; adc1, adc2, ram, and flash assert LOW. Ref1 and ref2 gate the system reference clocks rather than the SPI bus, so the command interface allows one (or neither) of them to remain selected across other operations while preventing both from being asserted simultaneously. For the SPI peripherals, switching targets first drives the previous chip select back to its idle level before enabling the new one so only a single device ever talks on the shared bus.
 - `help` – prints the banner and command reference.
 - `status` – shows the RF input, LO frequencies, IF values, injection modes, attenuator setting, and current manual target.
 - `relock` – reruns initialization for each MAX2871, reapplies the last frequency, and notes completion.
