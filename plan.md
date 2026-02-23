@@ -1,55 +1,59 @@
-# SpecAnn.cpp Development Plan
+# SpecAnn Technician Console Plan
 
 ## Goals
-- Accept a single RF input frequency over the USB serial port and configure the three MAX2871 PLLs accordingly.
-- Leverage the existing MAX2871 library (`ArduinoHAL`, `MAX2871`, `FrequencyCalculator`) without modifying its internals.
-- Provide responsive feedback to the user (acknowledgements, error messages, status dumps).
-- Keep the sketch testable without RF hardware attached by guarding hardware-dependent paths.
-- Pin selects and SPI writes will be tested with the o'scope
+- Accept numeric RF frequency requests over USB serial and drive all three MAX2871 PLLs accordingly.
+- Expose a technician-friendly console that also allows attenuator control, LO injection selection, explicit LO programming (`lofreq`), and manual SPI access.
+- Keep technician-visible state easy to inspect in code (`console_state`) so bench troubleshooting lines up with runtime output.
+- Leverage the MAX2871 support library (`ArduinoHAL`, `MAX2871`, `FrequencyCalculator`) without modifying its internals.
+- Maintain CI safety by compiling with `SPECANN_CI_BUILD` to skip hardware writes while preserving state transitions.
+- Verify pin selects and SPI transactions on the scope, with special treatment for the ref clock selects (ref1/ref2) remaining mutually exclusive even when they stay asserted.
 
 ## System Overview
-1. **Hardware layer:** Three `ArduinoHAL` instances, one per LO (LE pins on Metro Mini: A3, 4, A4).
-2. **Synthesizers:** `MAX2871 lo1/lo2/lo3` configured with 66 MHz reference clock.
-3. **Coordinator:** `FrequencyCalculator` computes LO frequencies for a requested RF input.
-4. **UI layer:** Serial command loop that parses numeric MHz inputs and optional commands (`help`, `status`, `relock`, etc.).
+1. **Hardware layer (`main_entry.cpp`):** Owns the three `ArduinoHAL` instances (Metro Mini LE pins A3, D4, A4), the MAX2871 objects with a 66 MHz reference, the frequency calculator, and heartbeat/status GPIO.
+2. **Technician console (`command_interface.cpp`):** Parses serial input, manages command state (attenuator dB, chip target, manual SPI arming), and calls back into hardware helpers such as `tuneTo()` and `recomputePlan()`.
+3. **Shared console state (`console_state.h/.cpp`):** Centralizes technician-facing variables (attenuator value, selected device, confirmation flags) so the source code exposes the same state technicians see on the console.
+4. **Command surface:** Numeric MHz entries and keywords (`help`, `status`, `relock`, `info`, `atten`, `ifmode`, `lofreq`, `chip`, `spi`) with polarity-aware chip select handling—LO/atten/ref pins assert HIGH, ADC/RAM/flash assert LOW, and ref1/ref2 remain mutually exclusive while allowed to stay asserted.
 
 ```
-Serial (host) ──> Command Parser ──> FrequencyCalculator#set_LO_frequencies ──┐
-                                                                              ├──> MAX2871::setFrequency / output control
-User feedback <── Status Reporter <───────────────────────────────────────────┘
+Serial host ──> command_interface.cpp (parse/tokens) ──┐
+                                                      ├──> console_state (chip, atten, SPI guard)
+                                                      ├──> tuneTo()/recomputePlan()/printStatus()
+                                                      └──> manual SPI writer / attenuator driver
 ```
 
 ## Work Breakdown
 1. **Bootstrap (`setup`)**
-   - Initialize serial at 115200 baud with blocking wait.
-   - Call `begin()` on each HAL and PLL, configure outputs (`outputSelect`, `outputPower`), set reference enables.
-   - Program an initial LO plan with `freqCalc.set_LO_frequencies(1735.113, freqCalc.RefClock1, 1);`.
-   - Print banner and usage instructions.
+   - Initialize serial at 115200 baud with a short wait for USB.
+   - Initialize HALs and MAX2871 devices (`begin`, `outputSelect`, `outputPower`), set attenuator/ref enable pins, seed the `FrequencyCalculator` reference, and call `programAttenuatorDb(getCurrentAttenuatorDb())`.
+   - Call `tuneTo(STARTUP_RF_MHZ)` → `recomputePlan()` to program the synths, print console banner/status, and start the heartbeat timer.
 
-2. **Serial Command Loop (`loop`)**
-   - Poll `Serial.available()`; buffer characters until end-of-line.
-   - Parse commands:
-     - **Numeric** (e.g., `2412.5`): validate range (23.5–6000 MHz), call `freqCalc.set_LO_frequencies()`, then dump resulting LO/IF values.
-     - **Keywords** (`help`, `status`, `relock`, `info`): map to helper functions.
-   - Gracefully handle invalid input (timeout, non-numeric).
+2. **Serial Command Loop (`loop` + `pollSerial`)**
+   - Buffer up to 96 chars, trim whitespace, tokenize (max 4 tokens), and dispatch:
+     - **Numeric MHz**: range-check (23.5–6000), call `tuneTo`, then `printStatus`.
+     - **Keywords**:
+       - `help`, `status`, `relock`, `info`
+       - `atten <dB>`: enforce 1.0–31.75 dB in 0.25 increments, send PE43711 code, update console state, print reminder.
+       - `ifmode <high|low>`: apply injection mode to selected LO; reject if no LO target selected.
+       - `lofreq <MHz>`: program the selected LO via the calculator/`setFrequency()` path; reject without an active LO.
+       - `chip <lo1|lo2|lo3|atten|ref1|ref2|adc1|adc2|ram|flash>`: switch targets respecting HIGH/LOW polarity; keep ref1/ref2 mutually exclusive while allowing one to stay asserted.
+       - `spi <hex32>`: enforce double-entry confirmation before arming manual writes, then forward to the active device.
+   - On overflow, reset the buffer and warn; ignore carriage returns.
 
 3. **Diagnostics Helpers**
-   - `void printLoSummary(const char* name, const MAX2871& lo);`
-   - `void printFrequencyPlan(const FrequencyCalculator& fc);`
+   - `void printStatus()` → prints frequency plan, LO summaries, injection modes, attenuator dB, active chip.
+   - `static void printFrequencyPlan()` / `static void printLoSummary(const __FlashStringHelper*, const MAX2871&)` output the detailed plan from `freqCalc`.
 
-4. **Attenuation Control & IF Path**
-   - Drive the PE43711 digital attenuator chip-select/LATCH during `setup()` and verify on the scope; it supports 0.25 dB steps from 1.0 dB to 31.75 dB, so we need to confirm we have (or obtain) its SPI programming table—otherwise defer this feature.
-   - Extend the command parser with `atten <dB>` to program the PE43711 and `ifmode <lo#> <high|low>` to select high- vs. low-side injection for each LO.
-   - Include the current attenuator setting in status output and remind testers that 31.75 dB should measure ~51 Ω on a DVM for sanity checks.
-   - Add a raw SPI/CS control shell (e.g., `chip <lo|atten|aux>`, `spi <hex32>`) so technicians can poke any device; document risks and log every manual write.
+4. **Attenuation & Manual SPI**
+   - `command_interface.cpp` drives attenuator programming (`programAttenuatorDb`, `programAttenuatorRaw`), storing the dB value in `ConsoleState` for printouts/tests.
+   - Manual SPI flow uses `ConsoleState` flags (`manualSpiArmed`, `pendingSpi*`) to gate writes, logs every transaction, and supports LO, attenuator, ref clock, ADC, RAM, flash targets.
 
 5. **Safety / Hardware Guards**
-   - Wrap hardware-touching code (`SpecAnn::begin`, attenuator writes, lock-checks) with `#if !defined(SPECANN_CI_BUILD)` so CI builds run logic without requiring peripherals.
-   - Keep a simulation-friendly path (mock HAL / no-op handlers) for future native tests.
+   - Wrap pin toggles, SPI writes, and MAX2871 programming with `#if !defined(SPECANN_CI_BUILD)` so CI runs logic without hardware effects while still updating state.
+   - Provide `resetConsoleState()` for future test scaffolding.
 
 6. **Future Hooks**
-   - Optional `bool checkLock(MAX2871& lo);` that queries `isLocked()` and reports (tolerant of stub returns).
-   - Add EEPROM persistence for last-tuned frequency.
+   - Optional lock-check helper (`checkLock`) and timestamped manual SPI logging.
+   - Store last-tuned frequency/attenuator in EEPROM for power-cycle persistence.
 
 ## File Layout
 ```
@@ -71,8 +75,11 @@ void setup() {
     pinMode(PIN_ATTEN, OUTPUT);
     halLo1.begin();
     initializeLo(lo1);
-    freqCalc.set_LO_frequencies(startupMHz, freqCalc.RefClock1, 1);
-    printFrequencyPlan();
+    console_state.reset();   // set attenuator/chip defaults
+    programAttenuatorDb(getCurrentAttenuatorDb());
+    tuneTo(startupMHz);
+    printBanner();
+    printStatus();
 }
 
 void loop() {
@@ -90,8 +97,8 @@ static void handleCommand(const String& cmd) {
     }
     double mhz = cmd.toFloat();
     if (mhz >= 23.5 && mhz <= 6000.0) {
-        freqCalc.set_LO_frequencies(mhz, freqCalc.RefClock1, 1);
-        printFrequencyPlan();
+        tuneTo(mhz);
+        printStatus();
         return;
     }
     Serial.println(F("Invalid entry. Try e.g. 2412.5 or 'help'."));
@@ -102,11 +109,11 @@ static void handleCommand(const String& cmd) {
 ```cpp
 static void printFrequencyPlan() {
     Serial.println(F("\nFrequency Plan"));
-    Serial.print(F("RF In: ")); Serial.print(freqCalc.FreqRFin, 3); Serial.println(F(" MHz"));
-    Serial.print(F("LO1 : ")); Serial.print(freqCalc.FreqLO1, 3);
-    Serial.print(F("  IF1: ")); Serial.println(freqCalc.IF1, 3);
-    Serial.print(F("LO2 : ")); Serial.print(freqCalc.FreqLO2, 3);
-    Serial.print(F("LO3 : ")); Serial.println(freqCalc.FreqLO3, 3);
+    Serial.print(F("RF In : ")); Serial.print(freqCalc.FreqRFin, 3); Serial.println(F(" MHz"));
+    Serial.print(F("LO1  : ")); Serial.print(freqCalc.FreqLO1, 3);
+    Serial.print(F(" MHz  IF1: ")); Serial.println(freqCalc.IF1, 3);
+    Serial.print(F("LO2  : ")); Serial.print(freqCalc.FreqLO2, 3); Serial.println(F(" MHz"));
+    Serial.print(F("LO3  : ")); Serial.print(freqCalc.FreqLO3, 3); Serial.println(F(" MHz"));
 }
 ```
 
