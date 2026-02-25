@@ -29,9 +29,6 @@ FrequencyCalculator freqCalc(lo1, lo2, lo3);
 double currentRfInputMhz = STARTUP_RF_MHZ;
 static uint32_t lastHeartbeatToggleMs = 0;
 static bool heartbeatState = false;
-LOInjectionMode desiredLo1Injection = LOInjectionMode::High;
-LOInjectionMode desiredLo2Injection = LOInjectionMode::High;
-LOInjectionMode desiredLo3Injection = LOInjectionMode::High;
 
 // cppcheck-suppress unusedFunction
 void initializeLo(MAX2871& lo)
@@ -50,7 +47,6 @@ void printStatus();
 void tuneTo(double mhz);
 void recomputePlan();
 static void heartbeat();
-static const __FlashStringHelper* injectionModeName(LOInjectionMode mode);
 
 void setup()
 {
@@ -108,6 +104,11 @@ void loop()
 void tuneTo(double mhz)
 {
     currentRfInputMhz = mhz;
+    // A fresh tune restores all LOs to automatic frequency control.
+    ConsoleState& s = consoleState();
+    s.lo1Manual = false;
+    s.lo2Manual = false;
+    s.lo3Manual = false;
     recomputePlan();
 }
 
@@ -127,7 +128,7 @@ static void printLoSummary(const __FlashStringHelper* label, const MAX2871& lo)
     Serial.print(F(" M=")); Serial.print(lo.M);
     Serial.print(F(" F=")); Serial.print(lo.Frac);
     Serial.print(F(" N=")); Serial.print(lo.N);
-    Serial.print(F(" DIVA=")); Serial.println(lo.DIVA);
+    Serial.print(F(" DIVA=")); Serial.println(1 << lo.DIVA);
 }
 
 void printStatus()
@@ -136,12 +137,7 @@ void printStatus()
     printLoSummary(F("LO1"), lo1);
     printLoSummary(F("LO2"), lo2);
     printLoSummary(F("LO3"), lo3);
-    Serial.print(F("Injection: LO1="));
-    Serial.print(injectionModeName(freqCalc.LO1InjectionMode));
-    Serial.print(F(" LO2="));
-    Serial.print(injectionModeName(freqCalc.LO2InjectionMode));
-    Serial.print(F(" LO3="));
-    Serial.println(injectionModeName(freqCalc.LO3InjectionMode));
+    printInjectionSummary();
     Serial.print(F("Attenuator: ")); Serial.print(getCurrentAttenuatorDb(), 2); Serial.println(F(" dB"));
     Serial.print(F("Manual target: "));
     Serial.println(chipTargetName(getCurrentChipTarget()));
@@ -157,58 +153,47 @@ static void heartbeat()
     }
 }
 
-static const __FlashStringHelper* injectionModeName(LOInjectionMode mode)
-{
-    return (mode == LOInjectionMode::High) ? F("High") : F("Low");
-}
-
 void recomputePlan()
 {
-    freqCalc.FreqRFin = currentRfInputMhz;
-    freqCalc.R = 1;
+    ConsoleState& s = consoleState();
 
-    const double fpfd = freqCalc.RefClock1 / static_cast<double>(freqCalc.R);
-    const double if1Step = fpfd * round(freqCalc.IF1_center / fpfd);
-    const int sign = (desiredLo1Injection == LOInjectionMode::High) ? 1 : -1;
+    // Save manually-held LO frequencies before the auto-calculation overwrites them.
+    const double savedLo1 = freqCalc.FreqLO1;
+    const double savedLo2 = freqCalc.FreqLO2;
+    const double savedLo3 = freqCalc.FreqLO3;
 
-    freqCalc.LO1InjectionMode = desiredLo1Injection;
-    freqCalc.FreqLO1 = fpfd * round((if1Step + static_cast<double>(sign) * currentRfInputMhz) / fpfd);
-    freqCalc.IF1 = freqCalc.FreqLO1 - (static_cast<double>(sign) * currentRfInputMhz);
-    if (freqCalc.IF1 < 0.0) {
-        freqCalc.IF1 = fabs(freqCalc.IF1);
-    }
-
-    freqCalc.LO2InjectionMode = desiredLo2Injection;
-    if (desiredLo2Injection == LOInjectionMode::High) {
-        freqCalc.FreqLO2 = freqCalc.IF1 + freqCalc.IF2;
-    } else {
-        freqCalc.FreqLO2 = freqCalc.IF1 - freqCalc.IF2;
-    }
-    if (freqCalc.FreqLO2 < 0.0) {
-        Serial.println(F("WARNING: Computed LO2 frequency negative. Check injection selection."));
-        freqCalc.FreqLO2 = fabs(freqCalc.FreqLO2);
-    }
-
-    freqCalc.LO3InjectionMode = desiredLo3Injection;
-    if (desiredLo3Injection == LOInjectionMode::High) {
-        freqCalc.FreqLO3 = freqCalc.IF2 + freqCalc.IF3;
-    } else {
-        freqCalc.FreqLO3 = freqCalc.IF2 - freqCalc.IF3;
-    }
-    if (freqCalc.FreqLO3 < 0.0) {
-        Serial.println(F("WARNING: Computed LO3 frequency negative. Check injection selection."));
-        freqCalc.FreqLO3 = fabs(freqCalc.FreqLO3);
-    }
+    // Overload B: pass the technician's desired injection modes so that
+    // freqCalc.LO2InjectionMode / LO3InjectionMode are set correctly for display.
+    freqCalc.set_LO_frequencies(currentRfInputMhz, freqCalc.RefClock1, 1,
+                                 s.desiredLo2Injection,
+                                 s.desiredLo3Injection);
 
 #if !defined(SPECANN_CI_BUILD)
-    lo1.setFrequency(freqCalc.FreqLO1);
-    lo2.setFrequency(freqCalc.FreqLO2);
-    lo3.setFrequency(freqCalc.FreqLO3);
-#endif
-
     freqCalc.FreqLO1 = lo1.fmn2freq();
     freqCalc.FreqLO2 = lo2.fmn2freq();
     freqCalc.FreqLO3 = lo3.fmn2freq();
+#endif
+
+    // Restore any LO that is under manual lofreq control; re-program the
+    // hardware to the saved value so the auto-calculation does not overwrite it.
+    if (s.lo1Manual) {
+#if !defined(SPECANN_CI_BUILD)
+        lo1.setFrequency(savedLo1);
+#endif
+        freqCalc.FreqLO1 = savedLo1;
+    }
+    if (s.lo2Manual) {
+#if !defined(SPECANN_CI_BUILD)
+        lo2.setFrequency(savedLo2);
+#endif
+        freqCalc.FreqLO2 = savedLo2;
+    }
+    if (s.lo3Manual) {
+#if !defined(SPECANN_CI_BUILD)
+        lo3.setFrequency(savedLo3);
+#endif
+        freqCalc.FreqLO3 = savedLo3;
+    }
 }
 
 #else

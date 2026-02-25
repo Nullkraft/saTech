@@ -22,6 +22,7 @@ constexpr size_t INPUT_BUFFER_SIZE = 96;
 
 void printBanner();
 void pollSerial();
+void printInjectionSummary();
 
 void programAttenuatorDb(double db);
 double getCurrentAttenuatorDb();

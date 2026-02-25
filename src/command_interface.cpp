@@ -237,9 +237,6 @@ extern MAX2871 lo2;
 extern MAX2871 lo3;
 extern FrequencyCalculator freqCalc;
 extern double currentRfInputMhz;
-extern LOInjectionMode desiredLo1Injection;
-extern LOInjectionMode desiredLo2Injection;
-extern LOInjectionMode desiredLo3Injection;
 
 const __FlashStringHelper* injectionLabel(LOInjectionMode mode)
 {
@@ -248,12 +245,13 @@ const __FlashStringHelper* injectionLabel(LOInjectionMode mode)
 
 void printInjectionSummary()
 {
+    const ConsoleState& s = consoleState();
     Serial.print(F("Injection: LO1="));
-    Serial.print(injectionLabel(freqCalc.LO1InjectionMode));
+    Serial.print(s.lo1Manual ? F("Manual") : injectionLabel(freqCalc.LO1InjectionMode));
     Serial.print(F(" LO2="));
-    Serial.print(injectionLabel(freqCalc.LO2InjectionMode));
+    Serial.print(s.lo2Manual ? F("Manual") : injectionLabel(freqCalc.LO2InjectionMode));
     Serial.print(F(" LO3="));
-    Serial.println(injectionLabel(freqCalc.LO3InjectionMode));
+    Serial.println(s.lo3Manual ? F("Manual") : injectionLabel(freqCalc.LO3InjectionMode));
 }
 
 void printSelectedLoSnapshot(ChipTarget target)
@@ -293,7 +291,7 @@ void printSelectedLoSnapshot(ChipTarget target)
     Serial.print(F(" N="));
     Serial.print(targetLo->N);
     Serial.print(F(" DIVA="));
-    Serial.println(targetLo->DIVA);
+    Serial.println(1 << targetLo->DIVA);
 }
 
 void tuneTo(double mhz);
@@ -421,29 +419,34 @@ void handleIfmodeCommand(const char* modeToken)
         Serial.println(F("ifmode requires 'high' or 'low'."));
         return;
     }
-    if (state.chipTarget != ChipTarget::LO1 && state.chipTarget != ChipTarget::LO2 && state.chipTarget != ChipTarget::LO3) {
-        Serial.println(F("Select lo1, lo2, or lo3 with 'chip' before using ifmode."));
+    if (state.chipTarget == ChipTarget::LO1) {
+        Serial.println(F("LO1 injection mode is computed automatically from the frequency plan."));
+        return;
+    }
+    if (state.chipTarget != ChipTarget::LO2 && state.chipTarget != ChipTarget::LO3) {
+        Serial.println(F("Select lo2 or lo3 with 'chip' before using ifmode."));
+        return;
+    }
+    // Reject ifmode while the selected LO is frozen under manual lofreq control.
+    // Tune to a frequency first to restore automatic mode.
+    if ((state.chipTarget == ChipTarget::LO2 && state.lo2Manual) ||
+        (state.chipTarget == ChipTarget::LO3 && state.lo3Manual)) {
+        Serial.print(chipTargetName(state.chipTarget));
+        Serial.println(F(" is under manual lofreq control; ifmode has no effect."));
+        Serial.println(F("Tune to a frequency (e.g. '1735.113') to restore automatic mode."));
         return;
     }
     const LOInjectionMode requestedMode = highRequested ? LOInjectionMode::High : LOInjectionMode::Low;
-    LOInjectionMode* injectionPtr = nullptr;
     switch (state.chipTarget) {
-        case ChipTarget::LO1:
-            injectionPtr = &desiredLo1Injection;
-            break;
         case ChipTarget::LO2:
-            injectionPtr = &desiredLo2Injection;
+            state.desiredLo2Injection = requestedMode;
             break;
         case ChipTarget::LO3:
-            injectionPtr = &desiredLo3Injection;
+            state.desiredLo3Injection = requestedMode;
             break;
         default:
-            break;
+            return;
     }
-    if (injectionPtr == nullptr) {
-        return;
-    }
-    *injectionPtr = requestedMode;
     recomputePlan();
     Serial.print(F("IF mode updated for "));
     Serial.print(chipTargetName(state.chipTarget));
@@ -498,6 +501,13 @@ void handleLofreqCommand(const char* valueToken)
     const double actual = requestedMhz;
 #endif
     *reportedFreq = actual;
+    // Mark this LO as manually controlled; recomputePlan will preserve its frequency.
+    switch (state.chipTarget) {
+        case ChipTarget::LO1: state.lo1Manual = true; break;
+        case ChipTarget::LO2: state.lo2Manual = true; break;
+        case ChipTarget::LO3: state.lo3Manual = true; break;
+        default: break;
+    }
     Serial.print(F("LO frequency set for "));
     Serial.print(chipTargetName(state.chipTarget));
     Serial.print(F(" -> "));

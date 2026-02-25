@@ -1,28 +1,43 @@
 #include "frequency_calculator.h"
-#include <math.h>   // round()
+#include <math.h>   // round(), fabs()
 
-void FrequencyCalculator::set_LO_frequencies(double rfin, double RefClock, int R_in) {
-  FreqRFin = rfin;
-  R = (uint8_t)R_in;
+// Overload A: Tech and Normal operation.
+// Delegates to Overload B with both LO2 and LO3 set to High.
+void FrequencyCalculator::set_LO_frequencies(double rfin, double refClockMHz, int r_div)
+{
+  set_LO_frequencies(rfin, refClockMHz, r_div,
+                     LOInjectionMode::High,
+                     LOInjectionMode::High);
+}
 
-  // TODO: set during calibration (spur mitigation)
-  LO2InjectionMode = LOInjectionMode::High;
-  LO3InjectionMode = LOInjectionMode::High;
+// Overload B: Calibration operation.
+// Caller explicitly specifies LO2 and LO3 injection modes.
+// LO1 injection mode is computed internally from the frequency plan threshold.
+void FrequencyCalculator::set_LO_frequencies(double rfin, double refClockMHz, int r_div,
+                                              LOInjectionMode lo2Mode,
+                                              LOInjectionMode lo3Mode)
+{
+  FreqRFin         = rfin;
+  R                = (uint8_t)r_div;
+  LO2InjectionMode = lo2Mode;
+  LO3InjectionMode = lo3Mode;
 
-  // NOTE: comparing doubles for equality is fragile; this keeps your current behavior.
-  double threshold = (RefClock == RefClock1) ? 2343.0001 : 2403.2731;
+  // NOTE: comparing doubles for equality is fragile; this preserves the
+  // original behavior while the threshold values are under review.
+  double threshold = (refClockMHz == RefClock1) ? 2343.0001 : 2403.2731;
 
-  double fpfd = RefClock / R;
+  double fpfd     = refClockMHz / R;
   double IF1_step = fpfd * round(IF1_center / fpfd);
 
-  bool hiLo1 = (rfin < threshold);
+  // LO1 injection mode is determined by the frequency plan, not the caller.
+  bool hiLo1       = (rfin < threshold);
   LO1InjectionMode = hiLo1 ? LOInjectionMode::High : LOInjectionMode::Low;
-  int sign = hiLo1 ? 1 : -1;
+  int sign         = hiLo1 ? 1 : -1;
 
   FreqLO1 = fpfd * round((IF1_step + sign * rfin) / fpfd);
   _lo1.setFrequency(FreqLO1);
 
-  IF1 = FreqLO1 - (sign * rfin);
+  IF1 = fabs(FreqLO1 - sign * rfin);   // fabs guards against rounding producing a tiny negative
 
   FreqLO2 = (LO2InjectionMode == LOInjectionMode::High) ? (IF1 + IF2) : (IF1 - IF2);
   _lo2.setFrequency(FreqLO2);
