@@ -28,7 +28,6 @@ FrequencyCalculator freqCalc(lo1, lo2, lo3);
 
 double currentRfInputMhz = STARTUP_RF_MHZ;
 static uint32_t lastHeartbeatToggleMs = 0;
-static bool heartbeatState = false;
 
 // cppcheck-suppress unusedFunction
 void initializeLo(MAX2871& lo)
@@ -73,13 +72,12 @@ void printStatus()
     Serial.println(chipTargetName(getCurrentChipTarget()));
 }
 
-static void heartbeat()
+static void heartBeat()
 {
     const uint32_t now = millis();
     if ((now - lastHeartbeatToggleMs) >= HEARTBEAT_INTERVAL_MS) {
         lastHeartbeatToggleMs = now;
-        heartbeatState = !heartbeatState;
-        digitalWrite(PIN_STATUS, heartbeatState ? HIGH : LOW);
+        digitalWrite(PIN_STATUS, !digitalRead(PIN_STATUS));
     }
 }
 
@@ -187,7 +185,7 @@ void setup()
 void loop()
 {
     pollSerial();
-    heartbeat();
+    heartBeat();
 }
 
 #else
