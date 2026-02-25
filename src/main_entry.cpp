@@ -41,76 +41,6 @@ void initializeLo(MAX2871& lo)
     (void)lo;
 #endif
 }
-static void printFrequencyPlan();
-static void printLoSummary(const __FlashStringHelper* label, const MAX2871& lo);
-void printStatus();
-void tuneTo(double mhz);
-void recomputePlan();
-static void heartbeat();
-
-void setup()
-{
-    pinMode(PIN_STATUS, OUTPUT);
-    digitalWrite(PIN_STATUS, LOW);
-
-    Serial.begin(115200);
-    const uint32_t serialStart = millis();
-    while (!Serial && (millis() - serialStart) < 2000U) {
-        // Wait briefly for USB serial on boards that need it.
-    }
-
-    resetConsoleState();
-
-    freqCalc.RefClock1 = REF_MHZ;
-
-#if !defined(SPECANN_CI_BUILD)
-    halLo1.begin();
-    halLo2.begin();
-    halLo3.begin();
-
-    pinMode(PIN_ATTEN, OUTPUT);
-    pinMode(PIN_REF_EN1, OUTPUT);
-    pinMode(PIN_REF_EN2, OUTPUT);
-
-    digitalWrite(PIN_ATTEN, HIGH); // Idle high so the attenuator is not latched unintentionally.
-    digitalWrite(PIN_REF_EN1, HIGH);
-    digitalWrite(PIN_REF_EN2, LOW);
-    consoleState().ref1Enabled = true;
-    consoleState().ref2Enabled = false;
-
-    initializeLo(lo1);
-    initializeLo(lo2);
-    initializeLo(lo3);
-
-    programAttenuatorDb(getCurrentAttenuatorDb());
-    Serial.println(F("Note: Attenuator programming assumes PE43711 0.25 dB step codes—verify against hardware."));
-#else
-    Serial.println(F("SPECANN_CI_BUILD defined: hardware initialization skipped."));
-#endif
-
-    tuneTo(currentRfInputMhz);
-    printBanner();
-    printStatus();
-
-    lastHeartbeatToggleMs = millis();
-}
-
-void loop()
-{
-    pollSerial();
-    heartbeat();
-}
-
-void tuneTo(double mhz)
-{
-    currentRfInputMhz = mhz;
-    // A fresh tune restores all LOs to automatic frequency control.
-    ConsoleState& s = consoleState();
-    s.lo1Manual = false;
-    s.lo2Manual = false;
-    s.lo3Manual = false;
-    recomputePlan();
-}
 
 static void printFrequencyPlan()
 {
@@ -194,6 +124,70 @@ void recomputePlan()
 #endif
         freqCalc.FreqLO3 = savedLo3;
     }
+}
+
+void tuneTo(double mhz)
+{
+    currentRfInputMhz = mhz;
+    // A fresh tune restores all LOs to automatic frequency control.
+    ConsoleState& s = consoleState();
+    s.lo1Manual = false;
+    s.lo2Manual = false;
+    s.lo3Manual = false;
+    recomputePlan();
+}
+
+void setup()
+{
+    pinMode(PIN_STATUS, OUTPUT);
+    digitalWrite(PIN_STATUS, LOW);
+
+    Serial.begin(115200);
+    const uint32_t serialStart = millis();
+    while (!Serial && (millis() - serialStart) < 2000U) {
+        // Wait briefly for USB serial on boards that need it.
+    }
+
+    resetConsoleState();
+
+    freqCalc.RefClock1 = REF_MHZ;
+
+#if !defined(SPECANN_CI_BUILD)
+    halLo1.begin();
+    halLo2.begin();
+    halLo3.begin();
+
+    pinMode(PIN_ATTEN, OUTPUT);
+    pinMode(PIN_REF_EN1, OUTPUT);
+    pinMode(PIN_REF_EN2, OUTPUT);
+
+    digitalWrite(PIN_ATTEN, HIGH); // Idle high so the attenuator is not latched unintentionally.
+    digitalWrite(PIN_REF_EN1, HIGH);
+    digitalWrite(PIN_REF_EN2, LOW);
+    consoleState().ref1Enabled = true;
+    consoleState().ref2Enabled = false;
+
+    initializeLo(lo1);
+    initializeLo(lo2);
+    initializeLo(lo3);
+
+    programAttenuatorDb(getCurrentAttenuatorDb());
+    Serial.println(F("Note: Attenuator programming assumes PE43711 0.25 dB step codes—verify against hardware."));
+#else
+    Serial.println(F("SPECANN_CI_BUILD defined: hardware initialization skipped."));
+#endif
+
+    tuneTo(currentRfInputMhz);
+    printBanner();
+    printStatus();
+
+    lastHeartbeatToggleMs = millis();
+}
+
+void loop()
+{
+    pollSerial();
+    heartbeat();
 }
 
 #else
