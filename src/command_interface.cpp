@@ -16,74 +16,6 @@ char inputBuffer[INPUT_BUFFER_SIZE];
 size_t inputLength = 0;
 ConsoleState& state = consoleState();
 
-bool isRefTarget(ChipTarget target)
-{
-    return (target == ChipTarget::Ref1) || (target == ChipTarget::Ref2);
-}
-
-bool isSpiPeripheral(ChipTarget target)
-{
-    switch (target) {
-        case ChipTarget::LO1:
-        case ChipTarget::LO2:
-        case ChipTarget::LO3:
-        case ChipTarget::Attenuator:
-        case ChipTarget::ADC1:
-        case ChipTarget::ADC2:
-        case ChipTarget::RAM:
-        case ChipTarget::Flash:
-            return true;
-        default:
-            return false;
-    }
-}
-
-bool hasHardwareChipSelect(ChipTarget target)
-{
-    switch (target) {
-        case ChipTarget::LO1:
-        case ChipTarget::LO2:
-        case ChipTarget::LO3:
-        case ChipTarget::Attenuator:
-        case ChipTarget::Ref1:
-        case ChipTarget::Ref2:
-            return true;
-        default:
-            return false;
-    }
-}
-
-void ensureRefSelection(ChipTarget target)
-{
-    if (target == ChipTarget::Ref1) {
-        if (state.ref2Enabled) {
-#if !defined(SPECANN_CI_BUILD)
-            digitalWrite(PIN_REF_EN2, LOW);
-#endif
-            state.ref2Enabled = false;
-        }
-        if (!state.ref1Enabled) {
-#if !defined(SPECANN_CI_BUILD)
-            digitalWrite(PIN_REF_EN1, HIGH);
-#endif
-            state.ref1Enabled = true;
-        }
-    } else if (target == ChipTarget::Ref2) {
-        if (state.ref1Enabled) {
-#if !defined(SPECANN_CI_BUILD)
-            digitalWrite(PIN_REF_EN1, LOW);
-#endif
-            state.ref1Enabled = false;
-        }
-        if (!state.ref2Enabled) {
-#if !defined(SPECANN_CI_BUILD)
-            digitalWrite(PIN_REF_EN2, HIGH);
-#endif
-            state.ref2Enabled = true;
-        }
-    }
-}
-
 bool equalsIgnoreCase(const char* lhs, const char* rhs)
 {
     while (*lhs != '\0' && *rhs != '\0') {
@@ -136,41 +68,17 @@ uint8_t attenCodeFromDb(double db)
     return static_cast<uint8_t>(code);
 }
 
-void deassertTargetInternal(ChipTarget target)
-{
-    switch (target) {
-        case ChipTarget::LO1:
-            digitalWrite(PIN_LE_LO1, HIGH);
-            break;
-        case ChipTarget::LO2:
-            digitalWrite(PIN_LE_LO2, HIGH);
-            break;
-        case ChipTarget::LO3:
-            digitalWrite(PIN_LE_LO3, HIGH);
-            break;
-        case ChipTarget::Attenuator:
-            digitalWrite(PIN_ATTEN, HIGH);
-            break;
-        case ChipTarget::Ref1:
-        case ChipTarget::Ref2:
-        case ChipTarget::ADC1:
-        case ChipTarget::ADC2:
-        case ChipTarget::RAM:
-        case ChipTarget::Flash:
-        case ChipTarget::None:
-        default:
-            break;
-    }
-}
-
 void programAttenuatorRaw(uint8_t code)
 {
 #if !defined(SPECANN_CI_BUILD)
-    deassertTargetInternal(ChipTarget::Attenuator);
-    SPI.beginTransaction(SPISettings(ATTEN_SPI_HZ, MSBFIRST, SPI_MODE0));
+    // Ensure the attenuator CS is idle before starting the SPI transaction.
+    // programAttenuatorRaw() manages its own complete CS cycle independently
+    // of selectChip(); the two mechanisms do not interfere with each other.
     digitalWrite(PIN_ATTEN, LOW);
-    SPI.transfer(code);
+    SPI.beginTransaction(SPISettings(ATTEN_SPI_HZ, MSBFIRST, SPI_MODE0));
     digitalWrite(PIN_ATTEN, HIGH);
+    SPI.transfer(code);
+    digitalWrite(PIN_ATTEN, LOW);
     SPI.endTransaction();
 #else
     (void)code;
@@ -180,6 +88,24 @@ void programAttenuatorRaw(uint8_t code)
     if (mappedDb >= ATTEN_MIN_DB && mappedDb <= (ATTEN_MAX_DB + 0.25)) {
         state.attenuatorDb = mappedDb;
     }
+}
+
+// Generic 32-bit SPI write for targets without a dedicated HAL object.
+// assertLow: true if the CS pin asserts LOW (ADC, RAM, Flash);
+//            false if it asserts HIGH.
+// cppcheck-suppress unusedFunction
+void spiWrite32(uint8_t csPin, bool assertLow, uint32_t value)
+{
+    const uint8_t assertLevel   = assertLow ? LOW  : HIGH;
+    const uint8_t deassertLevel = assertLow ? HIGH : LOW;
+    SPI.beginTransaction(SPISettings(SPI_DEFAULT_HZ, MSBFIRST, SPI_MODE0));
+    digitalWrite(csPin, assertLevel);
+    SPI.transfer(static_cast<uint8_t>((value >> 24) & 0xFFU));
+    SPI.transfer(static_cast<uint8_t>((value >> 16) & 0xFFU));
+    SPI.transfer(static_cast<uint8_t>((value >>  8) & 0xFFU));
+    SPI.transfer(static_cast<uint8_t>( value        & 0xFFU));
+    digitalWrite(csPin, deassertLevel);
+    SPI.endTransaction();
 }
 
 void logManualWrite(uint32_t value)
@@ -196,34 +122,11 @@ void logManualWrite(uint32_t value)
     Serial.println(F("WARNING: manual writes can damage hardware if misused."));
 }
 
-void selectChip(ChipTarget target)
-{
-    if (target == state.chipTarget) {
-        Serial.print(F("Manual target unchanged: "));
-        Serial.println(chipTargetName(state.chipTarget));
-        return;
-    }
-    deassertTargetInternal(state.chipTarget);
-    state.chipTarget = target;
-    state.manualSpiArmed = false;
-    state.pendingSpiConfirmation = false;
-    if (isRefTarget(target)) {
-        ensureRefSelection(target);
-        Serial.print(F("Reference select set to "));
-        Serial.println(chipTargetName(state.chipTarget));
-        return;
-    }
-    Serial.print(F("Manual target set to "));
-    Serial.println(chipTargetName(state.chipTarget));
-    if (!hasHardwareChipSelect(target) && isSpiPeripheral(target)) {
-        Serial.println(F("Note: chip-select control not wired; SPI writes will only be logged."));
-    }
-}
-
 void handleAttenuatorCommand(const char* valueToken);
 void handleIfmodeCommand(const char* modeToken);
 void handleLofreqCommand(const char* valueToken);
 void handleChipCommand(const char* targetToken);
+void handleSetCommand(const char* targetToken);
 void handleSpiCommand(const char* valueToken);
 void handleCommand(const char* line);
 
@@ -237,6 +140,116 @@ extern MAX2871 lo2;
 extern MAX2871 lo3;
 extern FrequencyCalculator freqCalc;
 extern double currentRfInputMhz;
+
+// ---------------------------------------------------------------------------
+// selectChip — public low-level primitive.
+//
+// Deasserts all CS/LE pins to their idle levels, then asserts the requested
+// target's pin. ChipTarget::None deasserts everything and leaves it that way.
+// Resets the SPI arming state on every call so a chip switch cannot carry over
+// a previously armed write.
+//
+// This function owns state.chipTarget and is the only site that writes it.
+// It is intentionally side-effect-free beyond pin state and state.chipTarget.
+// ---------------------------------------------------------------------------
+void selectChip(ChipTarget target)
+{
+#if !defined(SPECANN_CI_BUILD)
+    // Deassert all CS/LE pins to their idle levels.
+    // LO1/LO2/LO3/Attenuator assert HIGH  → idle LOW.
+    // ADC1/ADC2/RAM/Flash      assert LOW  → idle HIGH.
+    digitalWrite(PIN_LE_LO1, LOW);
+    digitalWrite(PIN_LE_LO2, LOW);
+    digitalWrite(PIN_LE_LO3, LOW);
+    digitalWrite(PIN_ATTEN,  LOW);
+    digitalWrite(PIN_ADC1,   HIGH);
+    digitalWrite(PIN_ADC2,   HIGH);
+    digitalWrite(PIN_RAM,    HIGH);
+    digitalWrite(PIN_FLASH,  HIGH);
+
+    // Assert the requested target.
+    switch (target) {
+        case ChipTarget::LO1:        digitalWrite(PIN_LE_LO1, HIGH); break;
+        case ChipTarget::LO2:        digitalWrite(PIN_LE_LO2, HIGH); break;
+        case ChipTarget::LO3:        digitalWrite(PIN_LE_LO3, HIGH); break;
+        case ChipTarget::Attenuator: digitalWrite(PIN_ATTEN,  HIGH); break;
+        case ChipTarget::ADC1:       digitalWrite(PIN_ADC1,   LOW);  break;
+        case ChipTarget::ADC2:       digitalWrite(PIN_ADC2,   LOW);  break;
+        case ChipTarget::RAM:        digitalWrite(PIN_RAM,    LOW);  break;
+        case ChipTarget::Flash:      digitalWrite(PIN_FLASH,  LOW);  break;
+        case ChipTarget::None:
+        default:
+            break;
+    }
+#else
+    Serial.print(F("(CI) selectChip -> "));
+    Serial.println(chipTargetName(target));
+#endif
+
+    ConsoleState& s = consoleState();
+    s.chipTarget            = target;
+    s.manualSpiArmed        = false;
+    s.pendingSpiConfirmation = false;
+
+    if (target == ChipTarget::None) {
+        Serial.println(F("All chip selects deasserted."));
+    } else {
+        Serial.print(F("Chip select set to "));
+        Serial.println(chipTargetName(target));
+    }
+}
+
+// ---------------------------------------------------------------------------
+// selectRef — public low-level primitive.
+//
+// Deasserts both REF_EN pins, then asserts the requested reference clock.
+// ChipTarget::None disables both clocks (with a warning — LOs will lose lock).
+// Any target value other than Ref1, Ref2, or None is rejected with an error.
+//
+// This function owns state.ref1Enabled and state.ref2Enabled and is the only
+// site that writes those flags.
+// It is intentionally side-effect-free beyond pin state and those two flags.
+// ---------------------------------------------------------------------------
+void selectRef(ChipTarget target)
+{
+    if (target != ChipTarget::Ref1 &&
+        target != ChipTarget::Ref2 &&
+        target != ChipTarget::None) {
+        Serial.println(F("set requires ref1, ref2, or off."));
+        return;
+    }
+
+    ConsoleState& s = consoleState();
+
+#if !defined(SPECANN_CI_BUILD)
+    // Deassert both reference clocks unconditionally.
+    digitalWrite(PIN_REF_EN1, LOW);
+    digitalWrite(PIN_REF_EN2, LOW);
+#else
+    Serial.print(F("(CI) selectRef -> "));
+    Serial.println(chipTargetName(target));
+#endif
+
+    s.ref1Enabled = false;
+    s.ref2Enabled = false;
+
+    if (target == ChipTarget::Ref1) {
+#if !defined(SPECANN_CI_BUILD)
+        digitalWrite(PIN_REF_EN1, HIGH);
+#endif
+        s.ref1Enabled = true;
+        Serial.println(F("Reference clock set to REF1."));
+    } else if (target == ChipTarget::Ref2) {
+#if !defined(SPECANN_CI_BUILD)
+        digitalWrite(PIN_REF_EN2, HIGH);
+#endif
+        s.ref2Enabled = true;
+        Serial.println(F("Reference clock set to REF2."));
+    } else {
+        // ChipTarget::None — both clocks remain deasserted.
+        Serial.println(F("Warning: all reference clocks disabled — LOs will lose lock."));
+    }
+}
 
 const __FlashStringHelper* injectionLabel(LOInjectionMode mode)
 {
@@ -304,16 +317,18 @@ void printBanner()
     Serial.println();
     Serial.println(F("=== SpecAnn Technician Console ==="));
     Serial.println(F("Commands:"));
-    Serial.println(F("  <MHz>              Tune synthesizers (23.5 to 6000 MHz)"));
-    Serial.println(F("  help               Show this list"));
-    Serial.println(F("  status             Report LO/IF plan, attenuator state, chip target"));
-    Serial.println(F("  relock             Reinitialize MAX2871 devices"));
-    Serial.println(F("  info               Show board pin assignments"));
-    Serial.println(F("  atten <dB>         Program PE43711 attenuator (1.0 to 31.75 dB in 0.25 steps)"));
-    Serial.println(F("  ifmode <high|low>  Set injection for the selected LO (use chip first)"));
-    Serial.println(F("  lofreq <MHz>       Program the selected LO directly"));
-    Serial.println(F("  chip <lo1|lo2|lo3|atten|ref1|ref2|adc1|adc2|ram|flash>  Select bus target"));
-    Serial.println(F("  spi <hex32>        Send raw 32-bit word to selected device"));
+    Serial.println(F("  RFin <MHz>            Tune all 3 LO's (23.5 to 6000 MHz)"));
+    Serial.println(F("  help                  Show this list"));
+    Serial.println(F("  status                Report LO/IF plan, attenuator state, chip target"));
+    Serial.println(F("  relock                Reinitialize MAX2871 devices"));
+    Serial.println(F("  info                  Show board pin assignments"));
+    Serial.println(F("  atten <dB>            Program PE43711 attenuator (1.0 to 31.75 dB in 0.25 steps)"));
+    Serial.println(F("  ifmode <high|low>     Set injection for the selected LO (use chip first)"));
+    Serial.println(F("  lofreq <MHz>          Program the selected LO directly"));
+    Serial.println(F("  chip <target|off>     Assert one CS/LE pin; off deasserts all"));
+    Serial.println(F("    targets: lo1 lo2 lo3 atten adc1 adc2 ram flash"));
+    Serial.println(F("  set <ref1|ref2|off>   Enable one reference clock; off disables both"));
+    Serial.println(F("  spi <hex32>           Send raw 32-bit word to selected device"));
     Serial.println();
 }
 
@@ -360,18 +375,18 @@ ChipTarget getCurrentChipTarget()
 const __FlashStringHelper* chipTargetName(ChipTarget target)
 {
     switch (target) {
-        case ChipTarget::LO1: return F("LO1");
-        case ChipTarget::LO2: return F("LO2");
-        case ChipTarget::LO3: return F("LO3");
+        case ChipTarget::LO1:        return F("LO1");
+        case ChipTarget::LO2:        return F("LO2");
+        case ChipTarget::LO3:        return F("LO3");
         case ChipTarget::Attenuator: return F("Attenuator");
-        case ChipTarget::Ref1: return F("REF1");
-        case ChipTarget::Ref2: return F("REF2");
-        case ChipTarget::ADC1: return F("ADC1");
-        case ChipTarget::ADC2: return F("ADC2");
-        case ChipTarget::RAM: return F("RAM");
-        case ChipTarget::Flash: return F("FLASH");
+        case ChipTarget::Ref1:       return F("REF1");
+        case ChipTarget::Ref2:       return F("REF2");
+        case ChipTarget::ADC1:       return F("ADC1");
+        case ChipTarget::ADC2:       return F("ADC2");
+        case ChipTarget::RAM:        return F("RAM");
+        case ChipTarget::Flash:      return F("FLASH");
         case ChipTarget::None:
-        default: return F("None");
+        default:                     return F("None");
     }
 }
 
@@ -414,7 +429,7 @@ void handleIfmodeCommand(const char* modeToken)
         return;
     }
     const bool highRequested = equalsIgnoreCase(modeToken, "high");
-    const bool lowRequested = equalsIgnoreCase(modeToken, "low");
+    const bool lowRequested  = equalsIgnoreCase(modeToken, "low");
     if (!highRequested && !lowRequested) {
         Serial.println(F("ifmode requires 'high' or 'low'."));
         return;
@@ -463,7 +478,9 @@ void handleLofreqCommand(const char* valueToken)
         Serial.println(F("Usage: lofreq <MHz>"));
         return;
     }
-    if (state.chipTarget != ChipTarget::LO1 && state.chipTarget != ChipTarget::LO2 && state.chipTarget != ChipTarget::LO3) {
+    if (state.chipTarget != ChipTarget::LO1 &&
+        state.chipTarget != ChipTarget::LO2 &&
+        state.chipTarget != ChipTarget::LO3) {
         Serial.println(F("Select lo1, lo2, or lo3 with 'chip' before using lofreq."));
         return;
     }
@@ -473,19 +490,19 @@ void handleLofreqCommand(const char* valueToken)
         Serial.println(F("lofreq requires a positive frequency in MHz."));
         return;
     }
-    MAX2871* targetLo = nullptr;
-    double* reportedFreq = nullptr;
+    MAX2871* targetLo       = nullptr;
+    double* reportedFreq    = nullptr;
     switch (state.chipTarget) {
         case ChipTarget::LO1:
-            targetLo = &lo1;
+            targetLo     = &lo1;
             reportedFreq = &freqCalc.FreqLO1;
             break;
         case ChipTarget::LO2:
-            targetLo = &lo2;
+            targetLo     = &lo2;
             reportedFreq = &freqCalc.FreqLO2;
             break;
         case ChipTarget::LO3:
-            targetLo = &lo3;
+            targetLo     = &lo3;
             reportedFreq = &freqCalc.FreqLO3;
             break;
         default:
@@ -532,10 +549,6 @@ void handleChipCommand(const char* targetToken)
         target = ChipTarget::LO3;
     } else if (equalsIgnoreCase(targetToken, "atten")) {
         target = ChipTarget::Attenuator;
-    } else if (equalsIgnoreCase(targetToken, "ref1")) {
-        target = ChipTarget::Ref1;
-    } else if (equalsIgnoreCase(targetToken, "ref2")) {
-        target = ChipTarget::Ref2;
     } else if (equalsIgnoreCase(targetToken, "adc1")) {
         target = ChipTarget::ADC1;
     } else if (equalsIgnoreCase(targetToken, "adc2")) {
@@ -544,11 +557,33 @@ void handleChipCommand(const char* targetToken)
         target = ChipTarget::RAM;
     } else if (equalsIgnoreCase(targetToken, "flash")) {
         target = ChipTarget::Flash;
+    } else if (equalsIgnoreCase(targetToken, "off")) {
+        target = ChipTarget::None;
     } else {
-        Serial.println(F("chip target must be lo1, lo2, lo3, atten, ref1, ref2, adc1, adc2, ram, or flash."));
+        Serial.println(F("chip target must be lo1, lo2, lo3, atten, adc1, adc2, ram, flash, or off."));
         return;
     }
     selectChip(target);
+}
+
+void handleSetCommand(const char* targetToken)
+{
+    if (targetToken == nullptr) {
+        Serial.println(F("Usage: set <ref1|ref2|off>"));
+        return;
+    }
+    ChipTarget target = ChipTarget::None;
+    if (equalsIgnoreCase(targetToken, "ref1")) {
+        target = ChipTarget::Ref1;
+    } else if (equalsIgnoreCase(targetToken, "ref2")) {
+        target = ChipTarget::Ref2;
+    } else if (equalsIgnoreCase(targetToken, "off")) {
+        target = ChipTarget::None;
+    } else {
+        Serial.println(F("set target must be ref1, ref2, or off."));
+        return;
+    }
+    selectRef(target);
 }
 
 void handleSpiCommand(const char* valueToken)
@@ -569,19 +604,19 @@ void handleSpiCommand(const char* valueToken)
     if (!state.manualSpiArmed) {
         if (!state.pendingSpiConfirmation) {
             state.pendingSpiConfirmation = true;
-            state.pendingSpiValue = value;
-            state.pendingSpiTarget = state.chipTarget;
+            state.pendingSpiValue        = value;
+            state.pendingSpiTarget       = state.chipTarget;
             Serial.println(F("Manual SPI writes locked. Re-enter the same command to arm manual writes."));
             return;
         }
         if (state.pendingSpiValue != value || state.pendingSpiTarget != state.chipTarget) {
-            state.pendingSpiValue = value;
+            state.pendingSpiValue  = value;
             state.pendingSpiTarget = state.chipTarget;
             Serial.println(F("Confirmation mismatch. Re-enter desired value to arm manual writes."));
             return;
         }
         state.pendingSpiConfirmation = false;
-        state.manualSpiArmed = true;
+        state.manualSpiArmed         = true;
         Serial.println(F("Manual SPI writes armed. Proceed with caution."));
     }
 
@@ -612,15 +647,33 @@ void handleSpiCommand(const char* valueToken)
         case ChipTarget::Attenuator:
             programAttenuatorRaw(static_cast<uint8_t>(value & 0x7FU));
             break;
-        case ChipTarget::Ref1:
-        case ChipTarget::Ref2:
-            Serial.println(F("Reference selects are not on the SPI bus; write skipped."));
-            break;
         case ChipTarget::ADC1:
+#if !defined(SPECANN_CI_BUILD)
+            spiWrite32(PIN_ADC1, true, value);
+#else
+            Serial.println(F("(CI) ADC1 write skipped."));
+#endif
+            break;
         case ChipTarget::ADC2:
+#if !defined(SPECANN_CI_BUILD)
+            spiWrite32(PIN_ADC2, true, value);
+#else
+            Serial.println(F("(CI) ADC2 write skipped."));
+#endif
+            break;
         case ChipTarget::RAM:
+#if !defined(SPECANN_CI_BUILD)
+            spiWrite32(PIN_RAM, true, value);
+#else
+            Serial.println(F("(CI) RAM write skipped."));
+#endif
+            break;
         case ChipTarget::Flash:
-            Serial.println(F("SPI control for the selected target is not wired; write skipped."));
+#if !defined(SPECANN_CI_BUILD)
+            spiWrite32(PIN_FLASH, true, value);
+#else
+            Serial.println(F("(CI) Flash write skipped."));
+#endif
             break;
         case ChipTarget::None:
         default:
@@ -684,13 +737,20 @@ void handleCommand(const char* line)
     }
     if (equalsIgnoreCase(tokens[0], "info")) {
         Serial.println(F("Pin assignments (Metro Mini):"));
-        Serial.println(F("  LO1 LE -> A3"));
-        Serial.println(F("  LO2 LE -> D4"));
-        Serial.println(F("  LO3 LE -> A4"));
-        Serial.println(F("  Attenuator CS -> A5"));
-        Serial.println(F("  REF_EN1 -> D5 (HIGH to enable)"));
-        Serial.println(F("  REF_EN2 -> D6 (LOW default)"));
-        Serial.println(F("  Status pin -> D10 (500 Hz heartbeat)"));
+        Serial.println(F("  chip targets (assert HIGH):"));
+        Serial.println(F("    LO1 LE     -> A3"));
+        Serial.println(F("    LO2 LE     -> D4"));
+        Serial.println(F("    LO3 LE     -> A4"));
+        Serial.println(F("    Atten CS   -> A5"));
+        Serial.println(F("  chip targets (assert LOW):"));
+        Serial.println(F("    ADC1 CS    -> see PIN_ADC1 in command_interface.h"));
+        Serial.println(F("    ADC2 CS    -> see PIN_ADC2 in command_interface.h"));
+        Serial.println(F("    RAM  CS    -> see PIN_RAM  in command_interface.h"));
+        Serial.println(F("    Flash CS   -> see PIN_FLASH in command_interface.h"));
+        Serial.println(F("  set targets (assert HIGH):"));
+        Serial.println(F("    REF_EN1    -> D5"));
+        Serial.println(F("    REF_EN2    -> D6"));
+        Serial.println(F("  Status pin  -> D10 (500 Hz heartbeat)"));
         return;
     }
     if (equalsIgnoreCase(tokens[0], "atten")) {
@@ -719,10 +779,18 @@ void handleCommand(const char* line)
     }
     if (equalsIgnoreCase(tokens[0], "chip")) {
         if (count < 2U) {
-            Serial.println(F("Usage: chip <lo1|lo2|lo3|atten|ref1|ref2|adc1|adc2|ram|flash>"));
+            Serial.println(F("Usage: chip <lo1|lo2|lo3|atten|adc1|adc2|ram|flash|off>"));
             return;
         }
         handleChipCommand(tokens[1]);
+        return;
+    }
+    if (equalsIgnoreCase(tokens[0], "set")) {
+        if (count < 2U) {
+            Serial.println(F("Usage: set <ref1|ref2|off>"));
+            return;
+        }
+        handleSetCommand(tokens[1]);
         return;
     }
     if (equalsIgnoreCase(tokens[0], "spi")) {

@@ -68,16 +68,16 @@ void printStatus()
     printLoSummary(F("LO3"), lo3);
     printInjectionSummary();
     Serial.print(F("Attenuator: ")); Serial.print(getCurrentAttenuatorDb(), 2); Serial.println(F(" dB"));
-    Serial.print(F("Manual target: "));
+    Serial.print(F("Chip select: "));
     Serial.println(chipTargetName(getCurrentChipTarget()));
 }
 
-static void heartBeat()
+static void heartBeat(char control_pin)
 {
     const uint32_t now = millis();
     if ((now - lastHeartbeatToggleMs) >= HEARTBEAT_INTERVAL_MS) {
         lastHeartbeatToggleMs = now;
-        digitalWrite(PIN_STATUS, !digitalRead(PIN_STATUS));
+        digitalWrite(control_pin, !digitalRead(PIN_STATUS));
     }
 }
 
@@ -151,19 +151,24 @@ void setup()
     freqCalc.RefClock1 = REF_MHZ;
 
 #if !defined(SPECANN_CI_BUILD)
+    // HAL begin() sets the LE pins as OUTPUT.
     halLo1.begin();
     halLo2.begin();
     halLo3.begin();
 
-    pinMode(PIN_ATTEN, OUTPUT);
+    // Set remaining CS/LE and REF_EN pins as OUTPUT before driving them.
+    pinMode(PIN_ATTEN,   OUTPUT);
     pinMode(PIN_REF_EN1, OUTPUT);
     pinMode(PIN_REF_EN2, OUTPUT);
+    pinMode(PIN_ADC1,    OUTPUT);
+    pinMode(PIN_ADC2,    OUTPUT);
+    pinMode(PIN_RAM,     OUTPUT);
+    pinMode(PIN_FLASH,   OUTPUT);
+    // pinMode(PIN_LE_LO2,  OUTPUT);
 
-    digitalWrite(PIN_ATTEN, HIGH); // Idle high so the attenuator is not latched unintentionally.
-    digitalWrite(PIN_REF_EN1, HIGH);
-    digitalWrite(PIN_REF_EN2, LOW);
-    consoleState().ref1Enabled = true;
-    consoleState().ref2Enabled = false;
+    // Deassert all CS/LE pins to idle and enable REF1 as the startup reference.
+    selectChip(ChipTarget::None);
+    selectRef(ChipTarget::Ref1);
 
     initializeLo(lo1);
     initializeLo(lo2);
@@ -185,7 +190,7 @@ void setup()
 void loop()
 {
     pollSerial();
-    heartBeat();
+    heartBeat(PIN_STATUS);
 }
 
 #else
