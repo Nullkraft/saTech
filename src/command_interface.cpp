@@ -119,7 +119,6 @@ void logManualWrite(uint32_t value)
         Serial.print(hexDigits[nibble]);
     }
     Serial.println();
-    Serial.println(F("WARNING: manual writes can damage hardware if misused."));
 }
 
 void handleAttenuatorCommand(const char* valueToken);
