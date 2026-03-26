@@ -175,7 +175,7 @@ void setup()
     initializeLo(lo3);
 
     programAttenuatorDb(getCurrentAttenuatorDb());
-    Serial.println(F("Note: Attenuator programming assumes PE43711 0.25 dB step codes—verify against hardware."));
+    Serial.println(F("Note: ~/projects/Arduino/SpecAnn/src/main_entry.cpp - Tech Tool for board bring up. 3/26/26"));
 #else
     Serial.println(F("SPECANN_CI_BUILD defined: hardware initialization skipped."));
 #endif
