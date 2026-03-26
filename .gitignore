@@ -4,3 +4,7 @@
 # AI developement files
 frequency_plan.md
 plan1.md
+
+include/
+lib/
+test/
