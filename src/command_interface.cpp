@@ -70,7 +70,6 @@ uint8_t attenCodeFromDb(double db)
 
 void programAttenuatorRaw(uint8_t code)
 {
-#if !defined(SPECANN_CI_BUILD)
     // Ensure the attenuator CS is idle before starting the SPI transaction.
     // programAttenuatorRaw() manages its own complete CS cycle independently
     // of selectChip(); the two mechanisms do not interfere with each other.
@@ -80,10 +79,6 @@ void programAttenuatorRaw(uint8_t code)
     SPI.transfer(code);
     digitalWrite(PIN_ATTEN, LOW);
     SPI.endTransaction();
-#else
-    (void)code;
-    Serial.println(F("(CI) Attenuator write skipped."));
-#endif
     const double mappedDb = ATTEN_MIN_DB + (static_cast<double>(code) * ATTEN_STEP_DB);
     if (mappedDb >= ATTEN_MIN_DB && mappedDb <= (ATTEN_MAX_DB + 0.25)) {
         state.attenuatorDb = mappedDb;
@@ -153,7 +148,6 @@ extern double currentRfInputMhz;
 // ---------------------------------------------------------------------------
 void selectChip(ChipTarget target)
 {
-#if !defined(SPECANN_CI_BUILD)
     // Deassert all CS/LE pins to their idle levels.
     // LO1/LO2/LO3/Attenuator assert HIGH  → idle LOW.
     // ADC1/ADC2/RAM/Flash      assert LOW  → idle HIGH.
@@ -180,10 +174,6 @@ void selectChip(ChipTarget target)
         default:
             break;
     }
-#else
-    Serial.print(F("(CI) selectChip -> "));
-    Serial.println(chipTargetName(target));
-#endif
 
     ConsoleState& s = consoleState();
     s.chipTarget            = target;
@@ -220,28 +210,19 @@ void selectRef(ChipTarget target)
 
     ConsoleState& s = consoleState();
 
-#if !defined(SPECANN_CI_BUILD)
     // Deassert both reference clocks unconditionally.
     digitalWrite(PIN_REF_EN1, LOW);
     digitalWrite(PIN_REF_EN2, LOW);
-#else
-    Serial.print(F("(CI) selectRef -> "));
-    Serial.println(chipTargetName(target));
-#endif
 
     s.ref1Enabled = false;
     s.ref2Enabled = false;
 
     if (target == ChipTarget::Ref1) {
-#if !defined(SPECANN_CI_BUILD)
         digitalWrite(PIN_REF_EN1, HIGH);
-#endif
         s.ref1Enabled = true;
         Serial.println(F("Reference clock set to REF1."));
     } else if (target == ChipTarget::Ref2) {
-#if !defined(SPECANN_CI_BUILD)
         digitalWrite(PIN_REF_EN2, HIGH);
-#endif
         s.ref2Enabled = true;
         Serial.println(F("Reference clock set to REF2."));
     } else {
@@ -510,12 +491,8 @@ void handleLofreqCommand(const char* valueToken)
     if (targetLo == nullptr || reportedFreq == nullptr) {
         return;
     }
-#if !defined(SPECANN_CI_BUILD)
     targetLo->setFrequency(requestedMhz);
     const double actual = targetLo->fmn2freq();
-#else
-    const double actual = requestedMhz;
-#endif
     *reportedFreq = actual;
     // Mark this LO as manually controlled; recomputePlan will preserve its frequency.
     switch (state.chipTarget) {
@@ -623,56 +600,28 @@ void handleSpiCommand(const char* valueToken)
 
     switch (state.chipTarget) {
         case ChipTarget::LO1:
-#if !defined(SPECANN_CI_BUILD)
             halLo1.spiWriteRegister(value);
-#else
-            Serial.println(F("(CI) LO1 write skipped."));
-#endif
             break;
         case ChipTarget::LO2:
-#if !defined(SPECANN_CI_BUILD)
             halLo2.spiWriteRegister(value);
-#else
-            Serial.println(F("(CI) LO2 write skipped."));
-#endif
             break;
         case ChipTarget::LO3:
-#if !defined(SPECANN_CI_BUILD)
             halLo3.spiWriteRegister(value);
-#else
-            Serial.println(F("(CI) LO3 write skipped."));
-#endif
             break;
         case ChipTarget::Attenuator:
             programAttenuatorRaw(static_cast<uint8_t>(value & 0x7FU));
             break;
         case ChipTarget::ADC1:
-#if !defined(SPECANN_CI_BUILD)
             spiWrite32(PIN_ADC1, true, value);
-#else
-            Serial.println(F("(CI) ADC1 write skipped."));
-#endif
             break;
         case ChipTarget::ADC2:
-#if !defined(SPECANN_CI_BUILD)
             spiWrite32(PIN_ADC2, true, value);
-#else
-            Serial.println(F("(CI) ADC2 write skipped."));
-#endif
             break;
         case ChipTarget::RAM:
-#if !defined(SPECANN_CI_BUILD)
             spiWrite32(PIN_RAM, true, value);
-#else
-            Serial.println(F("(CI) RAM write skipped."));
-#endif
             break;
         case ChipTarget::Flash:
-#if !defined(SPECANN_CI_BUILD)
             spiWrite32(PIN_FLASH, true, value);
-#else
-            Serial.println(F("(CI) Flash write skipped."));
-#endif
             break;
         case ChipTarget::None:
         default:

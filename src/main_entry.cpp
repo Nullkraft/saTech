@@ -32,13 +32,9 @@ static uint32_t lastHeartbeatToggleMs = 0;
 // cppcheck-suppress unusedFunction
 void initializeLo(MAX2871& lo)
 {
-#if !defined(SPECANN_CI_BUILD)
     lo.begin();
     lo.outputSelect(RF_ALL);
     lo.outputPower(+5, RF_ALL);
-#else
-    (void)lo;
-#endif
 }
 
 static void printFrequencyPlan()
@@ -96,30 +92,22 @@ void recomputePlan()
                                  s.desiredLo2Injection,
                                  s.desiredLo3Injection);
 
-#if !defined(SPECANN_CI_BUILD)
     freqCalc.FreqLO1 = lo1.fmn2freq();
     freqCalc.FreqLO2 = lo2.fmn2freq();
     freqCalc.FreqLO3 = lo3.fmn2freq();
-#endif
 
     // Restore any LO that is under manual lofreq control; re-program the
     // hardware to the saved value so the auto-calculation does not overwrite it.
     if (s.lo1Manual) {
-#if !defined(SPECANN_CI_BUILD)
         lo1.setFrequency(savedLo1);
-#endif
         freqCalc.FreqLO1 = savedLo1;
     }
     if (s.lo2Manual) {
-#if !defined(SPECANN_CI_BUILD)
         lo2.setFrequency(savedLo2);
-#endif
         freqCalc.FreqLO2 = savedLo2;
     }
     if (s.lo3Manual) {
-#if !defined(SPECANN_CI_BUILD)
         lo3.setFrequency(savedLo3);
-#endif
         freqCalc.FreqLO3 = savedLo3;
     }
 }
@@ -150,7 +138,6 @@ void setup()
 
     freqCalc.RefClock1 = REF_MHZ;
 
-#if !defined(SPECANN_CI_BUILD)
     // HAL begin() sets the LE pins as OUTPUT.
     halLo1.begin();
     halLo2.begin();
@@ -176,9 +163,6 @@ void setup()
 
     programAttenuatorDb(getCurrentAttenuatorDb());
     Serial.println(F("Note: ~/projects/Arduino/SpecAnn/src/main_entry.cpp - Tech Tool for board bring up. 3/26/26"));
-#else
-    Serial.println(F("SPECANN_CI_BUILD defined: hardware initialization skipped."));
-#endif
 
     tuneTo(currentRfInputMhz);
     printBanner();
