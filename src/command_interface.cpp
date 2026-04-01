@@ -135,6 +135,7 @@ extern MAX2871 lo3;
 extern FrequencyCalculator freqCalc;
 extern double currentRfInputMhz;
 
+// Shared chip-select metadata: target, assigned pin, and asserted raw level.
 const ChipSelectDefinition CHIP_SELECT_DEFINITIONS[] = {
     {ChipTarget::Attenuator, PIN_ATTEN, HIGH},
     {ChipTarget::LO1,        PIN_LE_LO1, HIGH},

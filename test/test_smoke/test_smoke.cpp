@@ -66,6 +66,8 @@ void test_select_chip_asserts_selected_target_and_deasserts_the_rest(void)
 {
     char message[96];
 
+    // For each selectable target, verify that only that target is driven to
+    // its asserted level and every other chip-select stays deasserted.
     for (size_t selectedIndex = 0; selectedIndex < CHIP_SELECT_DEFINITION_COUNT; ++selectedIndex) {
         const ChipSelectDefinition& selected = CHIP_SELECT_DEFINITIONS[selectedIndex];
         selectChip(selected.target);
@@ -86,6 +88,8 @@ void test_select_chip_asserts_selected_target_and_deasserts_the_rest(void)
         }
     }
 
+    // The special None case should leave every chip-select at its idle
+    // deasserted level.
     selectChip(ChipTarget::None);
     for (size_t observedIndex = 0; observedIndex < CHIP_SELECT_DEFINITION_COUNT; ++observedIndex) {
         const ChipSelectDefinition& observed = CHIP_SELECT_DEFINITIONS[observedIndex];
