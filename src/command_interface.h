@@ -21,6 +21,15 @@ constexpr uint8_t PIN_REF_EN2 = 6;
 
 enum class ChipTarget { None, LO1, LO2, LO3, Attenuator, Ref1, Ref2, ADC1, ADC2, RAM, Flash };
 
+struct ChipSelectDefinition {
+    ChipTarget target;
+    uint8_t pin;
+    uint8_t assertedLevel;
+};
+
+extern const ChipSelectDefinition CHIP_SELECT_DEFINITIONS[];
+extern const size_t CHIP_SELECT_DEFINITION_COUNT;
+
 constexpr double MIN_RF_INPUT_MHZ = 0.001;
 constexpr double MAX_RF_INPUT_MHZ = 6000.0;
 constexpr double ATTEN_MIN_DB     = 0.0;

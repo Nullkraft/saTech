@@ -135,6 +135,30 @@ extern MAX2871 lo3;
 extern FrequencyCalculator freqCalc;
 extern double currentRfInputMhz;
 
+const ChipSelectDefinition CHIP_SELECT_DEFINITIONS[] = {
+    {ChipTarget::Attenuator, PIN_ATTEN, HIGH},
+    {ChipTarget::LO1,        PIN_LE_LO1, HIGH},
+    {ChipTarget::LO2,        PIN_LE_LO2, HIGH},
+    {ChipTarget::LO3,        PIN_LE_LO3, HIGH},
+    {ChipTarget::RAM,        PIN_RAM,    LOW},
+    {ChipTarget::Flash,      PIN_FLASH,  LOW},
+    {ChipTarget::ADC1,       PIN_ADC1,   LOW},
+    {ChipTarget::ADC2,       PIN_ADC2,   LOW},
+};
+
+const size_t CHIP_SELECT_DEFINITION_COUNT =
+    sizeof(CHIP_SELECT_DEFINITIONS) / sizeof(CHIP_SELECT_DEFINITIONS[0]);
+
+const ChipSelectDefinition* chipSelectDefinitionForTarget(ChipTarget target)
+{
+    for (size_t i = 0; i < CHIP_SELECT_DEFINITION_COUNT; ++i) {
+        if (CHIP_SELECT_DEFINITIONS[i].target == target) {
+            return &CHIP_SELECT_DEFINITIONS[i];
+        }
+    }
+    return nullptr;
+}
+
 // ---------------------------------------------------------------------------
 // selectChip — public low-level primitive.
 //
@@ -148,31 +172,14 @@ extern double currentRfInputMhz;
 // ---------------------------------------------------------------------------
 void selectChip(ChipTarget target)
 {
-    // Deassert all CS/LE pins to their idle levels.
-    // LO1/LO2/LO3/Attenuator assert HIGH  → idle LOW.
-    // ADC1/ADC2/RAM/Flash      assert LOW  → idle HIGH.
-    digitalWrite(PIN_LE_LO1, LOW);
-    digitalWrite(PIN_LE_LO2, LOW);
-    digitalWrite(PIN_LE_LO3, LOW);
-    digitalWrite(PIN_ATTEN,  LOW);
-    digitalWrite(PIN_ADC1,   HIGH);
-    digitalWrite(PIN_ADC2,   HIGH);
-    digitalWrite(PIN_RAM,    HIGH);
-    digitalWrite(PIN_FLASH,  HIGH);
+    for (size_t i = 0; i < CHIP_SELECT_DEFINITION_COUNT; ++i) {
+        const ChipSelectDefinition& def = CHIP_SELECT_DEFINITIONS[i];
+        digitalWrite(def.pin, (def.assertedLevel == HIGH) ? LOW : HIGH);
+    }
 
-    // Assert the requested target.
-    switch (target) {
-        case ChipTarget::LO1:        digitalWrite(PIN_LE_LO1, HIGH); break;
-        case ChipTarget::LO2:        digitalWrite(PIN_LE_LO2, HIGH); break;
-        case ChipTarget::LO3:        digitalWrite(PIN_LE_LO3, HIGH); break;
-        case ChipTarget::Attenuator: digitalWrite(PIN_ATTEN,  HIGH); break;
-        case ChipTarget::ADC1:       digitalWrite(PIN_ADC1,   LOW);  break;
-        case ChipTarget::ADC2:       digitalWrite(PIN_ADC2,   LOW);  break;
-        case ChipTarget::RAM:        digitalWrite(PIN_RAM,    LOW);  break;
-        case ChipTarget::Flash:      digitalWrite(PIN_FLASH,  LOW);  break;
-        case ChipTarget::None:
-        default:
-            break;
+    const ChipSelectDefinition* selected = chipSelectDefinitionForTarget(target);
+    if (selected != nullptr) {
+        digitalWrite(selected->pin, selected->assertedLevel);
     }
 
     ConsoleState& s = consoleState();
