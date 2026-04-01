@@ -21,9 +21,9 @@ constexpr uint8_t PIN_REF_EN2 = 6;
 
 enum class ChipTarget { None, LO1, LO2, LO3, Attenuator, Ref1, Ref2, ADC1, ADC2, RAM, Flash };
 
-constexpr double MIN_RF_INPUT_MHZ = 23.5;
+constexpr double MIN_RF_INPUT_MHZ = 0.001;
 constexpr double MAX_RF_INPUT_MHZ = 6000.0;
-constexpr double ATTEN_MIN_DB     = 1.0;
+constexpr double ATTEN_MIN_DB     = 0.0;
 constexpr double ATTEN_MAX_DB     = 31.75;
 constexpr double ATTEN_STEP_DB    = 0.25;
 constexpr uint32_t ATTEN_SPI_HZ   = 1000000UL;

@@ -302,7 +302,7 @@ void printBanner()
     Serial.println(F("  status                Report LO/IF plan, attenuator state, chip target"));
     Serial.println(F("  relock                Reinitialize MAX2871 devices"));
     Serial.println(F("  info                  Show board pin assignments"));
-    Serial.println(F("  atten <dB>            Program PE43711 attenuator (1.0 to 31.75 dB in 0.25 steps)"));
+    Serial.println(F("  atten <dB>            Program PE43711 attenuator (0.0 to 31.75 dB in 0.25 steps)"));
     Serial.println(F("  ifmode <high|low>     Set injection for the selected LO (use chip first)"));
     Serial.println(F("  lofreq <MHz>          Program the selected LO directly"));
     Serial.println(F("  chip <target|off>     Assert one CS/LE pin; off deasserts all"));
@@ -384,7 +384,7 @@ void handleAttenuatorCommand(const char* valueToken)
         return;
     }
     if (requestedDb < ATTEN_MIN_DB || requestedDb > ATTEN_MAX_DB) {
-        Serial.println(F("Attenuator range is 1.0 to 31.75 dB."));
+        Serial.println(F("Attenuator range is 0.0 to 31.75 dB."));
         return;
     }
     const double steps = (requestedDb - ATTEN_MIN_DB) / ATTEN_STEP_DB;
