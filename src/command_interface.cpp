@@ -30,6 +30,20 @@ bool equalsIgnoreCase(const char* lhs, const char* rhs)
     return (*lhs == '\0' && *rhs == '\0');
 }
 
+enum class CommandKind {
+    Unknown,
+    Help,
+    Status,
+    Relock,
+    Info,
+    Atten,
+    Ifmode,
+    Lofreq,
+    Chip,
+    Set,
+    Spi,
+};
+
 void trimWhitespace(char* text)
 {
     if (text == nullptr) {
@@ -635,6 +649,41 @@ void handleSpiCommand(const char* valueToken)
     }
 }
 
+CommandKind commandKindFromToken(const char* token)
+{
+    if (equalsIgnoreCase(token, "help")) {
+        return CommandKind::Help;
+    }
+    if (equalsIgnoreCase(token, "status")) {
+        return CommandKind::Status;
+    }
+    if (equalsIgnoreCase(token, "relock")) {
+        return CommandKind::Relock;
+    }
+    if (equalsIgnoreCase(token, "info")) {
+        return CommandKind::Info;
+    }
+    if (equalsIgnoreCase(token, "atten")) {
+        return CommandKind::Atten;
+    }
+    if (equalsIgnoreCase(token, "ifmode")) {
+        return CommandKind::Ifmode;
+    }
+    if (equalsIgnoreCase(token, "lofreq")) {
+        return CommandKind::Lofreq;
+    }
+    if (equalsIgnoreCase(token, "chip")) {
+        return CommandKind::Chip;
+    }
+    if (equalsIgnoreCase(token, "set")) {
+        return CommandKind::Set;
+    }
+    if (equalsIgnoreCase(token, "spi")) {
+        return CommandKind::Spi;
+    }
+    return CommandKind::Unknown;
+}
+
 void handleCommand(const char* line)
 {
     if (line == nullptr) {
@@ -673,91 +722,85 @@ void handleCommand(const char* line)
         return;
     }
 
-    if (equalsIgnoreCase(tokens[0], "help")) {
-        printBanner();
-        return;
-    }
-    if (equalsIgnoreCase(tokens[0], "status")) {
-        printStatus();
-        return;
-    }
-    if (equalsIgnoreCase(tokens[0], "relock")) {
-        initializeLo(lo1);
-        initializeLo(lo2);
-        initializeLo(lo3);
-        tuneTo(currentRfInputMhz);
-        Serial.println(F("MAX2871 devices reinitialized."));
-        return;
-    }
-    if (equalsIgnoreCase(tokens[0], "info")) {
-        Serial.println(F("Pin assignments (Metro Mini):"));
-        Serial.println(F("  chip targets (assert HIGH):"));
-        Serial.println(F("    LO1 LE     -> A3"));
-        Serial.println(F("    LO2 LE     -> D4"));
-        Serial.println(F("    LO3 LE     -> A4"));
-        Serial.println(F("    Atten CS   -> A5"));
-        Serial.println(F("  chip targets (assert LOW):"));
-        Serial.println(F("    ADC1 CS    -> see PIN_ADC1 in command_interface.h"));
-        Serial.println(F("    ADC2 CS    -> see PIN_ADC2 in command_interface.h"));
-        Serial.println(F("    RAM  CS    -> see PIN_RAM  in command_interface.h"));
-        Serial.println(F("    Flash CS   -> see PIN_FLASH in command_interface.h"));
-        Serial.println(F("  set targets (assert HIGH):"));
-        Serial.println(F("    REF_EN1    -> D5"));
-        Serial.println(F("    REF_EN2    -> D6"));
-        Serial.println(F("  Status pin  -> D10 (500 Hz heartbeat)"));
-        return;
-    }
-    if (equalsIgnoreCase(tokens[0], "atten")) {
-        if (count < 2U) {
-            Serial.println(F("Usage: atten <dB>"));
+    switch (commandKindFromToken(tokens[0])) {
+        case CommandKind::Help:
+            printBanner();
             return;
-        }
-        handleAttenuatorCommand(tokens[1]);
-        return;
-    }
-    if (equalsIgnoreCase(tokens[0], "ifmode")) {
-        if (count < 2U) {
-            Serial.println(F("Usage: ifmode <high|low>"));
+        case CommandKind::Status:
+            printStatus();
             return;
-        }
-        handleIfmodeCommand(tokens[1]);
-        return;
-    }
-    if (equalsIgnoreCase(tokens[0], "lofreq")) {
-        if (count < 2U) {
-            Serial.println(F("Usage: lofreq <MHz>"));
+        case CommandKind::Relock:
+            initializeLo(lo1);
+            initializeLo(lo2);
+            initializeLo(lo3);
+            tuneTo(currentRfInputMhz);
+            Serial.println(F("MAX2871 devices reinitialized."));
             return;
-        }
-        handleLofreqCommand(tokens[1]);
-        return;
-    }
-    if (equalsIgnoreCase(tokens[0], "chip")) {
-        if (count < 2U) {
-            Serial.println(F("Usage: chip <lo1|lo2|lo3|atten|adc1|adc2|ram|flash|off>"));
+        case CommandKind::Info:
+            Serial.println(F("Pin assignments (Metro Mini):"));
+            Serial.println(F("  chip targets (assert HIGH):"));
+            Serial.println(F("    LO1 LE     -> A3"));
+            Serial.println(F("    LO2 LE     -> D4"));
+            Serial.println(F("    LO3 LE     -> A4"));
+            Serial.println(F("    Atten CS   -> A5"));
+            Serial.println(F("  chip targets (assert LOW):"));
+            Serial.println(F("    ADC1 CS    -> see PIN_ADC1 in command_interface.h"));
+            Serial.println(F("    ADC2 CS    -> see PIN_ADC2 in command_interface.h"));
+            Serial.println(F("    RAM  CS    -> see PIN_RAM  in command_interface.h"));
+            Serial.println(F("    Flash CS   -> see PIN_FLASH in command_interface.h"));
+            Serial.println(F("  set targets (assert HIGH):"));
+            Serial.println(F("    REF_EN1    -> D5"));
+            Serial.println(F("    REF_EN2    -> D6"));
+            Serial.println(F("  Status pin  -> D10 (500 Hz heartbeat)"));
             return;
-        }
-        handleChipCommand(tokens[1]);
-        return;
-    }
-    if (equalsIgnoreCase(tokens[0], "set")) {
-        if (count < 2U) {
-            Serial.println(F("Usage: set <ref1|ref2|off>"));
+        case CommandKind::Atten:
+            if (count < 2U) {
+                Serial.println(F("Usage: atten <dB>"));
+                return;
+            }
+            handleAttenuatorCommand(tokens[1]);
             return;
-        }
-        handleSetCommand(tokens[1]);
-        return;
-    }
-    if (equalsIgnoreCase(tokens[0], "spi")) {
-        if (count < 2U) {
-            Serial.println(F("Usage: spi <hex32>"));
+        case CommandKind::Ifmode:
+            if (count < 2U) {
+                Serial.println(F("Usage: ifmode <high|low>"));
+                return;
+            }
+            handleIfmodeCommand(tokens[1]);
             return;
-        }
-        handleSpiCommand(tokens[1]);
-        return;
+        case CommandKind::Lofreq:
+            if (count < 2U) {
+                Serial.println(F("Usage: lofreq <MHz>"));
+                return;
+            }
+            handleLofreqCommand(tokens[1]);
+            return;
+        case CommandKind::Chip:
+            if (count < 2U) {
+                Serial.println(F("Usage: chip <lo1|lo2|lo3|atten|adc1|adc2|ram|flash|off>"));
+                return;
+            }
+            handleChipCommand(tokens[1]);
+            return;
+        case CommandKind::Set:
+            if (count < 2U) {
+                Serial.println(F("Usage: set <ref1|ref2|off>"));
+                return;
+            }
+            handleSetCommand(tokens[1]);
+            return;
+        case CommandKind::Spi:
+            if (count < 2U) {
+                Serial.println(F("Usage: spi <hex32>"));
+                return;
+            }
+            handleSpiCommand(tokens[1]);
+            return;
+        case CommandKind::Unknown:
+        default:
+            Serial.print(F("Unknown command: "));
+            Serial.println(tokens[0]);
+            Serial.println(F("Type 'help' for a list of commands."));
+            return;
     }
-
-    Serial.print(F("Unknown command: "));
-    Serial.println(tokens[0]);
-    Serial.println(F("Type 'help' for a list of commands."));
 }
 } // namespace
