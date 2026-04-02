@@ -155,7 +155,7 @@ void setup()
 
     // Deassert all CS/LE pins to idle and enable REF1 as the startup reference.
     selectChip(ChipTarget::None);
-    selectRef(ChipTarget::Ref1);
+    selectRef(ReferenceTarget::Ref1);
 
     initializeLo(lo1);
     initializeLo(lo2);

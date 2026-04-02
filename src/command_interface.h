@@ -19,7 +19,8 @@ constexpr uint8_t PIN_FLASH   = A1;
 constexpr uint8_t PIN_REF_EN1 = 5;
 constexpr uint8_t PIN_REF_EN2 = 6;
 
-enum class ChipTarget { None, LO1, LO2, LO3, Attenuator, Ref1, Ref2, ADC1, ADC2, RAM, Flash };
+enum class ChipTarget { None, LO1, LO2, LO3, Attenuator, ADC1, ADC2, RAM, Flash };
+enum class ReferenceTarget { None, Ref1, Ref2 };
 
 struct ChipSelectDefinition {
     ChipTarget chip;
@@ -59,9 +60,9 @@ constexpr size_t INPUT_BUFFER_SIZE = 96;
 void selectChip(ChipTarget target);
 
 // Deasserts both REF_EN pins, then asserts the requested reference clock.
-// ChipTarget::Ref1 or Ref2 selects that clock; ChipTarget::None disables both
-// (warning printed — LOs will lose lock). Any other target value is rejected.
-void selectRef(ChipTarget target);
+// ReferenceTarget::Ref1 or Ref2 selects that clock; ReferenceTarget::None
+// disables both (warning printed — LOs will lose lock).
+void selectRef(ReferenceTarget target);
 
 void printBanner();
 void pollSerial();

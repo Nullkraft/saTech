@@ -207,11 +207,11 @@ void selectChip(ChipTarget target)
 // site that writes those flags.
 // It is intentionally side-effect-free beyond pin state and those two flags.
 // ---------------------------------------------------------------------------
-void selectRef(ChipTarget target)
+void selectRef(ReferenceTarget target)
 {
-    if (target != ChipTarget::Ref1 &&
-        target != ChipTarget::Ref2 &&
-        target != ChipTarget::None) {
+    if (target != ReferenceTarget::Ref1 &&
+        target != ReferenceTarget::Ref2 &&
+        target != ReferenceTarget::None) {
         Serial.println(F("set requires ref1, ref2, or off."));
         return;
     }
@@ -225,16 +225,16 @@ void selectRef(ChipTarget target)
     s.ref1Enabled = false;
     s.ref2Enabled = false;
 
-    if (target == ChipTarget::Ref1) {
+    if (target == ReferenceTarget::Ref1) {
         digitalWrite(PIN_REF_EN1, HIGH);
         s.ref1Enabled = true;
         Serial.println(F("Reference clock set to REF1."));
-    } else if (target == ChipTarget::Ref2) {
+    } else if (target == ReferenceTarget::Ref2) {
         digitalWrite(PIN_REF_EN2, HIGH);
         s.ref2Enabled = true;
         Serial.println(F("Reference clock set to REF2."));
     } else {
-        // ChipTarget::None — both clocks remain deasserted.
+        // ReferenceTarget::None — both clocks remain deasserted.
         Serial.println(F("Warning: all reference clocks disabled — LOs will lose lock."));
     }
 }
@@ -367,8 +367,6 @@ const __FlashStringHelper* chipTargetName(ChipTarget target)
         case ChipTarget::LO2:        return F("LO2");
         case ChipTarget::LO3:        return F("LO3");
         case ChipTarget::Attenuator: return F("Attenuator");
-        case ChipTarget::Ref1:       return F("REF1");
-        case ChipTarget::Ref2:       return F("REF2");
         case ChipTarget::ADC1:       return F("ADC1");
         case ChipTarget::ADC2:       return F("ADC2");
         case ChipTarget::RAM:        return F("RAM");
@@ -556,13 +554,13 @@ void handleSetCommand(const char* targetToken)
         Serial.println(F("Usage: set <ref1|ref2|off>"));
         return;
     }
-    ChipTarget target = ChipTarget::None;
+    ReferenceTarget target = ReferenceTarget::None;
     if (equalsIgnoreCase(targetToken, "ref1")) {
-        target = ChipTarget::Ref1;
+        target = ReferenceTarget::Ref1;
     } else if (equalsIgnoreCase(targetToken, "ref2")) {
-        target = ChipTarget::Ref2;
+        target = ReferenceTarget::Ref2;
     } else if (equalsIgnoreCase(targetToken, "off")) {
-        target = ChipTarget::None;
+        target = ReferenceTarget::None;
     } else {
         Serial.println(F("set target must be ref1, ref2, or off."));
         return;
