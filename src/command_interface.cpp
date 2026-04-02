@@ -136,7 +136,7 @@ extern FrequencyCalculator freqCalc;
 extern double currentRfInputMhz;
 
 // Shared chip-select metadata: target, assigned pin, and asserted raw level.
-const ChipSelectDefinition CHIP_SELECT_DEFINITIONS[] = {
+const ChipSelectDefinition CHIP_DEFINITIONS[] = {
     {ChipTarget::Attenuator, PIN_ATTEN, HIGH},
     {ChipTarget::LO1,        PIN_LE_LO1, HIGH},
     {ChipTarget::LO2,        PIN_LE_LO2, HIGH},
@@ -147,14 +147,14 @@ const ChipSelectDefinition CHIP_SELECT_DEFINITIONS[] = {
     {ChipTarget::ADC2,       PIN_ADC2,   LOW},
 };
 
-const size_t CHIP_SELECT_DEFINITION_COUNT =
-    sizeof(CHIP_SELECT_DEFINITIONS) / sizeof(CHIP_SELECT_DEFINITIONS[0]);
+const size_t CHIP_COUNT =
+    sizeof(CHIP_DEFINITIONS) / sizeof(CHIP_DEFINITIONS[0]);
 
 const ChipSelectDefinition* chipSelectDefinitionForTarget(ChipTarget target)
 {
-    for (size_t i = 0; i < CHIP_SELECT_DEFINITION_COUNT; ++i) {
-        if (CHIP_SELECT_DEFINITIONS[i].target == target) {
-            return &CHIP_SELECT_DEFINITIONS[i];
+    for (size_t i = 0; i < CHIP_COUNT; ++i) {
+        if (CHIP_DEFINITIONS[i].target == target) {
+            return &CHIP_DEFINITIONS[i];
         }
     }
     return nullptr;
@@ -173,8 +173,8 @@ const ChipSelectDefinition* chipSelectDefinitionForTarget(ChipTarget target)
 // ---------------------------------------------------------------------------
 void selectChip(ChipTarget target)
 {
-    for (size_t i = 0; i < CHIP_SELECT_DEFINITION_COUNT; ++i) {
-        const ChipSelectDefinition& def = CHIP_SELECT_DEFINITIONS[i];
+    for (size_t i = 0; i < CHIP_COUNT; ++i) {
+        const ChipSelectDefinition& def = CHIP_DEFINITIONS[i];
         digitalWrite(def.pin, (def.assertedLevel == HIGH) ? LOW : HIGH);
     }
 

@@ -33,8 +33,8 @@ void test_all_chip_select_pins_are_deasserted(void)
 
     // The special None case should leave every chip-select at its idle deasserted level.
     selectChip(ChipTarget::None);
-    for (size_t observedIndex = 0; observedIndex < CHIP_SELECT_DEFINITION_COUNT; ++observedIndex) {
-        const ChipSelectDefinition& observed = CHIP_SELECT_DEFINITIONS[observedIndex];
+    for (size_t observedIdx = 0; observedIdx < CHIP_COUNT; ++observedIdx) {
+        const ChipSelectDefinition& observed = CHIP_DEFINITIONS[observedIdx];
         const uint8_t expectedLevel = deassertedLevel(observed.assertedLevel);
         const uint8_t actualLevel = digitalRead(observed.pin);
         snprintf(
@@ -43,7 +43,7 @@ void test_all_chip_select_pins_are_deasserted(void)
             "selected=None observed=%s",
             chipTargetLabel(observed.target)
         );
-        TEST_ASSERT_EQUAL_UINT8_MESSAGE(expectedLevel, actualLevel, message);
+        TEST_ASSERT_EQUAL_UINT8_MESSAGE(actualLevel, expectedLevel, message);
     }
 }
 
@@ -51,14 +51,14 @@ void test_each_chip_select_pin_is_asserted(void)
 {
     char message[96];
 
-    // Verify that only that target's chip-select is driven to its asserted level
+    // Verify that only the target's chip-select is driven to its asserted level
     // and that every other chip-select stays deasserted.
-    for (size_t selectedIndex = 0; selectedIndex < CHIP_SELECT_DEFINITION_COUNT; ++selectedIndex) {
-        const ChipSelectDefinition& selected = CHIP_SELECT_DEFINITIONS[selectedIndex];
+    for (size_t selectedIndex = 0; selectedIndex < CHIP_COUNT; ++selectedIndex) {
+        const ChipSelectDefinition& selected = CHIP_DEFINITIONS[selectedIndex];
         selectChip(selected.target);
 
-        for (size_t observedIndex = 0; observedIndex < CHIP_SELECT_DEFINITION_COUNT; ++observedIndex) {
-            const ChipSelectDefinition& observed = CHIP_SELECT_DEFINITIONS[observedIndex];
+        for (size_t observedIdx = 0; observedIdx < CHIP_COUNT; ++observedIdx) {
+            const ChipSelectDefinition& observed = CHIP_DEFINITIONS[observedIdx];
             const uint8_t expectedLevel =
                 (observed.target == selected.target) ? observed.assertedLevel : deassertedLevel(observed.assertedLevel);
             const uint8_t actualLevel = digitalRead(observed.pin);
@@ -69,7 +69,7 @@ void test_each_chip_select_pin_is_asserted(void)
                 chipTargetLabel(selected.target),
                 chipTargetLabel(observed.target)
             );
-            TEST_ASSERT_EQUAL_UINT8_MESSAGE(expectedLevel, actualLevel, message);
+            TEST_ASSERT_EQUAL_UINT8_MESSAGE(actualLevel, expectedLevel, message);
         }
     }
 }

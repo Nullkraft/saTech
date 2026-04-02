@@ -27,8 +27,8 @@ struct ChipSelectDefinition {
     uint8_t assertedLevel;
 };
 
-extern const ChipSelectDefinition CHIP_SELECT_DEFINITIONS[];
-extern const size_t CHIP_SELECT_DEFINITION_COUNT;
+extern const ChipSelectDefinition CHIP_DEFINITIONS[];
+extern const size_t CHIP_COUNT;
 
 constexpr double MIN_RF_INPUT_MHZ = 0.001;
 constexpr double MAX_RF_INPUT_MHZ = 6000.0;
