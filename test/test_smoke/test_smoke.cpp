@@ -29,37 +29,28 @@ static const char* chipTargetLabel(ChipTarget target)
 
 void test_all_chip_select_pins_read_back_at_idle_levels(void)
 {
+    uint8_t assertHighPins[4] = {PIN_ATTEN, PIN_LE_LO1, PIN_LE_LO2, PIN_LE_LO3};
+    uint8_t assertLowPins[4] = {PIN_ADC1, PIN_ADC2, PIN_RAM, PIN_FLASH};
+
     selectChip(ChipTarget::None);
 
-    TEST_ASSERT_EQUAL(LOW, digitalRead(PIN_ATTEN));
-    TEST_ASSERT_EQUAL(LOW, digitalRead(PIN_LE_LO1));
-    TEST_ASSERT_EQUAL(LOW, digitalRead(PIN_LE_LO2));
-    TEST_ASSERT_EQUAL(LOW, digitalRead(PIN_LE_LO3));
-    TEST_ASSERT_EQUAL(HIGH, digitalRead(PIN_ADC1));
-    TEST_ASSERT_EQUAL(HIGH, digitalRead(PIN_ADC2));
-    TEST_ASSERT_EQUAL(HIGH, digitalRead(PIN_RAM));
-    TEST_ASSERT_EQUAL(HIGH, digitalRead(PIN_FLASH));
+    for (int i = 0; i < 4; i++) {
+        TEST_ASSERT_EQUAL(LOW, digitalRead(assertHighPins[i])); // assertHIGH == idleLOW
+        TEST_ASSERT_EQUAL(HIGH, digitalRead(assertLowPins[i])); // assertLOW == idleHIGH
+    }
 }
 
 void test_all_chip_select_pins_read_back_at_asserted_levels(void)
 {
-    digitalWrite(PIN_ATTEN, HIGH);
-    digitalWrite(PIN_LE_LO1, HIGH);
-    digitalWrite(PIN_LE_LO2, HIGH);
-    digitalWrite(PIN_LE_LO3, HIGH);
-    digitalWrite(PIN_ADC1, LOW);
-    digitalWrite(PIN_ADC2, LOW);
-    digitalWrite(PIN_RAM, LOW);
-    digitalWrite(PIN_FLASH, LOW);
+    uint8_t assertHighPins[4] = {PIN_ATTEN, PIN_LE_LO1, PIN_LE_LO2, PIN_LE_LO3};
+    uint8_t assertLowPins[4] = {PIN_ADC1, PIN_ADC2, PIN_RAM, PIN_FLASH};
 
-    TEST_ASSERT_EQUAL(HIGH, digitalRead(PIN_ATTEN));
-    TEST_ASSERT_EQUAL(HIGH, digitalRead(PIN_LE_LO1));
-    TEST_ASSERT_EQUAL(HIGH, digitalRead(PIN_LE_LO2));
-    TEST_ASSERT_EQUAL(HIGH, digitalRead(PIN_LE_LO3));
-    TEST_ASSERT_EQUAL(LOW, digitalRead(PIN_ADC1));
-    TEST_ASSERT_EQUAL(LOW, digitalRead(PIN_ADC2));
-    TEST_ASSERT_EQUAL(LOW, digitalRead(PIN_RAM));
-    TEST_ASSERT_EQUAL(LOW, digitalRead(PIN_FLASH));
+    for (int i = 0; i < 4; i++) {
+        digitalWrite(assertHighPins[i], HIGH);
+        TEST_ASSERT_EQUAL(HIGH, digitalRead(assertHighPins[i]));
+        digitalWrite(assertLowPins[i], LOW);
+        TEST_ASSERT_EQUAL(LOW, digitalRead(assertLowPins[i]));
+    }
 }
 
 void test_select_chip_asserts_selected_target_and_deasserts_the_rest(void)

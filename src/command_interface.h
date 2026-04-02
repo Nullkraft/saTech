@@ -3,13 +3,13 @@
 #include <Arduino.h>
 #include <stdint.h>
 
-// LE / chip-select pins — LO and attenuator assert HIGH; ADC, RAM, Flash assert LOW.
+// LE / chip-select pins — LO1, LO2, LO3, and attenuator assert HIGH
 constexpr uint8_t PIN_ATTEN   = A5;
 constexpr uint8_t PIN_LE_LO1  = A3;
 constexpr uint8_t PIN_LE_LO2  = 4;
 constexpr uint8_t PIN_LE_LO3  = A4;
 
-// TODO: assign actual Metro Mini pin numbers for the following before use.
+// LE / chip-select pins — ADC1, ADC2, RAM, and Flash assert LOW
 constexpr uint8_t PIN_ADC1    = 3;
 constexpr uint8_t PIN_ADC2    = 2;
 constexpr uint8_t PIN_RAM     = A0;
