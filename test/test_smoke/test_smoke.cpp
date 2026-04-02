@@ -6,11 +6,6 @@
 void setUp(void) {}
 void tearDown(void) {}
 
-static uint8_t deassertedLevel(uint8_t assertedLevel)
-{
-    return (assertedLevel == HIGH) ? LOW : HIGH;
-}
-
 static const char* chipTargetLabel(ChipTarget target)
 {
     switch (target) {
@@ -35,7 +30,7 @@ void test_all_chip_select_pins_are_deasserted(void)
     selectChip(ChipTarget::None);
     for (size_t observedIdx = 0; observedIdx < CHIP_COUNT; ++observedIdx) {
         const ChipSelectDefinition& observed = CHIP_DEFINITIONS[observedIdx];
-        const uint8_t expectedLevel = deassertedLevel(observed.assertedLevel);
+        const uint8_t deassertedLevel = !observed.assertedLevel;
         const uint8_t actualLevel = digitalRead(observed.pin);
         snprintf(
             message,
@@ -43,7 +38,7 @@ void test_all_chip_select_pins_are_deasserted(void)
             "selected=None observed=%s",
             chipTargetLabel(observed.target)
         );
-        TEST_ASSERT_EQUAL_UINT8_MESSAGE(actualLevel, expectedLevel, message);
+        TEST_ASSERT_EQUAL_UINT8_MESSAGE(actualLevel, deassertedLevel, message);
     }
 }
 
@@ -60,7 +55,7 @@ void test_each_chip_select_pin_is_asserted(void)
         for (size_t observedIdx = 0; observedIdx < CHIP_COUNT; ++observedIdx) {
             const ChipSelectDefinition& observed = CHIP_DEFINITIONS[observedIdx];
             const uint8_t expectedLevel =
-                (observed.target == selected.target) ? observed.assertedLevel : deassertedLevel(observed.assertedLevel);
+                (observed.target == selected.target) ? observed.assertedLevel : !observed.assertedLevel;
             const uint8_t actualLevel = digitalRead(observed.pin);
             snprintf(
                 message,
