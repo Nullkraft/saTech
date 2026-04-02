@@ -27,7 +27,7 @@ static const char* chipTargetLabel(ChipTarget target)
     }
 }
 
-void test_all_chip_select_pins_read_back_at_idle_levels(void)
+void test_all_chip_select_pins_are_deasserted(void)
 {
     char message[96];
 
@@ -47,25 +47,12 @@ void test_all_chip_select_pins_read_back_at_idle_levels(void)
     }
 }
 
-void test_all_chip_select_pins_read_back_at_asserted_levels(void)
-{
-    uint8_t assertHighPins[4] = {PIN_ATTEN, PIN_LE_LO1, PIN_LE_LO2, PIN_LE_LO3};
-    uint8_t assertLowPins[4] = {PIN_ADC1, PIN_ADC2, PIN_RAM, PIN_FLASH};
-
-    for (int i = 0; i < 4; i++) {
-        digitalWrite(assertHighPins[i], HIGH);
-        TEST_ASSERT_EQUAL(HIGH, digitalRead(assertHighPins[i]));
-        digitalWrite(assertLowPins[i], LOW);
-        TEST_ASSERT_EQUAL(LOW, digitalRead(assertLowPins[i]));
-    }
-}
-
-void test_select_chip_asserts_selected_target_and_deasserts_the_rest(void)
+void test_each_chip_select_pin_is_asserted(void)
 {
     char message[96];
 
-    // For each selectable target, verify that only that target is driven to
-    // its asserted level and every other chip-select stays deasserted.
+    // Verify that only that target's chip-select is driven to its asserted level
+    // and that every other chip-select stays deasserted.
     for (size_t selectedIndex = 0; selectedIndex < CHIP_SELECT_DEFINITION_COUNT; ++selectedIndex) {
         const ChipSelectDefinition& selected = CHIP_SELECT_DEFINITIONS[selectedIndex];
         selectChip(selected.target);
@@ -101,9 +88,8 @@ void setup(void)
     pinMode(PIN_FLASH, OUTPUT);
 
     UNITY_BEGIN();
-    RUN_TEST(test_all_chip_select_pins_read_back_at_idle_levels);
-    RUN_TEST(test_all_chip_select_pins_read_back_at_asserted_levels);
-    RUN_TEST(test_select_chip_asserts_selected_target_and_deasserts_the_rest);
+    RUN_TEST(test_all_chip_select_pins_are_deasserted);
+    RUN_TEST(test_each_chip_select_pin_is_asserted);
     UNITY_END();
 }
 
