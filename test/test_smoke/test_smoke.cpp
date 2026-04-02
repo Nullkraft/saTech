@@ -29,14 +29,21 @@ static const char* chipTargetLabel(ChipTarget target)
 
 void test_all_chip_select_pins_read_back_at_idle_levels(void)
 {
-    uint8_t assertHighPins[4] = {PIN_ATTEN, PIN_LE_LO1, PIN_LE_LO2, PIN_LE_LO3};
-    uint8_t assertLowPins[4] = {PIN_ADC1, PIN_ADC2, PIN_RAM, PIN_FLASH};
+    char message[96];
 
+    // The special None case should leave every chip-select at its idle deasserted level.
     selectChip(ChipTarget::None);
-
-    for (int i = 0; i < 4; i++) {
-        TEST_ASSERT_EQUAL(LOW, digitalRead(assertHighPins[i])); // assertHIGH == idleLOW
-        TEST_ASSERT_EQUAL(HIGH, digitalRead(assertLowPins[i])); // assertLOW == idleHIGH
+    for (size_t observedIndex = 0; observedIndex < CHIP_SELECT_DEFINITION_COUNT; ++observedIndex) {
+        const ChipSelectDefinition& observed = CHIP_SELECT_DEFINITIONS[observedIndex];
+        const uint8_t expectedLevel = deassertedLevel(observed.assertedLevel);
+        const uint8_t actualLevel = digitalRead(observed.pin);
+        snprintf(
+            message,
+            sizeof(message),
+            "selected=None observed=%s",
+            chipTargetLabel(observed.target)
+        );
+        TEST_ASSERT_EQUAL_UINT8_MESSAGE(expectedLevel, actualLevel, message);
     }
 }
 
@@ -77,22 +84,6 @@ void test_select_chip_asserts_selected_target_and_deasserts_the_rest(void)
             );
             TEST_ASSERT_EQUAL_UINT8_MESSAGE(expectedLevel, actualLevel, message);
         }
-    }
-
-    // The special None case should leave every chip-select at its idle
-    // deasserted level.
-    selectChip(ChipTarget::None);
-    for (size_t observedIndex = 0; observedIndex < CHIP_SELECT_DEFINITION_COUNT; ++observedIndex) {
-        const ChipSelectDefinition& observed = CHIP_SELECT_DEFINITIONS[observedIndex];
-        const uint8_t expectedLevel = deassertedLevel(observed.assertedLevel);
-        const uint8_t actualLevel = digitalRead(observed.pin);
-        snprintf(
-            message,
-            sizeof(message),
-            "selected=None observed=%s",
-            chipTargetLabel(observed.target)
-        );
-        TEST_ASSERT_EQUAL_UINT8_MESSAGE(expectedLevel, actualLevel, message);
     }
 }
 
