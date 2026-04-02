@@ -22,7 +22,7 @@ constexpr uint8_t PIN_REF_EN2 = 6;
 enum class ChipTarget { None, LO1, LO2, LO3, Attenuator, Ref1, Ref2, ADC1, ADC2, RAM, Flash };
 
 struct ChipSelectDefinition {
-    ChipTarget target;
+    ChipTarget chip;
     uint8_t pin;
     uint8_t assertedLevel;
 };

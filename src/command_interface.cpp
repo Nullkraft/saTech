@@ -153,7 +153,7 @@ const size_t CHIP_COUNT =
 const ChipSelectDefinition* chipSelectDefinitionForTarget(ChipTarget target)
 {
     for (size_t i = 0; i < CHIP_COUNT; ++i) {
-        if (CHIP_DEFINITIONS[i].target == target) {
+        if (CHIP_DEFINITIONS[i].chip == target) {
             return &CHIP_DEFINITIONS[i];
         }
     }
