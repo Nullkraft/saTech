@@ -99,6 +99,35 @@ binary:      FF 17 00 00
 This avoids a byte-level conflict because ASCII `F` is `0x46`; it is not the
 binary byte `0xFF`.
 
+## Host-Side Serial Test Tool
+
+Add a small host-side serial command test tool before coupling this bring-up
+work to WN2A_RFPeakSearch. The tool should send individual commands directly to
+the Arduino and print exactly what happened:
+
+```text
+TX bytes
+RX bytes
+RX printable text, when applicable
+```
+
+Example command names:
+
+- `arduino-message`: send `FF 17 00 00`, expect `saTech WN2A ready`.
+- `ascii-message`: send `17FF\n`, expect `saTech WN2A ready`.
+- `enter-ascii`: send `FF 20 00 00`.
+- `enter-fmn`: send `FF 40 00 00`.
+- `enter-direct`: send `FF 80 00 00`.
+- `select-lo1`: send `FF 01 00 00`.
+- `select-lo2`: send `FF 02 00 00`.
+- `select-ref1`: send `FF 0C 00 00`.
+- `select-ref2`: send `FF 14 00 00`.
+- `ref-off`: send `FF 04 00 00`.
+
+This tool is for protocol bring-up and repeatable debugging. WN2A_RFPeakSearch
+should be updated after the firmware protocol stabilizes, not for every
+individual firmware step.
+
 ## State Machine Sketch
 
 At a frame boundary, the receiver is ready for the first byte of the next
@@ -153,6 +182,8 @@ Direct2Register:
 - [ ] Add LO2 programming from FMN data words.
 - [ ] Add Direct2Register mode after the minimum LO bring-up path is working.
 - [ ] Exclude LO3 target selection and LO3 FMN programming from the first slice.
+- [ ] Add a small host-side serial command test tool.
+- [ ] Add named tests for individual ASCII and binary serial commands.
 - [ ] Build with `pio run -e ci`.
 - [ ] Verify Arduino message query over binary.
 - [ ] Verify ASCII `17FF` reaches the same internal control action as binary

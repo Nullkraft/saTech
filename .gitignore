@@ -15,3 +15,6 @@ STATUS.md
 include/
 lib/
 test/
+bin/
+lib64
+pyvenv.cfg
