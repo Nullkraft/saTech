@@ -14,6 +14,8 @@ namespace {
 
 char inputBuffer[INPUT_BUFFER_SIZE];
 size_t inputLength = 0;
+uint8_t wn2aBinaryBytes[4];
+uint8_t wn2aBinaryLength = 0;
 ConsoleState& state = consoleState();
 
 bool equalsIgnoreCase(const char* lhs, const char* rhs)
@@ -137,6 +139,7 @@ void handleChipCommand(const char* targetToken);
 void handleSetCommand(const char* targetToken);
 void handleSpiCommand(const char* valueToken);
 void handleCommand(const char* line);
+void handleWn2aBinaryWord(uint32_t word);
 
 } // namespace
 
@@ -339,6 +342,20 @@ void pollSerial()
 {
     while (Serial.available() > 0) {
         const char incoming = static_cast<char>(Serial.read());
+        const uint8_t incomingByte = static_cast<uint8_t>(incoming);
+        if (wn2aBinaryLength > 0U || (incoming != '\r' && incoming != '\n' && isprint(incomingByte) == 0)) {
+            wn2aBinaryBytes[wn2aBinaryLength++] = incomingByte;
+            if (wn2aBinaryLength == 4U) {
+                const uint32_t word =
+                    static_cast<uint32_t>(wn2aBinaryBytes[0]) |
+                    (static_cast<uint32_t>(wn2aBinaryBytes[1]) << 8) |
+                    (static_cast<uint32_t>(wn2aBinaryBytes[2]) << 16) |
+                    (static_cast<uint32_t>(wn2aBinaryBytes[3]) << 24);
+                wn2aBinaryLength = 0;
+                handleWn2aBinaryWord(word);
+            }
+            continue;
+        }
         if (incoming == '\r') {
             continue;
         }
@@ -391,6 +408,32 @@ const __FlashStringHelper* chipTargetName(ChipTarget target)
 }
 
 namespace {
+
+void handleWn2aBinaryWord(uint32_t word)
+{
+    const uint16_t selector = static_cast<uint16_t>(word & 0xFFFFU);
+    if (selector == 0x0FFFU) {
+        digitalWrite(LED_BUILTIN, HIGH);
+        Serial.print(F("LED on"));
+        return;
+    }
+    if (selector == 0x07FFU) {
+        digitalWrite(LED_BUILTIN, LOW);
+        Serial.print(F("LED off"));
+        return;
+    }
+    if (selector == 0x17FFU) {
+        Serial.print(F("saTech WN2A ready"));
+        return;
+    }
+    Serial.print(F("[WN2A] binary word 0x"));
+    static const char hexDigits[] = "0123456789ABCDEF";
+    for (int shift = 28; shift >= 0; shift -= 4) {
+        const uint8_t nibble = static_cast<uint8_t>((word >> shift) & 0x0FU);
+        Serial.print(hexDigits[nibble]);
+    }
+    Serial.print(F(" ignored."));
+}
 
 void handleAttenuatorCommand(const char* valueToken)
 {

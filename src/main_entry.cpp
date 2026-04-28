@@ -136,6 +136,7 @@ void setup()
     pinMode(PIN_ADC2,    OUTPUT);
     pinMode(PIN_RAM,     OUTPUT);
     pinMode(PIN_FLASH,   OUTPUT);
+    pinMode(LED_BUILTIN, OUTPUT);
     // pinMode(PIN_LE_LO2,  OUTPUT);
 
     // Deassert all CS/LE pins to idle and enable REF1 as the startup reference.
