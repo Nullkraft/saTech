@@ -51,6 +51,9 @@ Examples:
 - `0x04FF`: disable reference clocks.
 - `0x01FF`: select LO1.
 - `0x02FF`: select LO2.
+- `0x20FF`: enter AsciiLineData mode. Proposed; not yet approved.
+- `0x40FF`: enter FMNData mode. Proposed; not yet approved.
+- `0x80FF`: enter Direct2Register mode. Proposed; not yet approved.
 
 LO3 control may be added later, but is intentionally out of scope for the first
 bring-up slice.
@@ -98,6 +101,22 @@ binary byte `0xFF`.
 
 ## State Machine Sketch
 
+At a frame boundary, the receiver is ready for the first byte of the next
+4-byte word. If that first byte is `0xFF`, the word is decoded as a
+BinaryControlWord. Bytes inside a partially collected 4-byte word are data and
+are not interpreted as mode markers.
+
+Mode changes should be explicit control words. For example, target selection
+and receive-mode selection can be separate commands:
+
+```text
+FF 02 00 00   -> ControlWord 0x02FF, select LO2
+FF 40 00 00   -> ControlWord 0x40FF, enter FMNData
+<4 FMN bytes> -> program LO2
+<4 FMN bytes> -> program LO2 again
+FF 20 00 00   -> ControlWord 0x20FF, return to AsciiLineData
+```
+
 ```text
 AsciiLineData:
   printable bytes and line endings -> ASCII line decoder
@@ -129,6 +148,7 @@ Direct2Register:
 - [ ] Keep binary control responses quiet except for explicit query responses.
 - [ ] Add quiet reference selection for WN2A control words.
 - [ ] Add LO1 and LO2 target selection control words.
+- [ ] Add explicit mode selection control words.
 - [ ] Add LO1 programming from WN2A control words.
 - [ ] Add LO2 programming from FMN data words.
 - [ ] Add Direct2Register mode after the minimum LO bring-up path is working.
