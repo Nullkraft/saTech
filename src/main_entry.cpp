@@ -11,10 +11,8 @@
 #include "console_state.h"
 
 // Metro Mini pinout (see MAX2871 examples/specAnn/specAnn.ino)
-static constexpr uint8_t PIN_STATUS  = 10;
 static constexpr double  REF_MHZ     = 66.0;
 static constexpr double  STARTUP_RF_MHZ = 1735.113;
-static constexpr uint16_t HEARTBEAT_INTERVAL_MS = 1;
 
 ArduinoHAL halLo1(PIN_LE_LO1);
 ArduinoHAL halLo2(PIN_LE_LO2);
@@ -27,7 +25,6 @@ MAX2871 lo3(REF_MHZ, halLo3, halLo3);
 FrequencyCalculator freqCalc(lo1, lo2, lo3);
 
 double currentRfInputMhz = STARTUP_RF_MHZ;
-static uint32_t lastHeartbeatToggleMs = 0;
 
 // cppcheck-suppress unusedFunction
 void initializeLo(MAX2871& lo)
@@ -66,15 +63,6 @@ void printStatus()
     Serial.print(F("Attenuator: ")); Serial.print(getCurrentAttenuatorDb(), 2); Serial.println(F(" dB"));
     Serial.print(F("Chip select: "));
     Serial.println(chipTargetName(getCurrentChipTarget()));
-}
-
-static void heartBeat(char control_pin)
-{
-    const uint32_t now = millis();
-    if ((now - lastHeartbeatToggleMs) >= HEARTBEAT_INTERVAL_MS) {
-        lastHeartbeatToggleMs = now;
-        digitalWrite(control_pin, !digitalRead(PIN_STATUS));
-    }
 }
 
 void recomputePlan()
@@ -125,9 +113,6 @@ void tuneTo(double mhz)
 
 void setup()
 {
-    pinMode(PIN_STATUS, OUTPUT);
-    digitalWrite(PIN_STATUS, LOW);
-
     Serial.begin(115200);
     const uint32_t serialStart = millis();
     while (!Serial && (millis() - serialStart) < 2000U) {
@@ -167,14 +152,11 @@ void setup()
     tuneTo(currentRfInputMhz);
     printBanner();
     printStatus();
-
-    lastHeartbeatToggleMs = millis();
 }
 
 void loop()
 {
     pollSerial();
-    heartBeat(PIN_STATUS);
 }
 
 #else

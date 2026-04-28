@@ -751,7 +751,6 @@ void handleCommand(const char* line)
             Serial.println(F("  set targets (assert HIGH):"));
             Serial.println(F("    REF_EN1    -> D5"));
             Serial.println(F("    REF_EN2    -> D6"));
-            Serial.println(F("  Status pin  -> D10 (500 Hz heartbeat)"));
             return;
         case CommandKind::Atten:
             if (count < 2U) {
