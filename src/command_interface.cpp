@@ -256,6 +256,11 @@ void selectRef(ReferenceTarget target)
     }
 }
 
+int readOutputPinLevel(uint8_t pin)
+{
+    return digitalRead(pin);
+}
+
 const __FlashStringHelper* injectionLabel(LOInjectionMode mode)
 {
     return (mode == LOInjectionMode::High) ? F("High") : F("Low");
@@ -424,6 +429,10 @@ void handleWn2aBinaryWord(uint32_t word)
     }
     if (selector == 0x17FFU) {
         Serial.print(F("saTech WN2A ready"));
+        return;
+    }
+    if (selector == 0x04FFU) {
+        selectRef(ReferenceTarget::None);
         return;
     }
     Serial.print(F("[WN2A] binary word 0x"));

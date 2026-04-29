@@ -63,6 +63,7 @@ void selectChip(ChipTarget target);
 // ReferenceTarget::Ref1 or Ref2 selects that clock; ReferenceTarget::None
 // disables both (warning printed — LOs will lose lock).
 void selectRef(ReferenceTarget target);
+int readOutputPinLevel(uint8_t pin);
 
 void printBanner();
 void pollSerial();
