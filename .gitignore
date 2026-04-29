@@ -13,9 +13,10 @@ STATUS.md
 Transition notes 4-28-26.txt
 .codex
 
+test/README
+__pycache__/
 include/
 lib/
-test/
 bin/
 lib64
 pyvenv.cfg

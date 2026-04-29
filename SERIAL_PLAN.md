@@ -168,7 +168,7 @@ Direct2Register:
 ## Implementation Checklist
 
 - [x] Add a small host-side serial command test tool.
-- [ ] Add named tests for the current Arduino message binary command.
+- [x] Add named tests for the current Arduino message binary command.
 - [ ] Add `SerialRxMode` with `AsciiLineData`, `BinaryControlWord`,
       `FMNData`, and `Direct2Register`.
 - [ ] Add serial receive state near `pollSerial()`: current mode, selected
