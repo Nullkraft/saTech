@@ -167,22 +167,27 @@ Direct2Register:
 
 ## Implementation Checklist
 
-- [ ] Add `SerialRxMode` and binary receive state near `pollSerial()`.
+- [ ] Add a small host-side serial command test tool.
+- [ ] Add named tests for the current Arduino message binary command.
+- [ ] Add `SerialRxMode` with `AsciiLineData`, `BinaryControlWord`,
+      `FMNData`, and `Direct2Register`.
+- [ ] Add serial receive state near `pollSerial()`: current mode, selected
+      binary target, 4-byte buffer, and byte count.
 - [ ] Keep receive mode separate from selected binary hardware target.
 - [ ] Replace the current non-printable-byte binary heuristic with frame-boundary
       handling for `0xFF`.
 - [ ] Route binary 4-byte control frames into a shared `handleControlWord()`.
+- [ ] Add explicit mode selection control words for `AsciiLineData`, `FMNData`,
+      and `Direct2Register`.
 - [ ] Allow ASCII hex control words to dispatch into `handleControlWord()`.
 - [ ] Keep existing named ASCII technician commands working.
 - [ ] Keep binary control responses quiet except for explicit query responses.
 - [ ] Add quiet reference selection for WN2A control words.
 - [ ] Add LO1 and LO2 target selection control words.
-- [ ] Add explicit mode selection control words.
 - [ ] Add LO1 programming from WN2A control words.
 - [ ] Add LO2 programming from FMN data words.
 - [ ] Add Direct2Register mode after the minimum LO bring-up path is working.
 - [ ] Exclude LO3 target selection and LO3 FMN programming from the first slice.
-- [ ] Add a small host-side serial command test tool.
 - [ ] Add named tests for individual ASCII and binary serial commands.
 - [ ] Build with `pio run -e ci`.
 - [ ] Verify Arduino message query over binary.
