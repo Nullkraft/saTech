@@ -5,6 +5,7 @@ import serial_command_test
 
 class ArduinoMessageCommandTestCase(unittest.TestCase):
     def test_sends_binary_query(self):
+        print("test_arduino_message_command: arduino-message sends FF 17 00 00")
         command = serial_command_test.COMMANDS["arduino-message"]
 
         self.assertEqual(command["tx"], bytes.fromhex("FF 17 00 00"))
