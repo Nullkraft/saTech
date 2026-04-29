@@ -17,9 +17,9 @@ COMMANDS = {
     "ascii-message": {
         "tx": b"17FF\n",
     },
-    "enter-ascii": {"tx": bytes.fromhex("FF 20 00 00")},
-    "enter-fmn": {"tx": bytes.fromhex("FF 40 00 00")},
-    "enter-direct": {"tx": bytes.fromhex("FF 80 00 00")},
+    "enter-ascii": {"tx": bytes.fromhex("FF 06 00 00")},
+    "enter-fmn": {"tx": bytes.fromhex("FF 0E 00 00")},
+    "enter-direct": {"tx": bytes.fromhex("FF 16 00 00")},
     "select-lo1": {"tx": bytes.fromhex("FF 01 00 00")},
     "select-lo2": {"tx": bytes.fromhex("FF 02 00 00")},
     "select-ref1": {"tx": bytes.fromhex("FF 0C 00 00")},
@@ -70,7 +70,7 @@ def parse_args():
     parser.add_argument(
         "--open-delay",
         type=float,
-        default=2.0,
+        default=3.0,
         help="Seconds to wait after opening the serial port",
     )
     parser.add_argument("command", choices=sorted(COMMANDS))
