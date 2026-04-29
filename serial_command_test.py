@@ -67,6 +67,12 @@ def parse_args():
         default=1.0,
         help="Seconds to wait for response bytes",
     )
+    parser.add_argument(
+        "--open-delay",
+        type=float,
+        default=2.0,
+        help="Seconds to wait after opening the serial port",
+    )
     parser.add_argument("command", choices=sorted(COMMANDS))
     return parser.parse_args()
 
@@ -79,6 +85,7 @@ def main():
     print(f"TX bytes: {hex_bytes(tx)}")
 
     with serial.Serial(args.port, args.baud, timeout=0.05) as ser:
+        time.sleep(args.open_delay)
         ser.reset_input_buffer()
         ser.write(tx)
         ser.flush()
