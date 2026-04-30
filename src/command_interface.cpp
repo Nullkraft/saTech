@@ -443,6 +443,38 @@ void handleWn2aBinaryWord(uint32_t word)
         selectRef(ReferenceTarget::Ref2);
         return;
     }
+    if (selector == 0x01FFU) {
+        selectChip(ChipTarget::LO1);
+        return;
+    }
+    if (selector == 0x02FFU) {
+        selectChip(ChipTarget::LO2);
+        return;
+    }
+    if (selector == 0x08FFU) {
+        selectChip(ChipTarget::Attenuator);
+        return;
+    }
+    if (selector == 0x03FFU) {
+        selectChip(ChipTarget::LO3);
+        return;
+    }
+    if (selector == 0x05FFU) {
+        selectChip(ChipTarget::ADC1);
+        return;
+    }
+    if (selector == 0x0DFFU) {
+        selectChip(ChipTarget::ADC2);
+        return;
+    }
+    if (selector == 0x15FFU) {
+        selectChip(ChipTarget::RAM);
+        return;
+    }
+    if (selector == 0x1DFFU) {
+        selectChip(ChipTarget::Flash);
+        return;
+    }
     Serial.print(F("[WN2A] binary word 0x"));
     static const char hexDigits[] = "0123456789ABCDEF";
     for (int shift = 28; shift >= 0; shift -= 4) {
