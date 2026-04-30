@@ -435,6 +435,14 @@ void handleWn2aBinaryWord(uint32_t word)
         selectRef(ReferenceTarget::None);
         return;
     }
+    if (selector == 0x0CFFU) {
+        selectRef(ReferenceTarget::Ref1);
+        return;
+    }
+    if (selector == 0x14FFU) {
+        selectRef(ReferenceTarget::Ref2);
+        return;
+    }
     Serial.print(F("[WN2A] binary word 0x"));
     static const char hexDigits[] = "0123456789ABCDEF";
     for (int shift = 28; shift >= 0; shift -= 4) {
