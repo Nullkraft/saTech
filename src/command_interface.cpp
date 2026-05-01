@@ -14,9 +14,28 @@ namespace {
 
 char inputBuffer[INPUT_BUFFER_SIZE];
 size_t inputLength = 0;
-uint8_t wn2aBinaryBytes[4];
-uint8_t wn2aBinaryLength = 0;
 ConsoleState& state = consoleState();
+
+enum class SerialRxMode {
+    AsciiLineData,
+    BinaryControlWord,
+    FMNData,
+    Direct2Register,
+};
+
+struct SerialReceiveState {
+    SerialRxMode mode;
+    ChipTarget selectedBinaryTarget;
+    uint8_t wordBytes[4];
+    uint8_t wordLength;
+};
+
+SerialReceiveState serialRx = {
+    SerialRxMode::AsciiLineData,
+    ChipTarget::None,
+    {0U, 0U, 0U, 0U},
+    0U,
+};
 
 bool equalsIgnoreCase(const char* lhs, const char* rhs)
 {
@@ -348,15 +367,17 @@ void pollSerial()
     while (Serial.available() > 0) {
         const char incoming = static_cast<char>(Serial.read());
         const uint8_t incomingByte = static_cast<uint8_t>(incoming);
-        if (wn2aBinaryLength > 0U || (incoming != '\r' && incoming != '\n' && isprint(incomingByte) == 0)) {
-            wn2aBinaryBytes[wn2aBinaryLength++] = incomingByte;
-            if (wn2aBinaryLength == 4U) {
+        if (serialRx.wordLength > 0U || (incoming != '\r' && incoming != '\n' && isprint(incomingByte) == 0)) {
+            serialRx.mode = SerialRxMode::BinaryControlWord;
+            serialRx.wordBytes[serialRx.wordLength++] = incomingByte;
+            if (serialRx.wordLength == 4U) {
                 const uint32_t word =
-                    static_cast<uint32_t>(wn2aBinaryBytes[0]) |
-                    (static_cast<uint32_t>(wn2aBinaryBytes[1]) << 8) |
-                    (static_cast<uint32_t>(wn2aBinaryBytes[2]) << 16) |
-                    (static_cast<uint32_t>(wn2aBinaryBytes[3]) << 24);
-                wn2aBinaryLength = 0;
+                    static_cast<uint32_t>(serialRx.wordBytes[0]) |
+                    (static_cast<uint32_t>(serialRx.wordBytes[1]) << 8) |
+                    (static_cast<uint32_t>(serialRx.wordBytes[2]) << 16) |
+                    (static_cast<uint32_t>(serialRx.wordBytes[3]) << 24);
+                serialRx.wordLength = 0;
+                serialRx.mode = SerialRxMode::AsciiLineData;
                 handleWn2aBinaryWord(word);
             }
             continue;
@@ -414,6 +435,12 @@ const __FlashStringHelper* chipTargetName(ChipTarget target)
 
 namespace {
 
+void selectChipBinary(ChipTarget target)
+{
+    serialRx.selectedBinaryTarget = target;
+    selectChip(target);
+}
+
 void handleWn2aBinaryWord(uint32_t word)
 {
     const uint16_t selector = static_cast<uint16_t>(word & 0xFFFFU);
@@ -444,35 +471,35 @@ void handleWn2aBinaryWord(uint32_t word)
         return;
     }
     if (selector == 0x01FFU) {
-        selectChip(ChipTarget::LO1);
+        selectChipBinary(ChipTarget::LO1);
         return;
     }
     if (selector == 0x02FFU) {
-        selectChip(ChipTarget::LO2);
+        selectChipBinary(ChipTarget::LO2);
         return;
     }
     if (selector == 0x08FFU) {
-        selectChip(ChipTarget::Attenuator);
+        selectChipBinary(ChipTarget::Attenuator);
         return;
     }
     if (selector == 0x03FFU) {
-        selectChip(ChipTarget::LO3);
+        selectChipBinary(ChipTarget::LO3);
         return;
     }
     if (selector == 0x05FFU) {
-        selectChip(ChipTarget::ADC1);
+        selectChipBinary(ChipTarget::ADC1);
         return;
     }
     if (selector == 0x0DFFU) {
-        selectChip(ChipTarget::ADC2);
+        selectChipBinary(ChipTarget::ADC2);
         return;
     }
     if (selector == 0x15FFU) {
-        selectChip(ChipTarget::RAM);
+        selectChipBinary(ChipTarget::RAM);
         return;
     }
     if (selector == 0x1DFFU) {
-        selectChip(ChipTarget::Flash);
+        selectChipBinary(ChipTarget::Flash);
         return;
     }
     Serial.print(F("[WN2A] binary word 0x"));

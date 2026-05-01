@@ -182,9 +182,9 @@ Direct2Register:
 
 - [x] Add a small host-side serial command test tool.
 - [x] Add named tests for the current Arduino message binary command.
-- [ ] Add `SerialRxMode` with `AsciiLineData`, `BinaryControlWord`,
+- [x] Add `SerialRxMode` with `AsciiLineData`, `BinaryControlWord`,
       `FMNData`, and `Direct2Register`.
-- [ ] Add serial receive state near `pollSerial()`: current mode, selected
+- [x] Add serial receive state near `pollSerial()`: current mode, selected
       binary target, 4-byte buffer, and byte count.
 - [ ] Keep receive mode separate from selected binary hardware target.
 - [ ] Replace the current non-printable-byte binary heuristic with frame-boundary
