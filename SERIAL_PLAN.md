@@ -30,8 +30,9 @@ enum class SerialRxMode {
 `SerialRxMode` describes how incoming bytes are decoded right now. It should be
 separate from the selected hardware target.
 
-The receiver should also track the current binary target, such as LO1 or LO2,
-so that decoded data words can be routed without overloading the receive mode.
+The receiver should also track the current binary target, such as LO1, LO2, or
+another selected hardware target, so that decoded data words can be routed
+without overloading the receive mode.
 
 ## Word Types
 
@@ -51,12 +52,18 @@ Examples:
 - `0x04FF`: disable reference clocks.
 - `0x01FF`: select LO1.
 - `0x02FF`: select LO2.
-- `0x20FF`: enter AsciiLineData mode. Proposed; not yet approved.
-- `0x40FF`: enter FMNData mode. Proposed; not yet approved.
-- `0x80FF`: enter Direct2Register mode. Proposed; not yet approved.
+- `0x03FF`: select LO3.
+- `0x08FF`: select Attenuator.
+- `0x05FF`: select ADC1.
+- `0x0DFF`: select ADC2.
+- `0x15FF`: select RAM.
+- `0x1DFF`: select FLASH.
+- `0x06FF`: enter AsciiLineData mode.
+- `0x0EFF`: enter FMNData mode.
+- `0x16FF`: enter Direct2Register mode.
 
-LO3 control may be added later, but is intentionally out of scope for the first
-bring-up slice.
+Selector control words for LO1, LO2, LO3, Attenuator, ADC1, ADC2, RAM, and
+FLASH have been brought up and measured on hardware.
 
 ### FMNData
 
@@ -115,11 +122,17 @@ Example command names:
 
 - `arduino-message`: send `FF 17 00 00`, expect `saTech WN2A ready`.
 - `ascii-message`: send `17FF\n`, expect `saTech WN2A ready`.
-- `enter-ascii`: send `FF 20 00 00`.
-- `enter-fmn`: send `FF 40 00 00`.
-- `enter-direct`: send `FF 80 00 00`.
+- `enter-ascii`: send `FF 06 00 00`.
+- `enter-fmn`: send `FF 0E 00 00`.
+- `enter-direct`: send `FF 16 00 00`.
 - `select-lo1`: send `FF 01 00 00`.
 - `select-lo2`: send `FF 02 00 00`.
+- `select-lo3`: send `FF 03 00 00`.
+- `select-atten`: send `FF 08 7F 00`.
+- `select-adc1`: send `FF 05 00 00`.
+- `select-adc2`: send `FF 0D 00 00`.
+- `select-ram`: send `FF 15 00 00`.
+- `select-flash`: send `FF 1D 00 00`.
 - `select-ref1`: send `FF 0C 00 00`.
 - `select-ref2`: send `FF 14 00 00`.
 - `ref-off`: send `FF 04 00 00`.
@@ -140,10 +153,10 @@ and receive-mode selection can be separate commands:
 
 ```text
 FF 02 00 00   -> ControlWord 0x02FF, select LO2
-FF 40 00 00   -> ControlWord 0x40FF, enter FMNData
+FF 0E 00 00   -> ControlWord 0x0EFF, enter FMNData
 <4 FMN bytes> -> program LO2
 <4 FMN bytes> -> program LO2 again
-FF 20 00 00   -> ControlWord 0x20FF, return to AsciiLineData
+FF 06 00 00   -> ControlWord 0x06FF, return to AsciiLineData
 ```
 
 ```text
@@ -183,7 +196,9 @@ Direct2Register:
 - [ ] Keep existing named ASCII technician commands working.
 - [ ] Keep binary control responses quiet except for explicit query responses.
 - [ ] Add quiet reference selection for WN2A control words.
-- [ ] Add LO1 and LO2 target selection control words.
+- [x] Add chip select target control words for LO1, LO2, LO3, Attenuator,
+      ADC1, ADC2, RAM, and FLASH.
+- [x] Verify chip select target control words on hardware with meter readings.
 - [ ] Add LO1 programming from WN2A control words.
 - [ ] Add LO2 programming from FMN data words.
 - [ ] Add Direct2Register mode after the minimum LO bring-up path is working.
