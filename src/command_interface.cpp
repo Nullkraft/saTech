@@ -30,7 +30,7 @@ struct SerialReceiveState {
     uint8_t wordLength;
 };
 
-SerialReceiveState serialRx = {
+SerialReceiveState serialRxState = {
     SerialRxMode::AsciiLineData,
     ChipTarget::None,
     {0U, 0U, 0U, 0U},
@@ -361,34 +361,46 @@ void printBanner()
     Serial.println();
 }
 
+// The serial stream is byte-oriented, and higher-level things like ASCII lines
+// or 4-byte binary words are assembled from those individual bytes.
 // cppcheck-suppress unusedFunction
 void pollSerial()
 {
     while (Serial.available() > 0) {
         const char incoming = static_cast<char>(Serial.read());
         const uint8_t incomingByte = static_cast<uint8_t>(incoming);
-        if (serialRx.wordLength > 0U || (incoming != '\r' && incoming != '\n' && isprint(incomingByte) == 0)) {
-            serialRx.mode = SerialRxMode::BinaryControlWord;
-            serialRx.wordBytes[serialRx.wordLength++] = incomingByte;
-            if (serialRx.wordLength == 4U) {
+        const bool atAsciiFrameBoundary = (inputLength == 0U);
+        const bool startsControlWord = (atAsciiFrameBoundary && incomingByte == 0xFFU);
+        // If it is raw 0xFF at an ASCII frame boundary, start collecting a
+        // 4-byte binary control word. If already collecting binary bytes,
+        // append it to the 4-byte buffer.
+        if (serialRxState.wordLength > 0U || startsControlWord) {
+            serialRxState.mode = SerialRxMode::BinaryControlWord;
+            serialRxState.wordBytes[serialRxState.wordLength++] = incomingByte;
+            if (serialRxState.wordLength == 4U) {
                 const uint32_t word =
-                    static_cast<uint32_t>(serialRx.wordBytes[0]) |
-                    (static_cast<uint32_t>(serialRx.wordBytes[1]) << 8) |
-                    (static_cast<uint32_t>(serialRx.wordBytes[2]) << 16) |
-                    (static_cast<uint32_t>(serialRx.wordBytes[3]) << 24);
-                serialRx.wordLength = 0;
-                serialRx.mode = SerialRxMode::AsciiLineData;
+                    static_cast<uint32_t>(serialRxState.wordBytes[0]) |
+                    (static_cast<uint32_t>(serialRxState.wordBytes[1]) << 8) |
+                    (static_cast<uint32_t>(serialRxState.wordBytes[2]) << 16) |
+                    (static_cast<uint32_t>(serialRxState.wordBytes[3]) << 24);
+                serialRxState.wordLength = 0;
+                serialRxState.mode = SerialRxMode::AsciiLineData;
                 handleControlWord(word);
             }
+            continue;
+        }
+        if (incoming != '\r' && incoming != '\n' && isprint(incomingByte) == 0) {
             continue;
         }
         if (incoming == '\r') {
             continue;
         }
+        // If it is ASCII newline, terminate and handle the text command.
         if (incoming == '\n') {
             inputBuffer[inputLength] = '\0';
             handleCommand(inputBuffer);
             inputLength = 0;
+        // Otherwise append printable ASCII to inputBuffer.
         } else if (inputLength < (INPUT_BUFFER_SIZE - 1U)) {
             inputBuffer[inputLength++] = incoming;
         } else {
@@ -437,7 +449,7 @@ namespace {
 
 void selectChipBinary(ChipTarget target)
 {
-    serialRx.selectedBinaryTarget = target;
+    serialRxState.selectedBinaryTarget = target;
     selectChip(target);
 }
 

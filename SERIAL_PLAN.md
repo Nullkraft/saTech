@@ -186,10 +186,10 @@ Direct2Register:
       `FMNData`, and `Direct2Register`.
 - [x] Add serial receive state near `pollSerial()`: current mode, selected
       binary target, 4-byte buffer, and byte count.
-- [ ] Keep receive mode separate from selected binary hardware target.
-- [ ] Replace the current non-printable-byte binary heuristic with frame-boundary
+- [x] Keep receive mode separate from selected binary hardware target.
+- [x] Replace the current non-printable-byte binary heuristic with frame-boundary
       handling for `0xFF`.
-- [ ] Route binary 4-byte control frames into a shared `handleControlWord()`.
+- [x] Route binary 4-byte control frames into a shared `handleControlWord()`.
 - [ ] Add explicit mode selection control words for `AsciiLineData`, `FMNData`,
       and `Direct2Register`.
 - [ ] Allow ASCII hex control words to dispatch into `handleControlWord()`.
