@@ -190,7 +190,7 @@ Direct2Register:
 - [x] Replace the current non-printable-byte binary heuristic with frame-boundary
       handling for `0xFF`.
 - [x] Route binary 4-byte control frames into a shared `handleControlWord()`.
-- [ ] Add explicit mode selection control words for `AsciiLineData`, `FMNData`,
+- [x] Add explicit mode selection control words for `AsciiLineData`, `FMNData`,
       and `Direct2Register`.
 - [ ] Allow ASCII hex control words to dispatch into `handleControlWord()`.
 - [ ] Keep existing named ASCII technician commands working.

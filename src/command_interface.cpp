@@ -453,6 +453,12 @@ void selectChipBinary(ChipTarget target)
     selectChip(target);
 }
 
+void setSerialRxMode(SerialRxMode mode)
+{
+    serialRxState.mode = mode;
+    serialRxState.wordLength = 0U;
+}
+
 void handleControlWord(uint32_t word)
 {
     const uint16_t selector = static_cast<uint16_t>(word & 0xFFFFU);
@@ -468,6 +474,18 @@ void handleControlWord(uint32_t word)
     }
     if (selector == 0x17FFU) {
         Serial.print(F("saTech WN2A ready"));
+        return;
+    }
+    if (selector == 0x06FFU) {
+        setSerialRxMode(SerialRxMode::AsciiLineData);
+        return;
+    }
+    if (selector == 0x0EFFU) {
+        setSerialRxMode(SerialRxMode::FMNData);
+        return;
+    }
+    if (selector == 0x16FFU) {
+        setSerialRxMode(SerialRxMode::Direct2Register);
         return;
     }
     if (selector == 0x04FFU) {
