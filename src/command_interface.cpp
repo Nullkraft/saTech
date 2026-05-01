@@ -158,7 +158,7 @@ void handleChipCommand(const char* targetToken);
 void handleSetCommand(const char* targetToken);
 void handleSpiCommand(const char* valueToken);
 void handleCommand(const char* line);
-void handleWn2aBinaryWord(uint32_t word);
+void handleControlWord(uint32_t word);
 
 } // namespace
 
@@ -378,7 +378,7 @@ void pollSerial()
                     (static_cast<uint32_t>(serialRx.wordBytes[3]) << 24);
                 serialRx.wordLength = 0;
                 serialRx.mode = SerialRxMode::AsciiLineData;
-                handleWn2aBinaryWord(word);
+                handleControlWord(word);
             }
             continue;
         }
@@ -441,7 +441,7 @@ void selectChipBinary(ChipTarget target)
     selectChip(target);
 }
 
-void handleWn2aBinaryWord(uint32_t word)
+void handleControlWord(uint32_t word)
 {
     const uint16_t selector = static_cast<uint16_t>(word & 0xFFFFU);
     if (selector == 0x0FFFU) {
