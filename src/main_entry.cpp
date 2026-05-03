@@ -2,7 +2,6 @@
 
 #elif defined(ARDUINO)
 #include <Arduino.h>
-#include <SPI.h>
 #include <arduino_hal.h>
 #include <frequency_calculator.h>
 #include <max2871.h>
