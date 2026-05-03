@@ -2,7 +2,6 @@
 
 #include <stdint.h>
 #include "I_PLLSynthesizer.h"
-#include <math.h>   // round()
 
 enum class LOInjectionMode : uint8_t { Low, High };
 

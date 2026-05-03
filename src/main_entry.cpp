@@ -6,7 +6,6 @@
 #include <arduino_hal.h>
 #include <frequency_calculator.h>
 #include <max2871.h>
-#include <math.h>
 #include "command_interface.h"
 #include "console_state.h"
 
