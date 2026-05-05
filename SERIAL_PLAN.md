@@ -16,6 +16,9 @@ The protocol must stay host-language independent. The host may be Python,
 FreeBASIC, a terminal, or another program; the firmware contract is the serial
 byte stream, not the host implementation language.
 
+Hardware scope note: the MAX2871 chip itself is limited to 23.5 to 6000 MHz.
+The fully assembled three-chip spectrum analyzer target can tune DC to 3000 MHz.
+
 ## Serial Receive Modes
 
 ```cpp
@@ -29,6 +32,9 @@ enum class SerialRxMode {
 
 `SerialRxMode` describes how incoming bytes are decoded right now. It should be
 separate from the selected hardware target.
+
+`FMNData` and `Direct2Register` receive modes are currently selectable and
+scaffolded, but their non-control data decoding is not implemented yet.
 
 The receiver should also track the current binary target, such as LO1, LO2, or
 another selected hardware target, so that decoded data words can be routed
@@ -201,7 +207,8 @@ Direct2Register:
 - [x] Verify chip select target control words on hardware with meter readings.
 - [ ] Add LO1 programming from WN2A control words.
 - [ ] Add LO2 programming from FMN data words.
-- [ ] Add Direct2Register mode after the minimum LO bring-up path is working.
+- [ ] Implement Direct2Register non-control data decoding after the minimum LO
+      bring-up path is working.
 - [ ] Exclude LO3 target selection and LO3 FMN programming from the first slice.
 - [ ] Add named tests for individual ASCII and binary serial commands.
 - [ ] Build with `pio run -e ci`.
