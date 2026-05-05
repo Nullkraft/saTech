@@ -28,8 +28,8 @@ double currentRfInputMhz = STARTUP_RF_MHZ;
 void initializeLo(MAX2871& lo)
 {
     lo.begin();
-    lo.outputSelect(RF_ALL);
-    lo.outputPower(+5, RF_ALL);
+    lo.outputSelect(RF_B);
+    lo.outputPower(+5, RF_B);
 }
 
 static void printFrequencyPlan()
