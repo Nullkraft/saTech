@@ -118,6 +118,7 @@ void setup()
     }
 
     resetConsoleState();
+    saTech.begin("ascii");
 
     freqCalc.RefClock1 = REF_MHZ;
 

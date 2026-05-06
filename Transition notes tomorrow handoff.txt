@@ -42,6 +42,8 @@ Public setup API
   and ignores unsupported encoding strings.
 - Progress: setup encoding selection is stored separately from the runtime
   payload state.
+- Progress: setup() hard-codes the current ASCII startup transport through
+  saTech.begin("ascii").
 - The library API should provide saTech.begin(...) for ascii and binary,
   accepting capitalization variants.
 - Unsupported encoding strings should be ignored.

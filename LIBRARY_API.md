@@ -6,7 +6,7 @@
       capitalization variants for the encoding string.
 - [x] Ignore unsupported encoding strings.
 - [x] Keep encoding selection outside the runtime payload state machine.
-- [ ] Allow sketches to hard-code the encoding in `setup()`.
+- [x] Allow sketches to hard-code the encoding in `setup()`.
 - [ ] Allow sketches to wait for a serial token of `ascii` or `binary` before
       calling `saTech.begin(...)`.
 - [ ] If waiting for the token, periodically print a reminder and continue
