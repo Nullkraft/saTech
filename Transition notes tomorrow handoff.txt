@@ -98,6 +98,11 @@ Validation completed
 - test/run_ascii_tests.sh passed after the runner split.
 - Stale pollSerial cppcheck suppression cleanup was verified and is being
   committed separately.
+- test/run_ascii_tests.sh passed after quiet reference control-word dispatch.
+- test/run_binary_tests.sh passed after quiet reference control-word dispatch.
+- cppcheck --enable=warning,performance,portability --std=c++11 -I ../MAX2871_library_dev/src src
+  passed after quiet reference control-word dispatch.
+- pio run -e ci passed after quiet reference control-word dispatch.
 - Firmware was uploaded and flash-verified earlier after serial receive
   scaffolding; the later quiet mode-control upload note is historical/stale.
 
@@ -106,9 +111,11 @@ Starting point for tomorrow
 
 - Project-local AGENTS.md was created/refined and is being committed separately
   with tiny progress-note updates.
-- Keep existing named ASCII technician commands working.
-- Keep mode-selection controls quiet.
-- Defer quieting chip-select/reference binary commands until after bring-up,
-  because their RX text is still useful for bench scripts.
-- Pending SERIAL_PLAN.md follow-up work remains: quiet binary chip/reference
+- Existing named ASCII technician commands were rechecked with the focused ASCII
+  command mapping tests.
+- Mode-selection control words remain quiet.
+- Reference control words now update REF_EN1/REF_EN2 and ref state quietly for
+  WN2A/binary control-word dispatch; named ASCII `set <ref1|ref2|off>` still
+  prints the technician-facing reference text.
+- Pending SERIAL_PLAN.md follow-up work remains: quiet chip-select binary
   commands, decode FMNData, and decode Direct2Register non-control words.

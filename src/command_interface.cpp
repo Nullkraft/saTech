@@ -160,6 +160,7 @@ void handleSpiCommand(const char* valueToken);
 void handleCommand(const char* line);
 void handleControlWord(uint32_t word);
 bool parseAsciiControlWord(const char* token, uint32_t* word);
+void applyReferenceSelection(ReferenceTarget target, bool verbose);
 
 } // namespace
 
@@ -246,34 +247,7 @@ void selectChip(ChipTarget target)
 // ---------------------------------------------------------------------------
 void selectRef(ReferenceTarget target)
 {
-    if (target != ReferenceTarget::Ref1 &&
-        target != ReferenceTarget::Ref2 &&
-        target != ReferenceTarget::None) {
-        Serial.println(F("set requires ref1, ref2, or off."));
-        return;
-    }
-
-    ConsoleState& s = consoleState();
-
-    // Deassert both reference clocks unconditionally.
-    digitalWrite(PIN_REF_EN1, LOW);
-    digitalWrite(PIN_REF_EN2, LOW);
-
-    s.ref1Enabled = false;
-    s.ref2Enabled = false;
-
-    if (target == ReferenceTarget::Ref1) {
-        digitalWrite(PIN_REF_EN1, HIGH);
-        s.ref1Enabled = true;
-        Serial.println(F("Reference clock set to REF1."));
-    } else if (target == ReferenceTarget::Ref2) {
-        digitalWrite(PIN_REF_EN2, HIGH);
-        s.ref2Enabled = true;
-        Serial.println(F("Reference clock set to REF2."));
-    } else {
-        // ReferenceTarget::None — both clocks remain deasserted.
-        Serial.println(F("Warning: all reference clocks disabled — LOs will lose lock."));
-    }
+    applyReferenceSelection(target, true);
 }
 
 int readOutputPinLevel(uint8_t pin)
@@ -447,6 +421,46 @@ const __FlashStringHelper* chipTargetName(ChipTarget target)
 
 namespace {
 
+void applyReferenceSelection(ReferenceTarget target, bool verbose)
+{
+    if (target != ReferenceTarget::Ref1 &&
+        target != ReferenceTarget::Ref2 &&
+        target != ReferenceTarget::None) {
+        if (verbose) {
+            Serial.println(F("set requires ref1, ref2, or off."));
+        }
+        return;
+    }
+
+    ConsoleState& s = consoleState();
+
+    // Deassert both reference clocks unconditionally.
+    digitalWrite(PIN_REF_EN1, LOW);
+    digitalWrite(PIN_REF_EN2, LOW);
+
+    s.ref1Enabled = false;
+    s.ref2Enabled = false;
+
+    if (target == ReferenceTarget::Ref1) {
+        digitalWrite(PIN_REF_EN1, HIGH);
+        s.ref1Enabled = true;
+        if (verbose) {
+            Serial.println(F("Reference clock set to REF1."));
+        }
+    } else if (target == ReferenceTarget::Ref2) {
+        digitalWrite(PIN_REF_EN2, HIGH);
+        s.ref2Enabled = true;
+        if (verbose) {
+            Serial.println(F("Reference clock set to REF2."));
+        }
+    } else {
+        // ReferenceTarget::None — both clocks remain deasserted.
+        if (verbose) {
+            Serial.println(F("Warning: all reference clocks disabled — LOs will lose lock."));
+        }
+    }
+}
+
 void selectChipBinary(ChipTarget target)
 {
     serialRxState.selectedBinaryTarget = target;
@@ -489,15 +503,15 @@ void handleControlWord(uint32_t word)
         return;
     }
     if (selector == 0x04FFU) {
-        selectRef(ReferenceTarget::None);
+        applyReferenceSelection(ReferenceTarget::None, false);
         return;
     }
     if (selector == 0x0CFFU) {
-        selectRef(ReferenceTarget::Ref1);
+        applyReferenceSelection(ReferenceTarget::Ref1, false);
         return;
     }
     if (selector == 0x14FFU) {
-        selectRef(ReferenceTarget::Ref2);
+        applyReferenceSelection(ReferenceTarget::Ref2, false);
         return;
     }
     if (selector == 0x01FFU) {

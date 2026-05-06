@@ -201,9 +201,9 @@ Direct2Register:
 - [x] Add explicit mode selection control words for `AsciiLineData`, `FMNData`,
       and `Direct2Register`.
 - [x] Allow ASCII hex control words to dispatch into `handleControlWord()`.
-- [ ] Keep existing named ASCII technician commands working.
-- [ ] Keep binary control responses quiet except for explicit query responses.
-- [ ] Add quiet reference selection for WN2A control words.
+- [x] Verify existing named ASCII technician commands still work.
+- [x] Keep mode-selection control words quiet; defer chip/reference quieting until after bring-up.
+- [x] Add quiet reference selection for WN2A control words.
 - [x] Add chip select target control words for LO1, LO2, LO3, Attenuator,
       ADC1, ADC2, RAM, and FLASH.
 - [x] Verify chip select target control words on hardware with meter readings.
