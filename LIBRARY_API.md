@@ -2,10 +2,9 @@
 
 ## Public Setup API
 
-- [ ] Provide `saTech.begin("ascii")`.
-- [ ] Provide `saTech.begin("binary")`.
-- [ ] Accept capitalization variants for the encoding string.
-- [ ] Reject unsupported encoding strings with a clear error path.
+- [x] Provide `saTech.begin(...)` for `ascii` and `binary`, accepting
+      capitalization variants for the encoding string.
+- [ ] Ignore unsupported encoding strings.
 - [ ] Keep encoding selection outside the runtime payload state machine.
 - [ ] Allow sketches to hard-code the encoding in `setup()`.
 - [ ] Allow sketches to wait for a serial token of `ascii` or `binary` before

@@ -38,6 +38,7 @@ SerialReceiveState serialRxState = {
     {0U, 0U, 0U, 0U},
     0U,
 };
+SerialTransportEncoding serialTransportEncoding = SerialTransportEncoding::Ascii;
 
 bool equalsIgnoreCase(const char* lhs, const char* rhs)
 {
@@ -195,6 +196,22 @@ const ChipSelectDefinition CHIP_DEFINITIONS[] = {
 
 const size_t CHIP_COUNT =
     sizeof(CHIP_DEFINITIONS) / sizeof(CHIP_DEFINITIONS[0]);
+
+SaTech saTech;
+
+void SaTech::begin(const char* encoding)
+{
+    if (equalsIgnoreCase(encoding, "ascii")) {
+        serialTransportEncoding = SerialTransportEncoding::Ascii;
+    } else if (equalsIgnoreCase(encoding, "binary")) {
+        serialTransportEncoding = SerialTransportEncoding::Binary;
+    }
+}
+
+SerialTransportEncoding SaTech::transportEncoding() const
+{
+    return serialTransportEncoding;
+}
 
 const ChipSelectDefinition* chipSelectDefinitionForTarget(ChipTarget target)
 {

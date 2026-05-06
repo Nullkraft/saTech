@@ -38,13 +38,14 @@ Runtime processing should be:
 Public setup API
 ----------------
 
-- The library API should provide saTech.begin("ascii") and
-  saTech.begin("binary").
+- Progress: saTech.begin(...) now accepts ascii/binary capitalization variants.
+- The library API should provide saTech.begin(...) for ascii and binary,
+  accepting capitalization variants.
+- Unsupported encoding strings should be ignored.
 - The sketch setup() is responsible for choosing or waiting for the encoding
   before runtime starts.
 - If setup waits for a serial token, it should keep waiting until ascii or
   binary is received. A periodic reminder string is acceptable.
-- Accept capitalization variants for ascii/binary.
 - Encoding selection is configuration, not part of the runtime payload state
   machine.
 
