@@ -5,7 +5,7 @@
 - [x] Provide `saTech.begin(...)` for `ascii` and `binary`, accepting
       capitalization variants for the encoding string.
 - [x] Ignore unsupported encoding strings.
-- [ ] Keep encoding selection outside the runtime payload state machine.
+- [x] Keep encoding selection outside the runtime payload state machine.
 - [ ] Allow sketches to hard-code the encoding in `setup()`.
 - [ ] Allow sketches to wait for a serial token of `ascii` or `binary` before
       calling `saTech.begin(...)`.
