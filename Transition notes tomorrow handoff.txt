@@ -56,6 +56,9 @@ Public setup API
 - Progress: ASCII receive now waits for a completed line token, converts it to
   a uint32_t word, and dispatches command words or FMN data through the existing
   word handlers.
+- Progress: completed ASCII tokens and completed binary words now both route
+  through shared processReceivedWord(uint32_t) payload processing after codec
+  parsing/conversion.
 - Progress: setup code can precheck serial tokens with
   saTech.supportsEncoding(token) before calling saTech.begin(token).
 - Progress: saTech.begin(token) returns false for unsupported tokens so a

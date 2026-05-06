@@ -21,10 +21,10 @@
 - [x] In binary encoding, collect a complete 4-byte word before processing.
 - [x] In ASCII encoding, receive a complete token or line, convert it to the
       same internal `uint32_t` word format, then process it.
-- [ ] Keep ASCII parsing and binary parsing in codec-level functions.
-- [ ] Route both codecs into one shared `processReceivedWord(uint32_t word)`
+- [x] Keep ASCII parsing and binary parsing in codec-level functions.
+- [x] Route both codecs into one shared `processReceivedWord(uint32_t word)`
       style function.
-- [ ] Do not mix ASCII-vs-binary detection into normal payload processing.
+- [x] Do not mix ASCII-vs-binary detection into normal payload processing.
 
 ## Word Formats
 

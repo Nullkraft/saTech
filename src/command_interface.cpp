@@ -26,7 +26,6 @@ enum class SerialPayloadMode {
 struct SerialReceiveState {
     SerialPayloadMode payloadMode;
     ChipTarget selectedBinaryTarget;
-    SerialPayloadMode pendingWordType;
     uint8_t wordBytes[RECEIVED_WORD_BYTES];
     uint8_t wordLength;
 };
@@ -34,7 +33,6 @@ struct SerialReceiveState {
 SerialReceiveState serialRxState = {
     SerialPayloadMode::Command,
     ChipTarget::None,
-    SerialPayloadMode::Command,
     {0U, 0U, 0U, 0U},
     0U,
 };
@@ -163,7 +161,7 @@ void handleSpiCommand(const char* valueToken);
 void handleCommand(const char* line);
 void handleControlWord(uint32_t word);
 void handleFmnDataWord(uint32_t word);
-void handleAsciiWord(uint32_t word);
+void processReceivedWord(uint32_t word);
 void collectBinaryByte(uint8_t incomingByte);
 void collectAsciiByte(char incoming, uint8_t incomingByte);
 bool parseAsciiControlWord(const char* token, uint32_t* word);
@@ -426,10 +424,6 @@ namespace {
 
 void collectBinaryByte(uint8_t incomingByte)
 {
-    if (serialRxState.wordLength == 0U) {
-        serialRxState.pendingWordType =
-            (incomingByte == 0xFFU) ? SerialPayloadMode::Command : serialRxState.payloadMode;
-    }
     serialRxState.wordBytes[serialRxState.wordLength++] = incomingByte;
     if (serialRxState.wordLength < RECEIVED_WORD_BYTES) {
         return;
@@ -441,11 +435,7 @@ void collectBinaryByte(uint8_t incomingByte)
         (static_cast<uint32_t>(serialRxState.wordBytes[2]) << 16) |
         (static_cast<uint32_t>(serialRxState.wordBytes[3]) << 24);
     serialRxState.wordLength = 0;
-    if (serialRxState.pendingWordType == SerialPayloadMode::Command) {
-        handleControlWord(word);
-    } else if (serialRxState.pendingWordType == SerialPayloadMode::FMNData) {
-        handleFmnDataWord(word);
-    }
+    processReceivedWord(word);
 }
 
 void collectAsciiByte(char incoming, uint8_t incomingByte)
@@ -665,8 +655,9 @@ void handleFmnDataWord(uint32_t word)
     markLoManual(target);
 }
 
-void handleAsciiWord(uint32_t word)
+void processReceivedWord(uint32_t word)
 {
+    // Check if the parsed 32-bit word has 0xFF (command flag) in its least-significant byte?
     const SerialPayloadMode wordType =
         ((word & 0xFFU) == 0xFFU) ? SerialPayloadMode::Command : serialRxState.payloadMode;
     if (wordType == SerialPayloadMode::Command) {
@@ -676,12 +667,13 @@ void handleAsciiWord(uint32_t word)
     }
 }
 
+// Convert string, e.g. "17ff", to hex 0x17FF
 bool parseAsciiControlWord(const char* token, uint32_t* word)
 {
     if (token == nullptr || word == nullptr) {
         return false;
     }
-    *word = static_cast<uint32_t>(strtoul(token, nullptr, 16));
+    *word = static_cast<uint32_t>(strtoul(token, nullptr, 16)); // Cast to 32 bits
     return true;
 }
 
@@ -982,7 +974,7 @@ void handleCommand(const char* line)
 
     uint32_t asciiControlWord = 0U;
     if (tokens[1] == nullptr && parseAsciiControlWord(tokens[0], &asciiControlWord)) {
-        handleAsciiWord(asciiControlWord);
+        processReceivedWord(asciiControlWord);
         return;
     }
 
