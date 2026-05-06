@@ -364,7 +364,6 @@ void printBanner()
 
 // The serial stream is byte-oriented, and higher-level things like ASCII lines
 // or 4-byte binary words are assembled from those individual bytes.
-// cppcheck-suppress unusedFunction
 void pollSerial()
 {
     while (Serial.available() > 0) {

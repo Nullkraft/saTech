@@ -96,6 +96,8 @@ Validation completed
   only binary command mapping tests.
 - test/run_binary_tests.sh passed after the runner split.
 - test/run_ascii_tests.sh passed after the runner split.
+- Stale pollSerial cppcheck suppression cleanup was verified and is being
+  committed separately.
 - Firmware was uploaded and flash-verified earlier after serial receive
   scaffolding; the later quiet mode-control upload note is historical/stale.
 
