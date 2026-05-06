@@ -198,7 +198,7 @@ Direct2Register:
 - [x] Route binary 4-byte control frames into a shared `handleControlWord()`.
 - [x] Add explicit mode selection control words for `AsciiLineData`, `FMNData`,
       and `Direct2Register`.
-- [ ] Allow ASCII hex control words to dispatch into `handleControlWord()`.
+- [x] Allow ASCII hex control words to dispatch into `handleControlWord()`.
 - [ ] Keep existing named ASCII technician commands working.
 - [ ] Keep binary control responses quiet except for explicit query responses.
 - [ ] Add quiet reference selection for WN2A control words.
@@ -211,7 +211,7 @@ Direct2Register:
       bring-up path is working.
 - [ ] Exclude LO3 target selection and LO3 FMN programming from the first slice.
 - [ ] Add named tests for individual ASCII and binary serial commands.
-- [ ] Build with `pio run -e ci`.
+- [x] Build with `pio run -e ci`.
 - [ ] Verify Arduino message query over binary.
 - [ ] Verify ASCII `17FF` reaches the same internal control action as binary
       `FF 17 00 00`.

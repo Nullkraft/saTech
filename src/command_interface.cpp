@@ -159,6 +159,7 @@ void handleSetCommand(const char* targetToken);
 void handleSpiCommand(const char* valueToken);
 void handleCommand(const char* line);
 void handleControlWord(uint32_t word);
+bool parseAsciiControlWord(const char* token, uint32_t* word);
 
 } // namespace
 
@@ -541,6 +542,15 @@ void handleControlWord(uint32_t word)
     Serial.print(F(" ignored."));
 }
 
+bool parseAsciiControlWord(const char* token, uint32_t* word)
+{
+    if (token == nullptr || word == nullptr) {
+        return false;
+    }
+    *word = static_cast<uint32_t>(strtoul(token, nullptr, 16));
+    return true;
+}
+
 void handleAttenuatorCommand(const char* valueToken)
 {
     if (valueToken == nullptr) {
@@ -855,6 +865,12 @@ void handleCommand(const char* line)
     }
 
     if (tokens[0] == nullptr) {
+        return;
+    }
+
+    uint32_t asciiControlWord = 0U;
+    if (tokens[1] == nullptr && parseAsciiControlWord(tokens[0], &asciiControlWord)) {
+        handleControlWord(asciiControlWord);
         return;
     }
 
