@@ -53,6 +53,9 @@ Public setup API
   Command, FMNData, and DirectRegisterData.
 - Progress: binary receive collection uses a named 4-byte word size and waits
   for that complete word before dispatching it.
+- Progress: ASCII receive now waits for a completed line token, converts it to
+  a uint32_t word, and dispatches command words or FMN data through the existing
+  word handlers.
 - Progress: setup code can precheck serial tokens with
   saTech.supportsEncoding(token) before calling saTech.begin(token).
 - Progress: saTech.begin(token) returns false for unsupported tokens so a

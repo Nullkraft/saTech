@@ -19,7 +19,7 @@
 - [x] Use a payload mode enum equivalent to command, FMN data, and direct
       register data.
 - [x] In binary encoding, collect a complete 4-byte word before processing.
-- [ ] In ASCII encoding, receive a complete token or line, convert it to the
+- [x] In ASCII encoding, receive a complete token or line, convert it to the
       same internal `uint32_t` word format, then process it.
 - [ ] Keep ASCII parsing and binary parsing in codec-level functions.
 - [ ] Route both codecs into one shared `processReceivedWord(uint32_t word)`

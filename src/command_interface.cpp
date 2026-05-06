@@ -163,6 +163,7 @@ void handleSpiCommand(const char* valueToken);
 void handleCommand(const char* line);
 void handleControlWord(uint32_t word);
 void handleFmnDataWord(uint32_t word);
+void handleAsciiWord(uint32_t word);
 void collectBinaryByte(uint8_t incomingByte);
 void collectAsciiByte(char incoming, uint8_t incomingByte);
 bool parseAsciiControlWord(const char* token, uint32_t* word);
@@ -664,6 +665,17 @@ void handleFmnDataWord(uint32_t word)
     markLoManual(target);
 }
 
+void handleAsciiWord(uint32_t word)
+{
+    const SerialPayloadMode wordType =
+        ((word & 0xFFU) == 0xFFU) ? SerialPayloadMode::Command : serialRxState.payloadMode;
+    if (wordType == SerialPayloadMode::Command) {
+        handleControlWord(word);
+    } else if (wordType == SerialPayloadMode::FMNData) {
+        handleFmnDataWord(word);
+    }
+}
+
 bool parseAsciiControlWord(const char* token, uint32_t* word)
 {
     if (token == nullptr || word == nullptr) {
@@ -970,7 +982,7 @@ void handleCommand(const char* line)
 
     uint32_t asciiControlWord = 0U;
     if (tokens[1] == nullptr && parseAsciiControlWord(tokens[0], &asciiControlWord)) {
-        handleControlWord(asciiControlWord);
+        handleAsciiWord(asciiControlWord);
         return;
     }
 
