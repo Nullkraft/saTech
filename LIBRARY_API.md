@@ -15,7 +15,7 @@
 ## Runtime Receiver Model
 
 - [x] Track serial transport encoding separately from payload mode.
-- [ ] Use an encoding enum equivalent to ASCII versus binary.
+- [x] Use an encoding enum equivalent to ASCII versus binary.
 - [ ] Use a payload mode enum equivalent to command, FMN data, and direct
       register data.
 - [ ] In binary encoding, collect a complete 4-byte word before processing.

@@ -47,6 +47,8 @@ Public setup API
 - Progress: runtime receive dispatch now uses the configured
   SerialTransportEncoding instead of inferring binary frames from payload
   state.
+- Progress: transport encoding is represented by the existing
+  SerialTransportEncoding enum with Ascii and Binary values.
 - Progress: setup code can precheck serial tokens with
   saTech.supportsEncoding(token) before calling saTech.begin(token).
 - Progress: saTech.begin(token) returns false for unsupported tokens so a
