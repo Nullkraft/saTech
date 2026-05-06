@@ -211,6 +211,12 @@ void SaTech::begin(const char* encoding)
     }
 }
 
+bool SaTech::supportsEncoding(const char* encoding) const
+{
+    return encoding != nullptr &&
+           (equalsIgnoreCase(encoding, "ascii") || equalsIgnoreCase(encoding, "binary"));
+}
+
 SerialTransportEncoding SaTech::transportEncoding() const
 {
     return serialTransportEncoding;

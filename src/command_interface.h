@@ -26,6 +26,7 @@ enum class SerialTransportEncoding { Ascii, Binary };
 class SaTech {
 public:
     void begin(const char* encoding);
+    bool supportsEncoding(const char* encoding) const;
     SerialTransportEncoding transportEncoding() const;
 };
 

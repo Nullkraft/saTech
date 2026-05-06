@@ -44,6 +44,8 @@ Public setup API
   payload state.
 - Progress: setup() hard-codes the current ASCII startup transport through
   saTech.begin("ascii").
+- Progress: setup code can precheck serial tokens with
+  saTech.supportsEncoding(token) before calling saTech.begin(token).
 - The library API should provide saTech.begin(...) for ascii and binary,
   accepting capitalization variants.
 - Unsupported encoding strings should be ignored.
