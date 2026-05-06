@@ -163,9 +163,6 @@ void handleSpiCommand(const char* valueToken);
 void handleCommand(const char* line);
 void handleControlWord(uint32_t word);
 void handleFmnDataWord(uint32_t word);
-bool isBinaryWordCollectionInProgress();
-bool isBinaryControlWordStartByte(uint8_t incomingByte, bool atAsciiFrameBoundary);
-bool isModeDataWordExpected();
 void collectBinaryByte(uint8_t incomingByte);
 void collectAsciiByte(char incoming, uint8_t incomingByte);
 bool parseAsciiControlWord(const char* token, uint32_t* word);
@@ -381,9 +378,7 @@ void pollSerial()
     while (Serial.available() > 0) {
         const char incomingChar = static_cast<char>(Serial.read());
         const uint8_t incomingByte = static_cast<uint8_t>(incomingChar);
-        if (isBinaryControlWordStartByte(incomingByte, inputLength == 0U) ||
-            isBinaryWordCollectionInProgress() ||
-            isModeDataWordExpected()) {
+        if (serialTransportEncoding == SerialTransportEncoding::Binary) {
             collectBinaryByte(incomingByte);
             continue;
         }
@@ -427,22 +422,6 @@ const __FlashStringHelper* chipTargetName(ChipTarget target)
 }
 
 namespace {
-
-bool isBinaryWordCollectionInProgress()
-{
-    return (serialRxState.wordLength > 0U);
-}
-
-bool isBinaryControlWordStartByte(uint8_t incomingByte, bool atAsciiFrameBoundary)
-{
-    return (incomingByte == 0xFFU) &&
-           (serialRxState.mode != SerialRxMode::AsciiLineData || atAsciiFrameBoundary);
-}
-
-bool isModeDataWordExpected()
-{
-    return (serialRxState.mode == SerialRxMode::FMNData);
-}
 
 void collectBinaryByte(uint8_t incomingByte)
 {

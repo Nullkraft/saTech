@@ -44,6 +44,9 @@ Public setup API
   payload state.
 - Progress: setup() hard-codes the current ASCII startup transport through
   saTech.begin("ascii").
+- Progress: runtime receive dispatch now uses the configured
+  SerialTransportEncoding instead of inferring binary frames from payload
+  state.
 - Progress: setup code can precheck serial tokens with
   saTech.supportsEncoding(token) before calling saTech.begin(token).
 - Progress: saTech.begin(token) returns false for unsupported tokens so a
