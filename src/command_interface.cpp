@@ -201,6 +201,9 @@ SaTech saTech;
 
 void SaTech::begin(const char* encoding)
 {
+    if (encoding == nullptr) {
+        return;
+    }
     if (equalsIgnoreCase(encoding, "ascii")) {
         serialTransportEncoding = SerialTransportEncoding::Ascii;
     } else if (equalsIgnoreCase(encoding, "binary")) {

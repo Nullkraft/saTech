@@ -38,7 +38,8 @@ Runtime processing should be:
 Public setup API
 ----------------
 
-- Progress: saTech.begin(...) now accepts ascii/binary capitalization variants.
+- Progress: saTech.begin(...) now accepts ascii/binary capitalization variants
+  and ignores unsupported encoding strings.
 - The library API should provide saTech.begin(...) for ascii and binary,
   accepting capitalization variants.
 - Unsupported encoding strings should be ignored.
