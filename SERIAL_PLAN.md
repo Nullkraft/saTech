@@ -208,8 +208,13 @@ Direct2Register:
       ADC1, ADC2, RAM, and FLASH.
 - [x] Verify chip select target control words on hardware with meter readings.
 - [x] Verified stale pollSerial cppcheck suppression cleanup; committing separately.
-- [ ] Add LO1 programming from WN2A control words.
-- [ ] Add LO2 programming from FMN data words.
+- [x] Refactor LO control-word handling into shared LO target dispatch.
+- [x] Add FMN data word programming for selected LO target.
+- [x] Added comments explaining each `SerialRxMode` enum value.
+- [x] Flattened `pollSerial()` by extracting binary and ASCII byte collection
+      helpers.
+- [x] Clarified binary word collection predicates around partial words,
+      control-word start bytes, and mode data words.
 - [ ] Implement Direct2Register non-control data decoding after the minimum LO
       bring-up path is working.
 - [ ] Exclude LO3 target selection and LO3 FMN programming from the first slice.

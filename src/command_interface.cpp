@@ -17,15 +17,16 @@ size_t inputLength = 0;
 ConsoleState& state = consoleState();
 
 enum class SerialRxMode {
-    AsciiLineData,
-    BinaryControlWord,
-    FMNData,
-    Direct2Register,
+    AsciiLineData,     // Collect technician ASCII commands until a line terminator.
+    BinaryControlWord, // Collect one four-byte WN2A command & control frame.
+    FMNData,           // Collect packed MAX2871 FMN words for the selected LO.
+    Direct2Register,   // Collect raw register words for the selected SPI target.
 };
 
 struct SerialReceiveState {
     SerialRxMode mode;
     ChipTarget selectedBinaryTarget;
+    SerialRxMode pendingWordType;
     uint8_t wordBytes[4];
     uint8_t wordLength;
 };
@@ -33,6 +34,7 @@ struct SerialReceiveState {
 SerialReceiveState serialRxState = {
     SerialRxMode::AsciiLineData,
     ChipTarget::None,
+    SerialRxMode::BinaryControlWord,
     {0U, 0U, 0U, 0U},
     0U,
 };
@@ -159,6 +161,12 @@ void handleSetCommand(const char* targetToken);
 void handleSpiCommand(const char* valueToken);
 void handleCommand(const char* line);
 void handleControlWord(uint32_t word);
+void handleFmnDataWord(uint32_t word);
+bool isBinaryWordCollectionInProgress();
+bool isBinaryControlWordStartByte(uint8_t incomingByte, bool atAsciiFrameBoundary);
+bool isModeDataWordExpected();
+void collectBinaryByte(uint8_t incomingByte);
+void collectAsciiByte(char incoming, uint8_t incomingByte);
 bool parseAsciiControlWord(const char* token, uint32_t* word);
 void applyReferenceSelection(ReferenceTarget target, bool verbose);
 
@@ -338,49 +346,19 @@ void printBanner()
 
 // The serial stream is byte-oriented, and higher-level things like ASCII lines
 // or 4-byte binary words are assembled from those individual bytes.
+//
 void pollSerial()
 {
     while (Serial.available() > 0) {
-        const char incoming = static_cast<char>(Serial.read());
-        const uint8_t incomingByte = static_cast<uint8_t>(incoming);
-        const bool atAsciiFrameBoundary = (inputLength == 0U);
-        const bool startsControlWord = (atAsciiFrameBoundary && incomingByte == 0xFFU);
-        // If it is raw 0xFF at an ASCII frame boundary, start collecting a
-        // 4-byte binary control word. If already collecting binary bytes,
-        // append it to the 4-byte buffer.
-        if (serialRxState.wordLength > 0U || startsControlWord) {
-            serialRxState.mode = SerialRxMode::BinaryControlWord;
-            serialRxState.wordBytes[serialRxState.wordLength++] = incomingByte;
-            if (serialRxState.wordLength == 4U) {
-                const uint32_t word =
-                    static_cast<uint32_t>(serialRxState.wordBytes[0]) |
-                    (static_cast<uint32_t>(serialRxState.wordBytes[1]) << 8) |
-                    (static_cast<uint32_t>(serialRxState.wordBytes[2]) << 16) |
-                    (static_cast<uint32_t>(serialRxState.wordBytes[3]) << 24);
-                serialRxState.wordLength = 0;
-                serialRxState.mode = SerialRxMode::AsciiLineData;
-                handleControlWord(word);
-            }
+        const char incomingChar = static_cast<char>(Serial.read());
+        const uint8_t incomingByte = static_cast<uint8_t>(incomingChar);
+        if (isBinaryControlWordStartByte(incomingByte, inputLength == 0U) ||
+            isBinaryWordCollectionInProgress() ||
+            isModeDataWordExpected()) {
+            collectBinaryByte(incomingByte);
             continue;
         }
-        if (incoming != '\r' && incoming != '\n' && isprint(incomingByte) == 0) {
-            continue;
-        }
-        if (incoming == '\r') {
-            continue;
-        }
-        // If it is ASCII newline, terminate and handle the text command.
-        if (incoming == '\n') {
-            inputBuffer[inputLength] = '\0';
-            handleCommand(inputBuffer);
-            inputLength = 0;
-        // Otherwise append printable ASCII to inputBuffer.
-        } else if (inputLength < (INPUT_BUFFER_SIZE - 1U)) {
-            inputBuffer[inputLength++] = incoming;
-        } else {
-            inputLength = 0;
-            Serial.println(F("Input too long, line cleared."));
-        }
+        collectAsciiByte(incomingChar, incomingByte);
     }
 }
 
@@ -420,6 +398,68 @@ const __FlashStringHelper* chipTargetName(ChipTarget target)
 }
 
 namespace {
+
+bool isBinaryWordCollectionInProgress()
+{
+    return (serialRxState.wordLength > 0U);
+}
+
+bool isBinaryControlWordStartByte(uint8_t incomingByte, bool atAsciiFrameBoundary)
+{
+    return (incomingByte == 0xFFU) &&
+           (serialRxState.mode != SerialRxMode::AsciiLineData || atAsciiFrameBoundary);
+}
+
+bool isModeDataWordExpected()
+{
+    return (serialRxState.mode == SerialRxMode::FMNData);
+}
+
+void collectBinaryByte(uint8_t incomingByte)
+{
+    if (serialRxState.wordLength == 0U) {
+        serialRxState.pendingWordType =
+            (incomingByte == 0xFFU) ? SerialRxMode::BinaryControlWord : serialRxState.mode;
+    }
+    serialRxState.wordBytes[serialRxState.wordLength++] = incomingByte;
+    if (serialRxState.wordLength < 4U) {
+        return;
+    }
+
+    const uint32_t word =
+        static_cast<uint32_t>(serialRxState.wordBytes[0]) |
+        (static_cast<uint32_t>(serialRxState.wordBytes[1]) << 8) |
+        (static_cast<uint32_t>(serialRxState.wordBytes[2]) << 16) |
+        (static_cast<uint32_t>(serialRxState.wordBytes[3]) << 24);
+    serialRxState.wordLength = 0;
+    if (serialRxState.pendingWordType == SerialRxMode::BinaryControlWord) {
+        handleControlWord(word);
+    } else if (serialRxState.pendingWordType == SerialRxMode::FMNData) {
+        handleFmnDataWord(word);
+    }
+}
+
+void collectAsciiByte(char incoming, uint8_t incomingByte)
+{
+    if (incoming != '\r' && incoming != '\n' && isprint(incomingByte) == 0) {
+        return;
+    }
+    if (incoming == '\r') {
+        return;
+    }
+    if (incoming == '\n') {
+        inputBuffer[inputLength] = '\0';
+        handleCommand(inputBuffer);
+        inputLength = 0;
+        return;
+    }
+    if (inputLength < (INPUT_BUFFER_SIZE - 1U)) {
+        inputBuffer[inputLength++] = incoming;
+        return;
+    }
+    inputLength = 0;
+    Serial.println(F("Input too long, line cleared."));
+}
 
 void applyReferenceSelection(ReferenceTarget target, bool verbose)
 {
@@ -465,6 +505,60 @@ void selectChipBinary(ChipTarget target)
 {
     serialRxState.selectedBinaryTarget = target;
     selectChip(target);
+}
+
+bool loTargetForControlSelector(uint16_t selector, ChipTarget* target)
+{
+    if (target == nullptr) {
+        return false;
+    }
+    if (selector == 0x01FFU) {
+        *target = ChipTarget::LO1;
+        return true;
+    }
+    if (selector == 0x02FFU) {
+        *target = ChipTarget::LO2;
+        return true;
+    }
+    if (selector == 0x03FFU) {
+        *target = ChipTarget::LO3;
+        return true;
+    }
+    return false;
+}
+
+bool loStateForTarget(ChipTarget target, MAX2871** targetLo, double** reportedFreq)
+{
+    if (targetLo == nullptr || reportedFreq == nullptr) {
+        return false;
+    }
+    switch (target) {
+        case ChipTarget::LO1:
+            *targetLo = &lo1;
+            *reportedFreq = &freqCalc.FreqLO1;
+            return true;
+        case ChipTarget::LO2:
+            *targetLo = &lo2;
+            *reportedFreq = &freqCalc.FreqLO2;
+            return true;
+        case ChipTarget::LO3:
+            *targetLo = &lo3;
+            *reportedFreq = &freqCalc.FreqLO3;
+            return true;
+        default:
+            break;
+    }
+    return false;
+}
+
+void markLoManual(ChipTarget target)
+{
+    switch (target) {
+        case ChipTarget::LO1: state.lo1Manual = true; break;
+        case ChipTarget::LO2: state.lo2Manual = true; break;
+        case ChipTarget::LO3: state.lo3Manual = true; break;
+        default: break;
+    }
 }
 
 void setSerialRxMode(SerialRxMode mode)
@@ -514,20 +608,13 @@ void handleControlWord(uint32_t word)
         applyReferenceSelection(ReferenceTarget::Ref2, false);
         return;
     }
-    if (selector == 0x01FFU) {
-        selectChipBinary(ChipTarget::LO1);
-        return;
-    }
-    if (selector == 0x02FFU) {
-        selectChipBinary(ChipTarget::LO2);
+    ChipTarget loTarget = ChipTarget::None;
+    if (loTargetForControlSelector(selector, &loTarget)) {
+        selectChipBinary(loTarget);
         return;
     }
     if (selector == 0x08FFU) {
         selectChipBinary(ChipTarget::Attenuator);
-        return;
-    }
-    if (selector == 0x03FFU) {
-        selectChipBinary(ChipTarget::LO3);
         return;
     }
     if (selector == 0x05FFU) {
@@ -553,6 +640,20 @@ void handleControlWord(uint32_t word)
         Serial.print(hexDigits[nibble]);
     }
     Serial.print(F(" ignored."));
+}
+
+void handleFmnDataWord(uint32_t word)
+{
+    MAX2871* targetLo = nullptr;
+    double* reportedFreq = nullptr;
+    const ChipTarget target = serialRxState.selectedBinaryTarget;
+    if (!loStateForTarget(target, &targetLo, &reportedFreq)) {
+        return;
+    }
+
+    targetLo->setFrequency(word, targetLo->DIVA);
+    *reportedFreq = targetLo->fmn2freq();
+    markLoManual(target);
 }
 
 bool parseAsciiControlWord(const char* token, uint32_t* word)
@@ -662,37 +763,15 @@ void handleLofreqCommand(const char* valueToken)
         Serial.println(F("lofreq requires a positive frequency in MHz."));
         return;
     }
-    MAX2871* targetLo       = nullptr;
-    double* reportedFreq    = nullptr;
-    switch (state.chipTarget) {
-        case ChipTarget::LO1:
-            targetLo     = &lo1;
-            reportedFreq = &freqCalc.FreqLO1;
-            break;
-        case ChipTarget::LO2:
-            targetLo     = &lo2;
-            reportedFreq = &freqCalc.FreqLO2;
-            break;
-        case ChipTarget::LO3:
-            targetLo     = &lo3;
-            reportedFreq = &freqCalc.FreqLO3;
-            break;
-        default:
-            break;
-    }
-    if (targetLo == nullptr || reportedFreq == nullptr) {
+    MAX2871* targetLo = nullptr;
+    double* reportedFreq = nullptr;
+    if (!loStateForTarget(state.chipTarget, &targetLo, &reportedFreq)) {
         return;
     }
     targetLo->setFrequency(requestedMhz);
     const double actual = targetLo->fmn2freq();
     *reportedFreq = actual;
-    // Mark this LO as manually controlled; recomputePlan will preserve its frequency.
-    switch (state.chipTarget) {
-        case ChipTarget::LO1: state.lo1Manual = true; break;
-        case ChipTarget::LO2: state.lo2Manual = true; break;
-        case ChipTarget::LO3: state.lo3Manual = true; break;
-        default: break;
-    }
+    markLoManual(state.chipTarget);
     Serial.print(F("LO frequency set for "));
     Serial.print(chipTargetName(state.chipTarget));
     Serial.print(F(" -> "));

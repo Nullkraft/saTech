@@ -103,6 +103,28 @@ Validation completed
 - cppcheck --enable=warning,performance,portability --std=c++11 -I ../MAX2871_library_dev/src src
   passed after quiet reference control-word dispatch.
 - pio run -e ci passed after quiet reference control-word dispatch.
+- LO1/LO2/LO3 control-word selection now dispatches through a shared LO target
+  selector and still updates selectedBinaryTarget via selectChipBinary().
+- test/run_binary_tests.sh, test/run_ascii_tests.sh,
+  cppcheck --enable=warning,performance,portability --std=c++11 -I ../MAX2871_library_dev/src src,
+  and pio run -e ci passed after shared LO target dispatch.
+- FMNData mode now collects non-control 4-byte words and programs the selected
+  LO1/LO2/LO3 binary target through shared LO dispatch. Raw 0xFF at a binary
+  frame boundary still dispatches a control word, and FMN writes retain the
+  target LO's current DIVA value.
+- test/run_binary_tests.sh, test/run_ascii_tests.sh,
+  cppcheck --enable=warning,performance,portability --std=c++11 -I ../MAX2871_library_dev/src src,
+  and pio run -e ci passed after selected-target FMN programming.
+- Added concise comments beside each SerialRxMode enum value in
+  src/command_interface.cpp.
+- pollSerial() was flattened by extracting shouldCollectBinaryWord(),
+  collectBinaryByte(), and collectAsciiByte(); binary word routing and ASCII
+  line handling remain behavior-preserving.
+- shouldCollectBinaryWord() was replaced with status-style predicates for
+  partial binary words, 0xFF control-word starts, and FMN mode data words.
+- test/run_binary_tests.sh, test/run_ascii_tests.sh,
+  cppcheck --enable=warning,performance,portability --std=c++11 -I ../MAX2871_library_dev/src src,
+  and pio run -e ci passed after pollSerial helper extraction.
 - Firmware was uploaded and flash-verified earlier after serial receive
   scaffolding; the later quiet mode-control upload note is historical/stale.
 
