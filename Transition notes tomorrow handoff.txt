@@ -46,6 +46,8 @@ Public setup API
   saTech.begin("ascii").
 - Progress: setup code can precheck serial tokens with
   saTech.supportsEncoding(token) before calling saTech.begin(token).
+- Progress: saTech.begin(token) returns false for unsupported tokens so a
+  waiting setup loop can keep printing its reminder instead of entering runtime.
 - The library API should provide saTech.begin(...) for ascii and binary,
   accepting capitalization variants.
 - Unsupported encoding strings should be ignored.

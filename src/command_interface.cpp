@@ -199,16 +199,19 @@ const size_t CHIP_COUNT =
 
 SaTech saTech;
 
-void SaTech::begin(const char* encoding)
+bool SaTech::begin(const char* encoding)
 {
     if (encoding == nullptr) {
-        return;
+        return false;
     }
     if (equalsIgnoreCase(encoding, "ascii")) {
         serialTransportEncoding = SerialTransportEncoding::Ascii;
+        return true;
     } else if (equalsIgnoreCase(encoding, "binary")) {
         serialTransportEncoding = SerialTransportEncoding::Binary;
+        return true;
     }
+    return false;
 }
 
 bool SaTech::supportsEncoding(const char* encoding) const
