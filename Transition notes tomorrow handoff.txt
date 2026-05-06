@@ -1,0 +1,112 @@
+Transition notes
+================================
+
+Historical branch and repo state
+--------------------------------
+
+- Historical handoff branch: gen4-max2871.
+- Current local branch on 2026-05-05: gen4-max2871.
+- Historical handoff commit: 2dff152 Add serial receive state mode control.
+- Current local HEAD on 2026-05-05: 180d04b, so commit/upload status below is stale.
+- Historical git status at handoff: clean against origin/gen4-max2871.
+- This transition notes file is ignored by .gitignore and remains local.
+
+What passed on hardware
+-----------------------
+
+Full select-pin loop passed on 2026-05-01 with BK390A negative lead on board
+ground.
+
+  |       Pin       |   Command    | Expected Assert |              Result                  |
+  | --------------- | ------------ | --------------- | ------------------------------------ |
+  | PIN_LE_LO1 / A3 | select-lo1   |      HIGH       | PASS: idle -0.4 mV, asserted 3.299 V |
+  | PIN_LE_LO2 / D4 | select-lo2   |      HIGH       | PASS: idle -0.6 mV, asserted 3.297 V |
+  | PIN_LE_LO3 / A4 | select-lo3   |      HIGH       | PASS: idle -0.3 mV, asserted 3.302 V |
+  | PIN_ATTEN / A5  | select-atten |      HIGH       | PASS: idle -0.3 mV, asserted 3.301 V |
+  | PIN_ADC1 / D3   | select-adc1  |      LOW        | PASS: idle 3.301 V, asserted -0.6 mV |
+  | PIN_ADC2 / D2   | select-adc2  |      LOW        | PASS: idle 3.301 V, asserted -0.5 mV |
+  | PIN_RAM / A0    | select-ram   |      LOW        | PASS: idle 3.302 V, asserted -0.4 mV |
+  | PIN_FLASH / A1  | select-flash |      LOW        | PASS: idle 3.302 V, asserted -0.4 mV |
+
+Serial/device ports used
+------------------------
+
+- BK390A meter port used by Codex: /dev/serial/by-id/usb-Prolific_Technology_Inc._USB-Serial_Controller_D-if00-port0.
+
+Current selector map
+--------------------
+
+  | Command      | Bytes       | Selector | Target       | Assert level |
+  | ------------ | ----------- | -------- | ------------ | ------------ |
+  | select-lo1   | FF 01 00 00 | 0x01FF   | LO1 / A3     | HIGH         |
+  | select-lo2   | FF 02 00 00 | 0x02FF   | LO2 / D4     | HIGH         |
+  | select-lo3   | FF 03 00 00 | 0x03FF   | LO3 / A4     | HIGH         |
+  | select-atten | FF 08 7F 00 | 0x08FF   | Atten / A5   | HIGH         |
+  | select-adc1  | FF 05 00 00 | 0x05FF   | ADC1 / D3    | LOW          |
+  | select-adc2  | FF 0D 00 00 | 0x0DFF   | ADC2 / D2    | LOW          |
+  | select-ram   | FF 15 00 00 | 0x15FF   | RAM / A0     | LOW          |
+  | select-flash | FF 1D 00 00 | 0x1DFF   | Flash / A1   | LOW          |
+
+Serial receive work completed
+-----------------------------
+
+- Added SerialRxMode: AsciiLineData, BinaryControlWord, FMNData, Direct2Register.
+- Added serialRxState to track current receive mode, selected binary target,
+  4-byte word buffer, and byte count.
+- Renamed binary chip-select helper to selectChipBinary().
+- Renamed binary control-word dispatcher to handleControlWord().
+- pollSerial() now treats the serial stream as byte-oriented and documents the
+  ASCII-vs-binary decision branches.
+- Binary control-word receive now starts only on raw 0xFF at the ASCII frame
+  boundary. Non-printable bytes other than 0xFF no longer start binary
+  collection in AsciiLineData mode.
+- Binary 4-byte control frames route through handleControlWord().
+- ASCII hex control words now dispatch into handleControlWord() from firmware
+  ASCII command handling.
+- The ASCII hex parser was simplified after bring-up: a single ASCII token is
+  parsed and passed to handleControlWord() without local format policing. Bad
+  or poorly formatted values are intentionally allowed through; technician
+  correction or the next sweep step can clean them up.
+- Added host-side ASCII command mapping tests and test/run_ascii_tests.sh for
+  ASCII equivalents of the message and reference control commands.
+- Quiet mode-selection control words implemented:
+  - 0x06FF enters AsciiLineData.
+  - 0x0EFF enters FMNData.
+  - 0x16FF enters Direct2Register.
+- Mode-selection control words update serialRxState.mode and clear the partial
+  word buffer without printing.
+
+Validation completed
+--------------------
+
+- pio run -e ci passed after the receive-mode changes.
+- test/run_tests.sh passed after the receive-mode changes.
+- pio run -e ci passed after ASCII hex control words were routed into
+  handleControlWord().
+- test/run_tests.sh passed after ASCII hex control words were routed into
+  handleControlWord().
+- pio run -e ci passed after simplifying the ASCII hex parser.
+- test/run_tests.sh passed after simplifying the ASCII hex parser.
+- pio run -e ci passed after removing the ASCII hex suffix check.
+- test/run_tests.sh passed after removing the ASCII hex suffix check.
+- test/run_ascii_tests.sh passed after adding ASCII command mapping tests.
+- test/run_tests.sh passed after adding ASCII command mapping tests.
+- pio run -e ci passed after adding ASCII command mapping tests.
+- test/run_tests.sh was renamed to test/run_binary_tests.sh and now reports
+  only binary command mapping tests.
+- test/run_binary_tests.sh passed after the runner split.
+- test/run_ascii_tests.sh passed after the runner split.
+- Firmware was uploaded and flash-verified earlier after serial receive
+  scaffolding; the later quiet mode-control upload note is historical/stale.
+
+Starting point for tomorrow
+---------------------------
+
+- Project-local AGENTS.md was created/refined and is being committed separately
+  with tiny progress-note updates.
+- Keep existing named ASCII technician commands working.
+- Keep mode-selection controls quiet.
+- Defer quieting chip-select/reference binary commands until after bring-up,
+  because their RX text is still useful for bench scripts.
+- Pending SERIAL_PLAN.md follow-up work remains: quiet binary chip/reference
+  commands, decode FMNData, and decode Direct2Register non-control words.

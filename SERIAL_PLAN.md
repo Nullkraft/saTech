@@ -186,6 +186,8 @@ Direct2Register:
 
 ## Implementation Checklist
 
+- [x] Created/refined project-local `AGENTS.md`; committing it separately with
+      these progress notes.
 - [x] Add a small host-side serial command test tool.
 - [x] Add named tests for the current Arduino message binary command.
 - [x] Add `SerialRxMode` with `AsciiLineData`, `BinaryControlWord`,
