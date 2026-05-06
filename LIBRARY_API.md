@@ -16,7 +16,7 @@
 
 - [x] Track serial transport encoding separately from payload mode.
 - [x] Use an encoding enum equivalent to ASCII versus binary.
-- [ ] Use a payload mode enum equivalent to command, FMN data, and direct
+- [x] Use a payload mode enum equivalent to command, FMN data, and direct
       register data.
 - [ ] In binary encoding, collect a complete 4-byte word before processing.
 - [ ] In ASCII encoding, receive a complete token or line, convert it to the

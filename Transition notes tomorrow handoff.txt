@@ -49,6 +49,8 @@ Public setup API
   state.
 - Progress: transport encoding is represented by the existing
   SerialTransportEncoding enum with Ascii and Binary values.
+- Progress: runtime payload state now uses SerialPayloadMode values for
+  Command, FMNData, and DirectRegisterData.
 - Progress: setup code can precheck serial tokens with
   saTech.supportsEncoding(token) before calling saTech.begin(token).
 - Progress: saTech.begin(token) returns false for unsupported tokens so a

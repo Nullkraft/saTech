@@ -16,25 +16,24 @@ char inputBuffer[INPUT_BUFFER_SIZE];
 size_t inputLength = 0;
 ConsoleState& state = consoleState();
 
-enum class SerialRxMode {
-    AsciiLineData,     // Collect technician ASCII commands until a line terminator.
-    BinaryControlWord, // Collect one four-byte WN2A command & control frame.
-    FMNData,           // Collect packed MAX2871 FMN words for the selected LO.
-    Direct2Register,   // Collect raw register words for the selected SPI target.
+enum class SerialPayloadMode {
+    Command,
+    FMNData,
+    DirectRegisterData,
 };
 
 struct SerialReceiveState {
-    SerialRxMode mode;
+    SerialPayloadMode payloadMode;
     ChipTarget selectedBinaryTarget;
-    SerialRxMode pendingWordType;
+    SerialPayloadMode pendingWordType;
     uint8_t wordBytes[4];
     uint8_t wordLength;
 };
 
 SerialReceiveState serialRxState = {
-    SerialRxMode::AsciiLineData,
+    SerialPayloadMode::Command,
     ChipTarget::None,
-    SerialRxMode::BinaryControlWord,
+    SerialPayloadMode::Command,
     {0U, 0U, 0U, 0U},
     0U,
 };
@@ -427,7 +426,7 @@ void collectBinaryByte(uint8_t incomingByte)
 {
     if (serialRxState.wordLength == 0U) {
         serialRxState.pendingWordType =
-            (incomingByte == 0xFFU) ? SerialRxMode::BinaryControlWord : serialRxState.mode;
+            (incomingByte == 0xFFU) ? SerialPayloadMode::Command : serialRxState.payloadMode;
     }
     serialRxState.wordBytes[serialRxState.wordLength++] = incomingByte;
     if (serialRxState.wordLength < 4U) {
@@ -440,9 +439,9 @@ void collectBinaryByte(uint8_t incomingByte)
         (static_cast<uint32_t>(serialRxState.wordBytes[2]) << 16) |
         (static_cast<uint32_t>(serialRxState.wordBytes[3]) << 24);
     serialRxState.wordLength = 0;
-    if (serialRxState.pendingWordType == SerialRxMode::BinaryControlWord) {
+    if (serialRxState.pendingWordType == SerialPayloadMode::Command) {
         handleControlWord(word);
-    } else if (serialRxState.pendingWordType == SerialRxMode::FMNData) {
+    } else if (serialRxState.pendingWordType == SerialPayloadMode::FMNData) {
         handleFmnDataWord(word);
     }
 }
@@ -569,9 +568,9 @@ void markLoManual(ChipTarget target)
     }
 }
 
-void setSerialRxMode(SerialRxMode mode)
+void setSerialPayloadMode(SerialPayloadMode mode)
 {
-    serialRxState.mode = mode;
+    serialRxState.payloadMode = mode;
     serialRxState.wordLength = 0U;
 }
 
@@ -593,15 +592,15 @@ void handleControlWord(uint32_t word)
         return;
     }
     if (selector == 0x06FFU) {
-        setSerialRxMode(SerialRxMode::AsciiLineData);
+        setSerialPayloadMode(SerialPayloadMode::Command);
         return;
     }
     if (selector == 0x0EFFU) {
-        setSerialRxMode(SerialRxMode::FMNData);
+        setSerialPayloadMode(SerialPayloadMode::FMNData);
         return;
     }
     if (selector == 0x16FFU) {
-        setSerialRxMode(SerialRxMode::Direct2Register);
+        setSerialPayloadMode(SerialPayloadMode::DirectRegisterData);
         return;
     }
     if (selector == 0x04FFU) {
