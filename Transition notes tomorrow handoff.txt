@@ -51,6 +51,8 @@ Public setup API
   SerialTransportEncoding enum with Ascii and Binary values.
 - Progress: runtime payload state now uses SerialPayloadMode values for
   Command, FMNData, and DirectRegisterData.
+- Progress: binary receive collection uses a named 4-byte word size and waits
+  for that complete word before dispatching it.
 - Progress: setup code can precheck serial tokens with
   saTech.supportsEncoding(token) before calling saTech.begin(token).
 - Progress: saTech.begin(token) returns false for unsupported tokens so a

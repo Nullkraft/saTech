@@ -15,6 +15,7 @@ namespace {
 char inputBuffer[INPUT_BUFFER_SIZE];
 size_t inputLength = 0;
 ConsoleState& state = consoleState();
+constexpr uint8_t RECEIVED_WORD_BYTES = 4U;
 
 enum class SerialPayloadMode {
     Command,
@@ -26,7 +27,7 @@ struct SerialReceiveState {
     SerialPayloadMode payloadMode;
     ChipTarget selectedBinaryTarget;
     SerialPayloadMode pendingWordType;
-    uint8_t wordBytes[4];
+    uint8_t wordBytes[RECEIVED_WORD_BYTES];
     uint8_t wordLength;
 };
 
@@ -429,7 +430,7 @@ void collectBinaryByte(uint8_t incomingByte)
             (incomingByte == 0xFFU) ? SerialPayloadMode::Command : serialRxState.payloadMode;
     }
     serialRxState.wordBytes[serialRxState.wordLength++] = incomingByte;
-    if (serialRxState.wordLength < 4U) {
+    if (serialRxState.wordLength < RECEIVED_WORD_BYTES) {
         return;
     }
 
