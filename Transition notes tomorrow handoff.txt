@@ -25,6 +25,8 @@ Completed checklist sections
   0xFF.
 - Word Formats: command/control data fields are documented.
 - Word Formats: command_flag is documented as always 0xFF.
+- Word Formats: command data bits are documented as currently unused but
+  accounted for.
 
 Current receiver shape
 ----------------------
@@ -71,8 +73,8 @@ Mode command words
 Next work
 ---------
 
-- Continue with the next unchecked LIBRARY_API.md Word Formats item: account
-  for command data bits even while currently unused.
+- Continue with the next unchecked LIBRARY_API.md Word Formats item: treat
+  command address as the selected Arduino chip-select pin target.
 - Then Payload State Machine, Binary Receive Details, and ASCII Receive
   Details.
 - Likely important implementation soon: direct-register payload handling after
