@@ -463,24 +463,11 @@ void collectAsciiByte(char incoming, uint8_t incomingByte)
 
 void applyReferenceSelection(ReferenceTarget target, bool verbose)
 {
-    switch (target) {
-    case ReferenceTarget::Ref1:
-    case ReferenceTarget::Ref2:
-    case ReferenceTarget::None:
-        break;
-    default:
-        if (verbose) {
-            Serial.println(F("set requires ref1, ref2, or off."));
-        }
-        return;
-    }
-
     ConsoleState& s = consoleState();
 
     // Deassert both reference clocks unconditionally.
     digitalWrite(PIN_REF_EN1, LOW);
     digitalWrite(PIN_REF_EN2, LOW);
-
     s.ref1Enabled = false;
     s.ref2Enabled = false;
 
