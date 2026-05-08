@@ -11,6 +11,14 @@ class AsciiCommandTestCase(unittest.TestCase):
         self.assertEqual(command["tx"], b"17FF\n")
         self.assertEqual(command["expect"], "saTech WN2A ready")
 
+    def test_ascii_message_matches_arduino_message_response(self):
+        print("test_ascii_commands: ascii-message expects arduino-message response")
+        ascii_command = serial_command_test.COMMANDS["ascii-message"]
+        arduino_command = serial_command_test.COMMANDS["arduino-message"]
+
+        self.assertEqual(ascii_command["tx"], b"17FF\n")
+        self.assertEqual(ascii_command["expect"], arduino_command["expect"])
+
     def test_ascii_ref_off_command(self):
         print("test_ascii_commands: ascii-ref-off sends 04FF")
         command = serial_command_test.COMMANDS["ascii-ref-off"]
