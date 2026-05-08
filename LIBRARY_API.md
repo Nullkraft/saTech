@@ -50,18 +50,18 @@
 ## Payload State Machine
 
 - [x] Start runtime payload mode in command mode.
-- [ ] In any payload mode, classify a completed word with LS byte `0xFF` as a
+- [x] In any payload mode, classify a completed word with LS byte `0xFF` as a
       command word.
-- [ ] In FMN data mode, classify completed non-command words as FMN data.
-- [ ] In direct register mode, classify completed non-command words as direct
+- [x] In FMN data mode, classify completed non-command words as FMN data.
+- [x] In direct register mode, classify completed non-command words as direct
       register data.
-- [ ] Enter command mode on command word `0x000006FF`.
-- [ ] Enter FMN data mode on command word `0x00000EFF`.
-- [ ] Enter direct register mode on command word `0x000016FF`.
-- [ ] From direct register mode, allow switching only through a command word.
-- [ ] From FMN data mode, allow switching only through a command word.
-- [ ] From command mode, allow switching to FMN data or direct register mode.
-- [ ] From command mode, allow switching between ASCII and binary transport
+- [x] Enter command mode on command word `0x000006FF`.
+- [x] Enter FMN data mode on command word `0x00000EFF`.
+- [x] Enter direct register mode on command word `0x000016FF`.
+- [x] From direct register mode, allow switching only through a command word.
+- [x] From FMN data mode, allow switching only through a command word.
+- [x] From command mode, allow switching to FMN data or direct register mode.
+- [x] From command mode, allow switching between ASCII and binary transport
       encoding.
 
 ## Binary Receive Details

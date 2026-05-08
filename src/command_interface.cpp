@@ -161,6 +161,7 @@ void handleSpiCommand(const char* valueToken);
 void handleCommand(const char* line);
 void handleControlWord(uint32_t word);
 void handleFmnDataWord(uint32_t word);
+void handleDirectRegisterDataWord(uint32_t word);
 void processReceivedWord(uint32_t word);
 void collectBinaryByte(uint8_t incomingByte);
 void collectAsciiByte(char incoming, uint8_t incomingByte);
@@ -569,6 +570,16 @@ void setSerialPayloadMode(SerialPayloadMode mode)
 void handleControlWord(uint32_t word)
 {
     const uint16_t selector = static_cast<uint16_t>(word & 0xFFFFU);
+    if (serialRxState.payloadMode == SerialPayloadMode::Command) {
+        if (word == 0x000106FFUL) {
+            serialTransportEncoding = SerialTransportEncoding::Ascii;
+            return;
+        }
+        if (word == 0x000206FFUL) {
+            serialTransportEncoding = SerialTransportEncoding::Binary;
+            return;
+        }
+    }
     if (selector == 0x0FFFU) {
         digitalWrite(LED_BUILTIN, HIGH);
         Serial.print(F("LED on"));
@@ -655,15 +666,56 @@ void handleFmnDataWord(uint32_t word)
     markLoManual(target);
 }
 
-void processReceivedWord(uint32_t word)
+void handleDirectRegisterDataWord(uint32_t word)
+{
+    switch (serialRxState.selectedBinaryTarget) {
+        case ChipTarget::LO1:
+            halLo1.spiWriteRegister(word);
+            break;
+        case ChipTarget::LO2:
+            halLo2.spiWriteRegister(word);
+            break;
+        case ChipTarget::LO3:
+            halLo3.spiWriteRegister(word);
+            break;
+        case ChipTarget::Attenuator:
+            programAttenuatorRaw(static_cast<uint8_t>(word & 0x7FU));
+            break;
+        case ChipTarget::ADC1:
+            spiWrite32(PIN_ADC1, true, word);
+            break;
+        case ChipTarget::ADC2:
+            spiWrite32(PIN_ADC2, true, word);
+            break;
+        case ChipTarget::RAM:
+            spiWrite32(PIN_RAM, true, word);
+            break;
+        case ChipTarget::Flash:
+            spiWrite32(PIN_FLASH, true, word);
+            break;
+        case ChipTarget::None:
+        default:
+            break;
+    }
+}
+
+void processReceivedWord(uint32_t mode)
 {
     // Check if the parsed 32-bit word has 0xFF (command flag) in its least-significant byte?
-    const SerialPayloadMode wordType =
-        ((word & 0xFFU) == 0xFFU) ? SerialPayloadMode::Command : serialRxState.payloadMode;
-    if (wordType == SerialPayloadMode::Command) {
-        handleControlWord(word);
-    } else if (wordType == SerialPayloadMode::FMNData) {
-        handleFmnDataWord(word);
+    const SerialPayloadMode modeType =
+        ((mode & 0xFFU) == 0xFFU) ? SerialPayloadMode::Command : serialRxState.payloadMode;
+    switch (modeType) {
+        case SerialPayloadMode::Command:
+            handleControlWord(mode);
+            break;
+        case SerialPayloadMode::FMNData:
+            handleFmnDataWord(mode);
+            break;
+        case SerialPayloadMode::DirectRegisterData:
+            handleDirectRegisterDataWord(mode);
+            break;
+        default:
+            break;
     }
 }
 
@@ -673,8 +725,9 @@ bool parseAsciiControlWord(const char* token, uint32_t* word)
     if (token == nullptr || word == nullptr) {
         return false;
     }
-    *word = static_cast<uint32_t>(strtoul(token, nullptr, 16)); // Cast to 32 bits
-    return true;
+    char* endPointer = nullptr;
+    *word = static_cast<uint32_t>(strtoul(token, &endPointer, 16)); // Cast to 32 bits
+    return endPointer != token && *endPointer == '\0';
 }
 
 void handleAttenuatorCommand(const char* valueToken)
@@ -970,6 +1023,13 @@ void handleCommand(const char* line)
 
     if (tokens[0] == nullptr) {
         return;
+    }
+
+    if (tokens[1] == nullptr && serialRxState.payloadMode == SerialPayloadMode::Command) {
+        if (equalsIgnoreCase(tokens[0], "ascii") || equalsIgnoreCase(tokens[0], "binary")) {
+            saTech.begin(tokens[0]);
+            return;
+        }
     }
 
     uint32_t asciiControlWord = 0U;
