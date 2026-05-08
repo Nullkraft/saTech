@@ -49,7 +49,7 @@
 
 ## Payload State Machine
 
-- [ ] Start runtime payload mode in command mode.
+- [x] Start runtime payload mode in command mode.
 - [ ] In any payload mode, classify a completed word with LS byte `0xFF` as a
       command word.
 - [ ] In FMN data mode, classify completed non-command words as FMN data.
