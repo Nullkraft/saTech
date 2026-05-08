@@ -652,7 +652,7 @@ void handleControlWord(uint32_t word)
     Serial.print(F(" ignored."));
 }
 
-void handleFmnDataWord(uint32_t word)
+void handleFmnDataWord(uint32_t packedFMN)
 {
     MAX2871* targetLo = nullptr;
     double* reportedFreq = nullptr;
@@ -661,37 +661,37 @@ void handleFmnDataWord(uint32_t word)
         return;
     }
 
-    targetLo->setFrequency(word, targetLo->DIVA);
+    targetLo->setFrequency(packedFMN, targetLo->DIVA);
     *reportedFreq = targetLo->fmn2freq();
     markLoManual(target);
 }
 
-void handleDirectRegisterDataWord(uint32_t word)
+void handleDirectRegisterDataWord(uint32_t chipSelPin)
 {
     switch (serialRxState.selectedBinaryTarget) {
         case ChipTarget::LO1:
-            halLo1.spiWriteRegister(word);
+            halLo1.spiWriteRegister(chipSelPin);
             break;
         case ChipTarget::LO2:
-            halLo2.spiWriteRegister(word);
+            halLo2.spiWriteRegister(chipSelPin);
             break;
         case ChipTarget::LO3:
-            halLo3.spiWriteRegister(word);
+            halLo3.spiWriteRegister(chipSelPin);
             break;
         case ChipTarget::Attenuator:
-            programAttenuatorRaw(static_cast<uint8_t>(word & 0x7FU));
+            programAttenuatorRaw(static_cast<uint8_t>(chipSelPin & 0x7FU));
             break;
         case ChipTarget::ADC1:
-            spiWrite32(PIN_ADC1, true, word);
+            spiWrite32(PIN_ADC1, true, chipSelPin);
             break;
         case ChipTarget::ADC2:
-            spiWrite32(PIN_ADC2, true, word);
+            spiWrite32(PIN_ADC2, true, chipSelPin);
             break;
         case ChipTarget::RAM:
-            spiWrite32(PIN_RAM, true, word);
+            spiWrite32(PIN_RAM, true, chipSelPin);
             break;
         case ChipTarget::Flash:
-            spiWrite32(PIN_FLASH, true, word);
+            spiWrite32(PIN_FLASH, true, chipSelPin);
             break;
         case ChipTarget::None:
         default:
