@@ -36,7 +36,7 @@
       `F=[31 downto 20]`, `M=[19 downto 8]`, `N=[7 downto 0]`.
 - [x] Document that FMN `N` will never equal `0xFF`; the low byte value
       `0xFF` is reserved for command words.
-- [ ] Direct register data:
+- [x] Direct register data:
       32-bit register word with `Addr=[2 downto 0]`.
 - [ ] Document that direct register data LS byte will never equal `0xFF`.
 - [ ] Command and control data:
