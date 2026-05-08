@@ -28,7 +28,10 @@
 
 ## Word Formats
 
-- [ ] Define wire byte order explicitly as little-endian for 32-bit words.
+- [x] Define wire byte order explicitly as little-endian for 32-bit words:
+      the first received byte is bits `[7 downto 0]`, the second byte is
+      bits `[15 downto 8]`, the third byte is bits `[23 downto 16]`, and the
+      fourth byte is bits `[31 downto 24]`.
 - [ ] FMN packed data:
       `F=[31 downto 20]`, `M=[19 downto 8]`, `N=[7 downto 0]`.
 - [ ] Document that FMN `N` will never equal `0xFF`.
