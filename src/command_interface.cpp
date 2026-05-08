@@ -463,9 +463,12 @@ void collectAsciiByte(char incoming, uint8_t incomingByte)
 
 void applyReferenceSelection(ReferenceTarget target, bool verbose)
 {
-    if (target != ReferenceTarget::Ref1 &&
-        target != ReferenceTarget::Ref2 &&
-        target != ReferenceTarget::None) {
+    switch (target) {
+    case ReferenceTarget::Ref1:
+    case ReferenceTarget::Ref2:
+    case ReferenceTarget::None:
+        break;
+    default:
         if (verbose) {
             Serial.println(F("set requires ref1, ref2, or off."));
         }
@@ -481,23 +484,29 @@ void applyReferenceSelection(ReferenceTarget target, bool verbose)
     s.ref1Enabled = false;
     s.ref2Enabled = false;
 
-    if (target == ReferenceTarget::Ref1) {
+    switch (target) {
+    case ReferenceTarget::Ref1:
         digitalWrite(PIN_REF_EN1, HIGH);
         s.ref1Enabled = true;
         if (verbose) {
             Serial.println(F("Reference clock set to REF1."));
         }
-    } else if (target == ReferenceTarget::Ref2) {
+        break;
+    case ReferenceTarget::Ref2:
         digitalWrite(PIN_REF_EN2, HIGH);
         s.ref2Enabled = true;
         if (verbose) {
             Serial.println(F("Reference clock set to REF2."));
         }
-    } else {
+        break;
+    case ReferenceTarget::None:
         // ReferenceTarget::None — both clocks remain deasserted.
         if (verbose) {
             Serial.println(F("Warning: all reference clocks disabled — LOs will lose lock."));
         }
+        break;
+    default:
+        break;
     }
 }
 
