@@ -43,7 +43,7 @@
 - [x] Command and control data:
       `data=[31 downto 16]`, `command=[15 downto 11]`,
       `address=[10 downto 8]`, `command_flag=[7 downto 0]`.
-- [ ] Document that `command_flag` is always `0xFF`.
+- [x] Document that `command_flag` is always `0xFF`.
 - [ ] Account for command `data` bits even while currently unused.
 - [ ] Treat command `address` as the selected Arduino chip-select pin target.
 
