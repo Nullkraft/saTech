@@ -45,7 +45,7 @@
       `address=[10 downto 8]`, `command_flag=[7 downto 0]`.
 - [x] Document that `command_flag` is always `0xFF`.
 - [x] Account for command `data` bits even while currently unused.
-- [ ] Treat command `address` as the selected Arduino chip-select pin target.
+- [x] Treat command `address` as the selected Arduino chip-select pin target.
 
 ## Payload State Machine
 
