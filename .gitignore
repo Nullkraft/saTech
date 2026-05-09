@@ -26,3 +26,4 @@ pyvenv.cfg
 node_modules/
 package-lock.json
 package.json
+calltree.html
