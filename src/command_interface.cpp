@@ -523,6 +523,24 @@ bool loTargetForControlSelector(uint16_t selector, ChipTarget* target)
     return false;
 }
 
+bool loTargetForListedSelector(uint16_t selector, uint8_t baseCommand, ChipTarget* target)
+{
+    if (target == nullptr || (selector & 0x00FFU) != 0x00FFU) {
+        return false;
+    }
+    const uint8_t command = static_cast<uint8_t>((selector >> 8) & 0xFFU);
+    if (command < (baseCommand + 1U) || command > (baseCommand + 3U)) {
+        return false;
+    }
+    switch (command - baseCommand) {
+        case 1U: *target = ChipTarget::LO1; return true;
+        case 2U: *target = ChipTarget::LO2; return true;
+        case 3U: *target = ChipTarget::LO3; return true;
+        default: break;
+    }
+    return false;
+}
+
 bool loStateForTarget(ChipTarget target, MAX2871** targetLo, double** reportedFreq)
 {
     if (targetLo == nullptr || reportedFreq == nullptr) {
@@ -563,6 +581,24 @@ void setSerialPayloadMode(SerialPayloadMode mode)
     serialRxState.wordLength = 0U;
 }
 
+void applyLoOutputSelect(ChipTarget target, RFOutPort port)
+{
+    MAX2871* targetLo = nullptr;
+    double* reportedFreq = nullptr;
+    if (loStateForTarget(target, &targetLo, &reportedFreq)) {
+        targetLo->outputSelect(port);
+    }
+}
+
+void applyLoOutputPower(ChipTarget target, int dBm)
+{
+    MAX2871* targetLo = nullptr;
+    double* reportedFreq = nullptr;
+    if (loStateForTarget(target, &targetLo, &reportedFreq)) {
+        targetLo->outputPower(dBm, RF_B);
+    }
+}
+
 void handleControlWord(uint32_t word)
 {
     const uint16_t selector = static_cast<uint16_t>(word & 0xFFFFU);
@@ -588,6 +624,19 @@ void handleControlWord(uint32_t word)
     }
     if (selector == 0x17FFU) {
         Serial.print(F("saTech WN2A ready"));
+        return;
+    }
+    if (selector == 0x1FFFU || selector == 0x27FFU ||
+        selector == 0x37FFU || selector == 0x3FFFU ||
+        selector == 0x47FFU) {
+        return;
+    }
+    if (selector == 0x2FFFU) {
+        initializeLo(lo1);
+        initializeLo(lo2);
+        initializeLo(lo3);
+        tuneTo(currentRfInputMhz);
+        printStatus();
         return;
     }
     if (selector == 0x06FFU) {
@@ -620,7 +669,37 @@ void handleControlWord(uint32_t word)
         return;
     }
     if (selector == 0x08FFU) {
-        selectChipBinary(ChipTarget::Attenuator);
+        programAttenuatorRaw(static_cast<uint8_t>((word >> 16) & 0x7FU));
+        return;
+    }
+    if (loTargetForListedSelector(selector, 0x08U, &loTarget)) {
+        applyLoOutputSelect(loTarget, RFNONE);
+        return;
+    }
+    if (loTargetForListedSelector(selector, 0x10U, &loTarget)) {
+        applyLoOutputPower(loTarget, -4);
+        return;
+    }
+    if (loTargetForListedSelector(selector, 0x18U, &loTarget)) {
+        applyLoOutputPower(loTarget, -1);
+        return;
+    }
+    if (loTargetForListedSelector(selector, 0x20U, &loTarget)) {
+        applyLoOutputPower(loTarget, 2);
+        return;
+    }
+    if (loTargetForListedSelector(selector, 0x28U, &loTarget)) {
+        applyLoOutputPower(loTarget, 5);
+        return;
+    }
+    if (loTargetForListedSelector(selector, 0x30U, &loTarget)) {
+        selectChipBinary(loTarget);
+        setSerialPayloadMode(SerialPayloadMode::FMNData);
+        return;
+    }
+    if (loTargetForListedSelector(selector, 0x38U, &loTarget) ||
+        loTargetForListedSelector(selector, 0x40U, &loTarget) ||
+        selector == 0x4AFFU || selector == 0x4BFFU) {
         return;
     }
     if (selector == 0x05FFU) {
