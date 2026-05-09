@@ -85,24 +85,21 @@ void trimWhitespace(char* text)
     }
 }
 
+static inline double clampD(double v, double lo, double hi)
+{
+    if (v < lo) return lo;
+    if (v > hi) return hi;
+    return v;
+}
+
+// I thought this was receiving 0..127 directly from the PC app?
 uint8_t attenCodeFromDb(double db)
 {
-    double clamped = db;
-    if (clamped < ATTEN_MIN_DB) {
-        clamped = ATTEN_MIN_DB;
-    } else if (clamped > ATTEN_MAX_DB) {
-        clamped = ATTEN_MAX_DB;
-    }
+    const double clamped = clampD(db, ATTEN_MIN_DB, ATTEN_MAX_DB);
     const double steps = (clamped - ATTEN_MIN_DB) / ATTEN_STEP_DB;
-    const int32_t code = static_cast<int32_t>(lround(steps));
-    if (code < 0) {
-        return 0U;
-    }
-    if (code > 0x7FU) {
-        return 0x7FU;
-    }
-    return static_cast<uint8_t>(code);
+    return static_cast<uint8_t>(lround(steps));
 }
+
 
 void programAttenuatorRaw(uint8_t code)
 {

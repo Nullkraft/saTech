@@ -147,7 +147,6 @@ void setup()
     initializeLo(lo2);
     initializeLo(lo3);
 
-    programAttenuatorDb(getCurrentAttenuatorDb());
     Serial.println(F("Note: ~/projects/Arduino/SpecAnn/src/main_entry.cpp - Tech Tool for board bring up. 3/26/26"));
 
     tuneTo(currentRfInputMhz);
