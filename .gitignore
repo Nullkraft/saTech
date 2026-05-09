@@ -13,6 +13,7 @@ STATUS.md
 Transition notes*
 SERIAL_PLAN.md.retired
 .codex
+archive/
 
 test/README
 __pycache__/
