@@ -66,19 +66,19 @@
 
 ## Binary Receive Details
 
-- [ ] Use a small partial buffer or equivalent logic to collect exactly 4 bytes.
-- [ ] Do not process a binary word until all 4 bytes have been received.
-- [ ] Treat short reads/timeouts as receive errors or incomplete words, not as
+- [x] Use a small partial buffer or equivalent logic to collect exactly 4 bytes.
+- [x] Do not process a binary word until all 4 bytes have been received.
+- [x] Treat short reads/timeouts as receive errors or incomplete words, not as
       partially valid commands.
-- [ ] Preserve the rule that command words are recognized at 32-bit word
+- [x] Preserve the rule that command words are recognized at 32-bit word
       boundaries, not by scanning arbitrary byte positions.
 
 ## ASCII Receive Details
 
-- [ ] Receive the full ASCII token or line before conversion.
-- [ ] Convert ASCII command tokens to the same binary command words used by
+- [x] Receive the full ASCII token or line before conversion.
+- [x] Convert ASCII command tokens to the same binary command words used by
       binary encoding.
-- [ ] Convert ASCII FMN/register payloads to the same `uint32_t` words used by
+- [x] Convert ASCII FMN/register payloads to the same `uint32_t` words used by
       binary encoding.
-- [ ] Keep all downstream command, FMN, and register handling shared after
+- [x] Keep all downstream command, FMN, and register handling shared after
       conversion.

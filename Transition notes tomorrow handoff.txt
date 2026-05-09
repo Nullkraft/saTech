@@ -5,7 +5,7 @@ Current repo state
 ------------------
 
 - Branch: serial-api-redesign.
-- Last pushed HEAD before shutdown cleanup: 7d047fd.
+- Last known local HEAD before this handoff update: af08919.
 - Active tracker: LIBRARY_API.md.
 - SERIAL_PLAN.md is retired locally as SERIAL_PLAN.md.retired.
 - AGENTS.md points agents at LIBRARY_API.md and this handoff file.
@@ -29,6 +29,13 @@ Completed checklist sections
   accounted for.
 - Word Formats: command address is documented as the selected Arduino
   chip-select pin target.
+- Payload State Machine is complete, including direct-register payload handling
+  and command-mode ASCII/binary transport switching.
+- Binary Receive Details is complete. Existing binary receive logic collects
+  exactly 4 bytes before processing a word.
+- ASCII Receive Details is complete. Existing ASCII receive logic buffers a
+  full token/line, converts it to a uint32_t word, and uses the shared
+  downstream processing path.
 
 Current receiver shape
 ----------------------
@@ -45,9 +52,11 @@ Current receiver shape
 - Both paths now produce complete uint32_t words and call
   processReceivedWord(uint32_t).
 - processReceivedWord() classifies any completed word with LS byte 0xFF as a
-  command; otherwise it uses the current payload mode.
-- Current processing handles Command and FMNData. DirectRegisterData mode can
-  be selected, but direct-register word handling still needs implementation.
+  command; otherwise it uses the current payload mode, then dispatches by word
+  type.
+- Current processing handles Command, FMNData, and DirectRegisterData.
+- In command mode, ASCII tokens "ascii" / "binary" and control words
+  0x000106FF / 0x000206FF switch transport encoding.
 
 Important protocol facts
 ------------------------
@@ -71,20 +80,20 @@ Mode command words
 - Enter command mode: 0x000006FF.
 - Enter FMN data mode: 0x00000EFF.
 - Enter direct register mode: 0x000016FF.
+- Switch to ASCII transport from command mode: 0x000106FF.
+- Switch to binary transport from command mode: 0x000206FF.
 
 Next work
 ---------
 
-- Continue with the next unchecked LIBRARY_API.md section: Payload State
-  Machine.
-- Then Payload State Machine, Binary Receive Details, and ASCII Receive
-  Details.
-- Likely important implementation soon: direct-register payload handling after
-  processReceivedWord() sees a non-command word in DirectRegisterData mode.
-- User measured Arduino serial and wants binary receive optimized later so
-  pollSerial collects all 4 bytes before calling into processing. Current code
-  still collects one byte per collectBinaryByte() call, though it waits for all
-  4 bytes before processing.
+- LIBRARY_API.md is fully checked through ASCII Receive Details.
+- If more saTech work is needed, define the next checklist section before
+  editing code.
+- Related RFPeakSearch note: in
+  /home/mark/projects/python/WN2A_RFPeakSearch, ui/mainWindow.py now uses the
+  generated chkContinuousSweep checkbox instead of the programmatic
+  chk_continuous_sweep widget. The generated on_chkContinuousSweep_clicked slot
+  is intentionally a no-op.
 
 Verification commands
 ---------------------
