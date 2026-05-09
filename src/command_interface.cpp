@@ -734,7 +734,7 @@ void handleFmnDataWord(uint32_t packedFMN)
     }
 
     targetLo->setFrequency(packedFMN, targetLo->DIVA);
-    *reportedFreq = targetLo->fmn2freq();
+    *reportedFreq = targetLo->fmn2freq();               // Okay for testing only
     markLoManual(target);
 }
 
