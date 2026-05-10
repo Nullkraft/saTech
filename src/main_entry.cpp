@@ -7,10 +7,15 @@
 #include <max2871.h>
 #include "command_interface.h"
 #include "console_state.h"
+#include "technician_console.h"
 
 // Metro Mini pinout (see MAX2871 examples/specAnn/specAnn.ino)
 static constexpr double  REF_MHZ     = 66.0;
 static constexpr double  STARTUP_RF_MHZ = 1735.113;
+
+#ifndef SATECH_TECHNICIAN_CONSOLE
+#define SATECH_TECHNICIAN_CONSOLE 0
+#endif
 
 ArduinoHAL halLo1(PIN_LE_LO1);
 ArduinoHAL halLo2(PIN_LE_LO2);
@@ -150,13 +155,19 @@ void setup()
     Serial.println(F("Note: ~/projects/Arduino/SpecAnn/src/main_entry.cpp - Tech Tool for board bring up. 3/26/26"));
 
     tuneTo(currentRfInputMhz);
-    printBanner();
+#if SATECH_TECHNICIAN_CONSOLE
+    printTechnicianBanner();
+#endif
     printStatus();
 }
 
 void loop()
 {
+#if SATECH_TECHNICIAN_CONSOLE
+    pollTechnicianConsole();
+#else
     pollSerial();
+#endif
 }
 
 #else

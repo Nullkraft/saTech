@@ -68,6 +68,7 @@ constexpr size_t INPUT_BUFFER_SIZE = 96;
 // ChipTarget::None deasserts everything and leaves it that way.
 // Resets the SPI arming state on every call.
 void selectChip(ChipTarget target);
+void selectSerialChipTarget(ChipTarget target);
 
 // Deasserts both REF_EN pins, then asserts the requested reference clock.
 // ReferenceTarget::Ref1 or Ref2 selects that clock; ReferenceTarget::None
@@ -75,9 +76,9 @@ void selectChip(ChipTarget target);
 void selectRef(ReferenceTarget target);
 int readOutputPinLevel(uint8_t pin);
 
-void printBanner();
 void pollSerial();
-void printInjectionSummary();
+void processReceivedWord(uint32_t word);
+void processDirectRegisterData(uint32_t value);
 
 void programAttenuatorDb(double db);
 double getCurrentAttenuatorDb();
