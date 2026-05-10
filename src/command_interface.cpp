@@ -623,6 +623,7 @@ void handleControlWord(uint32_t word)
         Serial.print(F("saTech WN2A ready"));
         return;
     }
+    // Unimplemented - Begin/End Macro, Begin/End Sweep, and Squelch Level
     if (selector == 0x1FFFU || selector == 0x27FFU ||
         selector == 0x37FFU || selector == 0x3FFFU ||
         selector == 0x47FFU) {
