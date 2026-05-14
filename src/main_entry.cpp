@@ -166,6 +166,7 @@ void loop()
 #if SATECH_TECHNICIAN_CONSOLE
     pollTechnicianConsole();
 #else
+    // See setup() where you can choose "ascii"  or "binary" communication
     pollSerial();
 #endif
 }

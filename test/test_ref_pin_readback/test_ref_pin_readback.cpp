@@ -14,8 +14,8 @@ void test_ref_off_deasserts_reference_enable_outputs(void)
     selectRef(ReferenceTarget::Ref1);
     selectRef(ReferenceTarget::None);
 
-    TEST_ASSERT_EQUAL_INT(LOW, readOutputPinLevel(PIN_REF_EN1));
-    TEST_ASSERT_EQUAL_INT(LOW, readOutputPinLevel(PIN_REF_EN2));
+    TEST_ASSERT_EQUAL_INT(LOW, digitalRead(PIN_REF_EN1));
+    TEST_ASSERT_EQUAL_INT(LOW, digitalRead(PIN_REF_EN2));
 }
 
 void test_ref1_on_asserts_reference_enable_outputs(void)
@@ -25,8 +25,8 @@ void test_ref1_on_asserts_reference_enable_outputs(void)
 
     selectRef(ReferenceTarget::Ref1);
 
-    TEST_ASSERT_EQUAL_INT(HIGH, readOutputPinLevel(PIN_REF_EN1));
-    TEST_ASSERT_EQUAL_INT(LOW, readOutputPinLevel(PIN_REF_EN2));
+    TEST_ASSERT_EQUAL_INT(HIGH, digitalRead(PIN_REF_EN1));
+    TEST_ASSERT_EQUAL_INT(LOW, digitalRead(PIN_REF_EN2));
 }
 
 void test_ref2_on_asserts_reference_enable_outputs(void)
@@ -36,8 +36,8 @@ void test_ref2_on_asserts_reference_enable_outputs(void)
 
     selectRef(ReferenceTarget::Ref2);
 
-    TEST_ASSERT_EQUAL_INT(LOW, readOutputPinLevel(PIN_REF_EN1));
-    TEST_ASSERT_EQUAL_INT(HIGH, readOutputPinLevel(PIN_REF_EN2));
+    TEST_ASSERT_EQUAL_INT(LOW, digitalRead(PIN_REF_EN1));
+    TEST_ASSERT_EQUAL_INT(HIGH, digitalRead(PIN_REF_EN2));
 }
 
 void setup(void)

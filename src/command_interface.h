@@ -72,9 +72,8 @@ void selectSerialChipTarget(ChipTarget target);
 
 // Deasserts both REF_EN pins, then asserts the requested reference clock.
 // ReferenceTarget::Ref1 or Ref2 selects that clock; ReferenceTarget::None
-// disables both (warning printed — LOs will lose lock).
+// disables both clocks.
 void selectRef(ReferenceTarget target);
-int readOutputPinLevel(uint8_t pin);
 
 void pollSerial();
 void processReceivedWord(uint32_t word);
