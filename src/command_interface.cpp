@@ -41,8 +41,8 @@ SerialTransportEncoding serialTransportEncoding = SerialTransportEncoding::Ascii
 bool equalsIgnoreCase(const char* lhs, const char* rhs)
 {
     while (*lhs != '\0' && *rhs != '\0') {
-        const char lc = static_cast<char>(tolower(*lhs));
-        const char rc = static_cast<char>(tolower(*rhs));
+        const char lc = static_cast<char>(tolower(static_cast<unsigned char>(*lhs)));
+        const char rc = static_cast<char>(tolower(static_cast<unsigned char>(*rhs)));
         if (lc != rc) {
             return false;
         }
@@ -59,7 +59,7 @@ static inline double clampD(double v, double lo, double hi)
     return v;
 }
 
-// I thought this was receiving 0..127 directly from the PC app?
+// Enable during compile: Used by technician only when SATECH_TECHNICIAN_CONSOLE
 uint8_t attenCodeFromDb(double db)
 {
     const double clamped = clampD(db, ATTEN_MIN_DB, ATTEN_MAX_DB);
@@ -616,32 +616,32 @@ void handleFmnDataWord(uint32_t packedFMN)
     markLoManual(target);
 }
 
-void handleDirectRegisterDataWord(uint32_t chipSelPin)
+void handleDirectRegisterDataWord(uint32_t dataWord)
 {
     switch (serialRxState.selectedBinaryTarget) {
         case ChipTarget::LO1:
-            halLo1.spiWriteRegister(chipSelPin);
+            halLo1.spiWriteRegister(dataWord);
             break;
         case ChipTarget::LO2:
-            halLo2.spiWriteRegister(chipSelPin);
+            halLo2.spiWriteRegister(dataWord);
             break;
         case ChipTarget::LO3:
-            halLo3.spiWriteRegister(chipSelPin);
+            halLo3.spiWriteRegister(dataWord);
             break;
         case ChipTarget::Attenuator:
-            programAttenuatorRaw(static_cast<uint8_t>(chipSelPin & 0x7FU));
+            programAttenuatorRaw(static_cast<uint8_t>(dataWord & 0x7FU));
             break;
         case ChipTarget::ADC1:
-            spiWrite32(PIN_ADC1, true, chipSelPin);
+            spiWrite32(PIN_ADC1, true, dataWord);
             break;
         case ChipTarget::ADC2:
-            spiWrite32(PIN_ADC2, true, chipSelPin);
+            spiWrite32(PIN_ADC2, true, dataWord);
             break;
         case ChipTarget::RAM:
-            spiWrite32(PIN_RAM, true, chipSelPin);
+            spiWrite32(PIN_RAM, true, dataWord);
             break;
         case ChipTarget::Flash:
-            spiWrite32(PIN_FLASH, true, chipSelPin);
+            spiWrite32(PIN_FLASH, true, dataWord);
             break;
         case ChipTarget::None:
         default:
