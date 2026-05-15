@@ -27,3 +27,6 @@ node_modules/
 package-lock.json
 package.json
 calltree.html
+proposed_parser.py
+scope_dump.csv
+waveform_api.fix
