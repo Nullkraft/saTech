@@ -29,4 +29,7 @@ package.json
 calltree.html
 proposed_parser.py
 scope_dump.csv
+*csv
+*ods
+.~lock*
 waveform_api.fix

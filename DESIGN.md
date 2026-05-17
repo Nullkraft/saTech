@@ -18,3 +18,12 @@ I need a script for sending SCPI commands to the oscilloscope.
     - The csv file will have 3 column headers: 'sample', 'ch1', and 'ch2'
     - If either ch1 or ch2, or both, are empty create/overwrite 'scope_dump.csv' with 'sample' data and just leave their columns empty if their data buffer is empty
     - Sample will be a sequential count starting from 0
+
+## Data Analysis
+I want to create a second script that can read and analyze the contents of scope_dump.csv
+
+1. Open scope_dump.csv for read/write
+2. If ch1 column contains data:
+    - Find the min_ch1 of ch1 column and reduce every value in ch1 column by that min_ch1
+3. If ch2 column contains data:
+    - Find the min_ch2 of ch2 column and reduce every value in ch2 column by that min_ch2

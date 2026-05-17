@@ -200,6 +200,15 @@ def complement_payload(payload):
     return [byte ^ 0xFF for byte in payload]
 
 
+def normalize_payload(payload):
+    values = complement_payload(payload)
+    if not values:
+        return values
+
+    minimum = min(values)
+    return [value - minimum for value in values]
+
+
 def run_console(args):
     fd = open_scope_fd(args.scope_device)
     buffers = {"ch1": [], "ch2": []}
@@ -236,7 +245,7 @@ def run_console(args):
             if buffer_name is not None:
                 response = read_waveform_response(fd, args.query_delay, args.read_size)
                 payload = waveform_payload(response)
-                buffers[buffer_name] = complement_payload(payload)
+                buffers[buffer_name] = normalize_payload(payload)
                 print(f"stored {len(buffers[buffer_name])} samples in {buffer_name}")
                 continue
 
