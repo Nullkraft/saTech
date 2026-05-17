@@ -123,8 +123,8 @@ void setup()
     }
 
     resetConsoleState();
-    // saTech.begin("ascii");
-    saTech.begin("binary");
+    saTech.begin("ascii");
+    // saTech.begin("binary");
 
     freqCalc.RefClock1 = REF_MHZ;
 
