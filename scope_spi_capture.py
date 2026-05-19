@@ -86,7 +86,7 @@ def setup_scope_for_normal_wait(fd, args):
     write_scope(fd, ":CHAN1:DISP ON")
     write_scope(fd, ":CHAN2:DISP ON")
     write_scope(fd, ":TRIGger:MODE EDGE")
-    write_scope(fd, ":TRIGger:EDGE:SWEep NORM")
+    write_scope(fd, ":TRIGger:EDGE:SWEep SING")
     write_scope(fd, ":WAVeform:POINts:MODE RAW")
     write_scope(fd, ":RUN")
     return wait_for_scope_status(fd, "WAIT", args.wait_timeout, args.poll_interval)
