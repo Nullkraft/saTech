@@ -31,6 +31,7 @@ enum class TechnicianCommandKind {
     Status,
     Relock,
     Info,
+    Rfin,
     Atten,
     Ifmode,
     Lofreq,
@@ -442,6 +443,9 @@ TechnicianCommandKind commandKindFromToken(const char* token)
     if (equalsIgnoreCase(token, "info")) {
         return TechnicianCommandKind::Info;
     }
+    if (equalsIgnoreCase(token, "rfin")) {
+        return TechnicianCommandKind::Rfin;
+    }
     if (equalsIgnoreCase(token, "atten")) {
         return TechnicianCommandKind::Atten;
     }
@@ -572,6 +576,25 @@ void handleTechnicianCommand(const char* line)
             Serial.println(F("    REF_EN1    -> D5"));
             Serial.println(F("    REF_EN2    -> D6"));
             return;
+        case TechnicianCommandKind::Rfin: {
+            if (count < 2U) {
+                Serial.println(F("Usage: RFin <MHz>"));
+                return;
+            }
+            char* rfinEndPointer;
+            const double rfinMhz = strtod(tokens[1], &rfinEndPointer);
+            if (rfinEndPointer == tokens[1] || *rfinEndPointer != '\0') {
+                Serial.println(F("Usage: RFin <MHz>"));
+                return;
+            }
+            if (rfinMhz < MIN_RF_INPUT_MHZ || rfinMhz > MAX_RF_INPUT_MHZ) {
+                Serial.println(F("Frequency out of range (23.5 to 6000 MHz)."));
+                return;
+            }
+            tuneTo(rfinMhz);
+            printStatus();
+            return;
+        }
         case TechnicianCommandKind::Atten:
             if (count < 2U) {
                 Serial.println(F("Usage: atten <dB>"));

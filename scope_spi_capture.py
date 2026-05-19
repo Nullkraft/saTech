@@ -20,6 +20,27 @@ WAVEFORM_QUERY_RE = re.compile(
 )
 
 
+def print_scpi_reply(scpi, response):
+    if isinstance(response, bytes):
+        if response.startswith(b"#") or waveform_buffer_name(scpi) is not None:
+            payload = waveform_payload(response)
+            print(f"{scpi} -> {len(response)} bytes ({len(payload)} payload bytes)")
+            return
+
+        text = response.decode("ascii", errors="replace").strip()
+        if text:
+            print(f"{scpi} -> {text}")
+        else:
+            print(f"{scpi} -> <empty>")
+        return
+
+    text = response.strip()
+    if text:
+        print(f"{scpi} -> {text}")
+    else:
+        print(f"{scpi} -> <empty>")
+
+
 def write_scope(fd, scpi, delay=0.05):
     os.write(fd, scpi.encode("ascii") + b"\n")
     time.sleep(delay)
@@ -28,7 +49,9 @@ def write_scope(fd, scpi, delay=0.05):
 def query_scope(fd, scpi, read_size, delay=0.15):
     os.write(fd, scpi.encode("ascii") + b"\n")
     time.sleep(delay)
-    return os.read(fd, read_size).decode("ascii", errors="replace").strip()
+    response = os.read(fd, read_size).decode("ascii", errors="replace").strip()
+    print_scpi_reply(scpi, response)
+    return response
 
 
 def read_scope_bytes(fd, scpi, count, delay=0.15):
@@ -43,7 +66,9 @@ def read_scope_bytes(fd, scpi, count, delay=0.15):
             break
         chunks.append(chunk)
         received += len(chunk)
-    return b"".join(chunks)
+    response = b"".join(chunks)
+    print_scpi_reply(scpi, response)
+    return response
 
 
 def wait_for_scope_status(fd, wanted, timeout_s, poll_s):
@@ -99,10 +124,13 @@ def open_scope_fd(path):
 
 def drain_scope(fd):
     while True:
-        ready, _, _ = select.select([fd], [], [], 0)
-        if not ready:
-            return
-        if not os.read(fd, 4096):
+        try:
+            ready, _, _ = select.select([fd], [], [], 0)
+            if not ready:
+                return
+            if not os.read(fd, 4096):
+                return
+        except OSError:
             return
 
 
@@ -154,6 +182,11 @@ def read_scpi_response(fd, timeout=1.0):
 def read_waveform_response(fd, delay=0.2, read_size=1200000):
     time.sleep(delay)
     return os.read(fd, read_size).rstrip(b"\n")
+
+
+def read_text_response(fd, delay=0.2, read_size=4096):
+    time.sleep(delay)
+    return os.read(fd, read_size).rstrip(b"\r\n")
 
 
 def waveform_buffer_name(command):
@@ -239,21 +272,26 @@ def run_console(args):
                 print(f"saved {OUTPUT_PATH}")
                 continue
 
-            send_scpi(fd, command)
+            try:
+                send_scpi(fd, command)
 
-            buffer_name = waveform_buffer_name(command)
-            if buffer_name is not None:
-                response = read_waveform_response(fd, args.query_delay, args.read_size)
-                payload = waveform_payload(response)
-                buffers[buffer_name] = normalize_payload(payload)
-                print(f"stored {len(buffers[buffer_name])} samples in {buffer_name}")
-                continue
+                buffer_name = waveform_buffer_name(command)
+                if buffer_name is not None:
+                    response = read_waveform_response(fd, args.query_delay, args.read_size)
+                    print_scpi_reply(command, response)
+                    payload = waveform_payload(response)
+                    buffers[buffer_name] = normalize_payload(payload)
+                    print(f"stored {len(buffers[buffer_name])} samples in {buffer_name}")
+                    continue
 
-            if stripped.endswith("?"):
-                response = read_scpi_response(fd)
-                text = response.decode("ascii", errors="replace").strip()
-                if text:
-                    print(text)
+                if stripped.endswith("?"):
+                    response = read_text_response(fd, args.query_delay)
+                    print_scpi_reply(command, response)
+            except OSError as exc:
+                print(f"{command} -> {exc}", file=sys.stderr)
+                os.close(fd)
+                fd = open_scope_fd(args.scope_device)
+                drain_scope(fd)
     finally:
         os.close(fd)
 
