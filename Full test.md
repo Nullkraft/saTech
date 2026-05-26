@@ -1,5 +1,9 @@
 This test derives the frequency plan from a given `RFin` value and verifies that the LO chain is programmed and measured correctly as a coordinated RF path. Because the LO select pins are automatically controlled during SPI programming and may transition too quickly to observe with `digitalRead`, the relevant select and control pins must be checked separately before programming. The result must include separate technician-facing reports for each LO and the final amplitude check for the `315 MHz` path.
 
+This full test should run while the technician console firmware is loaded so the same firmware image can support both automated test execution and manual technician troubleshooting. The technician console should remain the operator-facing interface for board-side actions such as setting `RFin`, selecting or verifying control states, programming the LOs, and reporting board status in a form that is useful to the technician. This avoids requiring a separate firmware build or reprogramming step when the technician needs to stop, inspect the board state, or perform follow-up checks after an automated run.
+
+The full test itself should be orchestrated by host-side code that uses the technician console as its control surface for the board. The host should send the required technician-console commands in a stable and parseable form, sequence the LO programming steps, and collect the board-side responses. The same host code should also handle the external instrument work that does not belong in the firmware: decode the oscilloscope capture for each LO programming event, compare the decoded register values against `max2871_expected.py`, read the BK390A voltage directly, convert that voltage to dBm, and collate the final result into separate technician-facing LO reports plus the overall `315 MHz` path amplitude result.
+
 The procedure is:
 
 - Take `RFin`.
