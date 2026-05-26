@@ -1,8 +1,5 @@
-## Agent delegation
-- Update `LIBRARY_API.md` only when 1 or more steps have been completed.
-
-## File scope exceptions
-- `LIBRARY_API.md` does not count against the 1-file update restriction.
+## Decoder Operations
+- Use 'expected register values' from max2871_expected.py to verify results decoded from Rigol mcp server decoder
 
 ## Coding routines
-- When creating functions let the technician be responsible for any errors. No error checks needed.
+- When creating functions do not add error checking code. The technician be directly responsible for causing any errors
