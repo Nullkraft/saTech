@@ -1,28 +1,22 @@
-1. It seems that we can correctly decode the 32-bit registers from the oscilloscope.
-2. The MCP server also has the ability to report the assert/deassert status of the pin for the selected lo.
-3. We can also verify any of the control pins whether they are asserted or deasserted
-4. The AI should also know the frequency plan so if I give it an RFin value it can:
-    - Select each lo
-    - program the selected lo
-    - Then report:
-        + Which Lo was programmed
-        + The Lo select pin was properly asserted
-        + Lo frequency that was programmed
-        + Lo register values that were programmed
-        + If the register values were correct
-    - Read the meter to report the logamp voltage
+This test derives the frequency plan from a given `RFin` value and verifies that the LO chain is programmed and measured correctly as a coordinated RF path. Because the LO select pins are automatically controlled during SPI programming and may transition too quickly to observe with `digitalRead`, the relevant select and control pins must be checked separately before programming. The result must include separate technician-facing reports for each LO and the final amplitude check for the `315 MHz` path.
 
-5. As steps:
-    - Get the freq plan from the RFin value
-    - For Lo 1 and 2:
-        + Assert & verify 'select' pin (digitaRead)
-        + Deassert & verify 'select' pin
-        + Get the selected Lo's expected register values based on RFin and frequency plan
-        + Program selected Lo to frequency based on RFin and frequency plan
-        + Decode 32-bit register values from the o'scope
-        + Compare the 32-bit decoded values against the expected values
-        + Read the LogAmp voltage using the BK390A meter
-        + Convert voltage to dBm:
+The procedure is:
+
+- Take `RFin`.
+- Derive the frequency plan.
+- Run a separate pin-state check before programming.
+- Program `LO1`.
+- Decode the scope's 32-bit register output for `LO1`.
+- Compare the decoded values against `max2871_expected.py`.
+- Program `LO2`.
+- Decode the scope's 32-bit register output for `LO2`.
+- Compare the decoded values against `max2871_expected.py`.
+- Read the BK390A voltage directly.
+- Convert the voltage to dBm.
+- Report the amplitude check for the `315 MHz` path.
+- Present separate reports for `LO1` and `LO2`.
+
+The notes on converting voltage to dBm remain as follows:
 
         def _volts_to_dBm(self, voltage: float) -> float:
             '''
