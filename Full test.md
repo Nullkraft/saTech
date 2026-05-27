@@ -16,6 +16,7 @@ The full test itself should be orchestrated by host-side code that uses the tech
 - Control pin pre-check completed, with a pass/fail result for each tested pin.
 - `LO1` register verification report produced for the dirty registers that were programmed on the SPI bus, with fail-early pass/fail checks for expected dirty-register count, expected dirty-register addresses, expected 32-bit register values, and decoded 32-bit register values.
 - `LO2` register verification report produced, using the same format and fail-early checks as `LO1`.
+- `315 MHz` path measurement report produced with the BK390A voltage reading and the converted dBm value. This report does not include pass/fail results.
 
 ## Report Formats
 
@@ -117,6 +118,16 @@ Register result vocabulary:
 - `CLEAN`: register was expected not to be written and was not observed.
 - `MISSING`: dirty register was expected but not observed.
 - `UNEXPECTED_WRITE`: clean register was observed on the bus.
+
+`315 MHz` path measurement report:
+
+```text
+315 MHz Path Measurement Report
+BK390A voltage: 1.234 V
+logamp power: -32.45 dBm
+```
+
+The `315 MHz` path measurement report only reports values. It does not produce a pass/fail result.
 
 ## Procedure
 
