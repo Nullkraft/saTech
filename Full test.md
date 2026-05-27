@@ -13,6 +13,9 @@ The full test itself should be orchestrated by host-side code that uses the tech
 ## Acceptance Checklist
 
 - Frequency plan report produced from `RFin`, showing the planned `LO1` and `LO2` frequencies and each LO's `M`, `F`, `N`, and `DIVA` values.
+- Control pin pre-check completed, with a pass/fail result for each tested pin.
+- `LO1` register verification report produced for the dirty registers that were programmed on the SPI bus, with fail-early pass/fail checks for expected dirty-register count, expected dirty-register addresses, expected 32-bit register values, and decoded 32-bit register values.
+- `LO2` register verification report produced, using the same format and fail-early checks as `LO1`.
 
 ## Report Formats
 
@@ -38,6 +41,82 @@ LO2:
   N: 4095
   DIVA: 1
 ```
+
+Control pin pre-check report:
+
+```text
+Control Pin Pre-Check Report
+
+LO1_SELECT:
+  expected: asserted
+  actual: asserted
+  result: PASS
+
+LO2_SELECT:
+  expected: deasserted
+  actual: deasserted
+  result: PASS
+```
+
+LO register verification report:
+
+This report is produced once for each programmed LO; `LO1` and `LO2` use the same structure.
+
+```text
+LO1 Register Verification Report
+
+register_count:
+  expected: 3
+  decoded: 3
+  result: PASS
+
+register_addresses:
+  expected: [4, 1, 0]
+  decoded: [4, 1, 0]
+  result: PASS
+
+register_values:
+  R5:
+    state: CLEAN
+    expected: 0x00580005
+    decoded: not_written
+    result: CLEAN
+  R4:
+    state: DIRTY
+    expected: 0x638C803C
+    decoded: 0x638C803C
+    result: PASS
+  R3:
+    state: CLEAN
+    expected: 0x0000000B
+    decoded: not_written
+    result: CLEAN
+  R2:
+    state: CLEAN
+    expected: 0x00005E42
+    decoded: not_written
+    result: CLEAN
+  R1:
+    state: DIRTY
+    expected: 0x80008011
+    decoded: 0x80008011
+    result: PASS
+  R0:
+    state: DIRTY
+    expected: 0x007D0000
+    decoded: 0x007D0000
+    result: PASS
+```
+
+Register verification checks the dirty registers that were programmed on the SPI bus and reports the clean registers that were not written. The scope capture should only contain the registers that changed; this will almost always be registers 4, 1, and 0. Register verification checks fail early. Check the decoded dirty-register count first. If the count fails, report the count result and stop that LO's register verification. If the count passes, check the decoded dirty-register addresses. If the address check fails, report the count result, the address result, and stop that LO's register verification. If the address check passes, compare the expected and decoded 32-bit register values for dirty registers and report each comparison up to and including the first failing value. Clean registers should still be included in the register report as `CLEAN` with `decoded: not_written`.
+
+Register result vocabulary:
+
+- `PASS`: dirty register was written and decoded value matched expected.
+- `FAIL`: dirty register was written but decoded value did not match expected.
+- `CLEAN`: register was expected not to be written and was not observed.
+- `MISSING`: dirty register was expected but not observed.
+- `UNEXPECTED_WRITE`: clean register was observed on the bus.
 
 ## Procedure
 
