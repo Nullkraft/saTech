@@ -18,6 +18,24 @@ The full test itself should be orchestrated by host-side code that uses the tech
 - `LO2` register verification report produced, using the same format and fail-early checks as `LO1`.
 - `315 MHz` path measurement report produced with the BK390A voltage reading and the converted dBm value. This report does not include pass/fail results.
 
+## Console Contract
+
+### Purpose
+
+### Command Format
+
+### Response Format
+
+### Parseability Rules
+
+### Commands
+
+### Error Responses
+
+### Timing and Sequencing
+
+### Open Questions
+
 ## Report Formats
 
 Frequency plan report:
