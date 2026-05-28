@@ -4,6 +4,7 @@
 #include "board_control.h"
 #include "console_state.h"
 #include "serial_transport.h"
+#include "technician_console.h"
 
 #include <SPI.h>
 #include <arduino_hal.h>
@@ -20,7 +21,6 @@ extern FrequencyCalculator freqCalc;
 extern double currentRfInputMhz;
 
 void tuneTo(double mhz);
-void printStatus();
 void initializeLo(MAX2871& lo);
 
 namespace {
@@ -193,7 +193,7 @@ void handleControlWord(uint32_t word)
         initializeLo(lo2);
         initializeLo(lo3);
         tuneTo(currentRfInputMhz);
-        printStatus();
+        printFulltestPlanReport();
         return;
     }
     if (selector == 0x06FFU) {

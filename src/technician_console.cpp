@@ -16,7 +16,6 @@ extern MAX2871 lo2;
 extern MAX2871 lo3;
 extern FrequencyCalculator freqCalc;
 
-void printStatus();
 void recomputePlan();
 void tuneTo(double mhz);
 
@@ -47,7 +46,6 @@ enum class TechnicianCommandKind {
     Unknown,
     Help,
     Id,
-    Status,
     Relock,
     Fulltest,
     Rfin,
@@ -119,6 +117,15 @@ void printJsonValue(const __FlashStringHelper* name, double value, uint8_t digit
     Serial.print(F("\",\"value\":"));
     Serial.print(value, digits);
     Serial.println(F("}"));
+}
+
+void printJsonTextValue(const __FlashStringHelper* name, const __FlashStringHelper* value)
+{
+    Serial.print(F("{\"type\":\"value\",\"name\":\""));
+    Serial.print(name);
+    Serial.print(F("\",\"value\":\""));
+    Serial.print(value);
+    Serial.println(F("\"}"));
 }
 
 void printReferenceState(const __FlashStringHelper* prefix, uint8_t ref1, uint8_t ref2)
@@ -277,15 +284,7 @@ void handleFulltestPlan(const char* valueToken)
     }
 
     tuneTo(rfinMhz);
-    printJsonReportEvent(F("report_begin"), F("plan"));
-    printJsonValue(F("rfin_mhz"), freqCalc.FreqRFin, 3);
-    printJsonValue(F("if1_mhz"), freqCalc.IF1, 3);
-    printJsonValue(F("if2_mhz"), freqCalc.IF2, 3);
-    printLoFrequencyCheck(F("lo1"), freqCalc.FreqLO1, freqCalc.FreqLO1);
-    printLoRegisterValues(F("lo1"), lo1);
-    printLoFrequencyCheck(F("lo2"), freqCalc.FreqLO2, freqCalc.FreqLO2);
-    printLoRegisterValues(F("lo2"), lo2);
-    printJsonReportEvent(F("report_end"), F("plan"));
+    printFulltestPlanReport();
 }
 
 void handleFulltestAtten(const char* valueToken)
@@ -759,9 +758,6 @@ TechnicianCommandKind commandKindFromToken(const char* token)
     if (strcmp(token, "id") == 0) {
         return TechnicianCommandKind::Id;
     }
-    if (strcmp(token, "status") == 0) {
-        return TechnicianCommandKind::Status;
-    }
     if (strcmp(token, "relock") == 0) {
         return TechnicianCommandKind::Relock;
     }
@@ -802,6 +798,25 @@ void printInjectionSummary()
     Serial.println(state.lo3Manual ? F("Manual") : injectionLabel(freqCalc.LO3InjectionMode));
 }
 
+void printFulltestPlanReport()
+{
+    const ConsoleState& state = consoleState();
+    printJsonReportEvent(F("report_begin"), F("plan"));
+    printJsonValue(F("rfin_mhz"), freqCalc.FreqRFin, 3);
+    printJsonValue(F("if1_mhz"), freqCalc.IF1, 3);
+    printJsonValue(F("if2_mhz"), freqCalc.IF2, 3);
+    printLoFrequencyCheck(F("lo1"), freqCalc.FreqLO1, freqCalc.FreqLO1);
+    printLoRegisterValues(F("lo1"), lo1);
+    printLoFrequencyCheck(F("lo2"), freqCalc.FreqLO2, freqCalc.FreqLO2);
+    printLoRegisterValues(F("lo2"), lo2);
+    printJsonTextValue(F("lo1_injection"), state.lo1Manual ? F("Manual") : injectionLabel(freqCalc.LO1InjectionMode));
+    printJsonTextValue(F("lo2_injection"), state.lo2Manual ? F("Manual") : injectionLabel(freqCalc.LO2InjectionMode));
+    printJsonTextValue(F("lo3_injection"), state.lo3Manual ? F("Manual") : injectionLabel(freqCalc.LO3InjectionMode));
+    printJsonValue(F("atten_db"), getCurrentAttenuatorDb(), 2);
+    printJsonTextValue(F("chip_select"), chipTargetName(getCurrentChipTarget()));
+    printJsonReportEvent(F("report_end"), F("plan"));
+}
+
 void printTechnicianBanner()
 {
     Serial.println();
@@ -809,7 +824,6 @@ void printTechnicianBanner()
     Serial.println(F(" RFin <MHz>            0 to 3000 MHz"));
     Serial.println(F(" help                  This list"));
     Serial.println(F(" id                    Print identifier"));
-    Serial.println(F(" status                Settings report"));
     Serial.println(F(" relock                Reinitialize LO's"));
     Serial.println(F(" fulltest refcheck     Report refclock pin checks"));
     Serial.println(F(" fulltest pincheck     Report chip pin checks"));
@@ -872,7 +886,7 @@ void handleTechnicianCommand(const char* line)
             return;
         }
         tuneTo(mhz);
-        printStatus();
+        printFulltestPlanReport();
         return;
     }
 
@@ -882,9 +896,6 @@ void handleTechnicianCommand(const char* line)
             return;
         case TechnicianCommandKind::Id:
             processReceivedWord(0x000017FFUL);
-            return;
-        case TechnicianCommandKind::Status:
-            printStatus();
             return;
         case TechnicianCommandKind::Relock:
             processReceivedWord(0x00002FFFUL);
@@ -908,7 +919,7 @@ void handleTechnicianCommand(const char* line)
                 return;
             }
             tuneTo(rfinMhz);
-            printStatus();
+            printFulltestPlanReport();
             return;
         }
         case TechnicianCommandKind::Ifmode:

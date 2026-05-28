@@ -37,37 +37,6 @@ void initializeLo(MAX2871& lo)
     lo.outputPower(+5, RF_B);
 }
 
-static void printFrequencyPlan()
-{
-    Serial.println(F("\nFrequency Plan"));
-    Serial.print(F("RF In : ")); Serial.print(freqCalc.FreqRFin, 3); Serial.println(F(" MHz"));
-    Serial.print(F("LO1  : ")); Serial.print(freqCalc.FreqLO1, 3);
-    Serial.print(F(" MHz  IF1: ")); Serial.println(freqCalc.IF1, 3);
-    Serial.print(F("LO2  : ")); Serial.print(freqCalc.FreqLO2, 3); Serial.println(F(" MHz"));
-    Serial.print(F("LO3  : ")); Serial.print(freqCalc.FreqLO3, 3); Serial.println(F(" MHz"));
-}
-
-static void printLoSummary(const __FlashStringHelper* label, const MAX2871& lo)
-{
-    Serial.print(label);
-    Serial.print(F(" M=")); Serial.print(lo.M);
-    Serial.print(F(" F=")); Serial.print(lo.Frac);
-    Serial.print(F(" N=")); Serial.print(lo.N);
-    Serial.print(F(" DIVA=")); Serial.println(1 << lo.DIVA);
-}
-
-void printStatus()
-{
-    printFrequencyPlan();
-    printLoSummary(F("LO1"), lo1);
-    printLoSummary(F("LO2"), lo2);
-    printLoSummary(F("LO3"), lo3);
-    printInjectionSummary();
-    Serial.print(F("Attenuator: ")); Serial.print(getCurrentAttenuatorDb(), 2); Serial.println(F(" dB"));
-    Serial.print(F("Chip select: "));
-    Serial.println(chipTargetName(getCurrentChipTarget()));
-}
-
 void recomputePlan()
 {
     ConsoleState& s = consoleState();
@@ -158,7 +127,7 @@ void setup()
 #if SATECH_TECHNICIAN_CONSOLE
     printTechnicianBanner();
 #endif
-    printStatus();
+    printFulltestPlanReport();
 }
 
 void loop()
