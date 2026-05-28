@@ -33,6 +33,7 @@ constexpr double LO_FREQUENCY_MAX_MHZ = 6000.0;
 enum class TechnicianCommandKind {
     Unknown,
     Help,
+    Id,
     Status,
     Relock,
     Info,
@@ -443,6 +444,9 @@ TechnicianCommandKind commandKindFromToken(const char* token)
     if (equalsIgnoreCase(token, "help")) {
         return TechnicianCommandKind::Help;
     }
+    if (equalsIgnoreCase(token, "id")) {
+        return TechnicianCommandKind::Id;
+    }
     if (equalsIgnoreCase(token, "status")) {
         return TechnicianCommandKind::Status;
     }
@@ -496,6 +500,7 @@ void printTechnicianBanner()
     Serial.println(F("Commands:"));
     Serial.println(F("  RFin <MHz>            Tune analyzer RF input (0 to 3000 MHz)"));
     Serial.println(F("  help                  Show this list"));
+    Serial.println(F("  id                    Print unit identification string"));
     Serial.println(F("  status                Report LO/IF plan, attenuator state, chip target"));
     Serial.println(F("  relock                Reinitialize MAX2871 devices"));
     Serial.println(F("  info                  Show board pin assignments"));
@@ -562,6 +567,9 @@ void handleTechnicianCommand(const char* line)
     switch (commandKindFromToken(tokens[0])) {
         case TechnicianCommandKind::Help:
             printTechnicianBanner();
+            return;
+        case TechnicianCommandKind::Id:
+            processReceivedWord(0x000017FFUL);
             return;
         case TechnicianCommandKind::Status:
             printStatus();
