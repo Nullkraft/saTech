@@ -12,6 +12,28 @@ Implement and test the full-test workflow as regular Python before turning it in
 
 `full_test.py` should be an entry point for argument parsing, configuration, report printing, and process exit status. The hardware orchestration, validation decisions, and structured report construction should live behind callable functions rather than being baked into CLI-only behavior.
 
+## Implementation
+First slice is implemented:
+
+1. run_full_test.py
+  - run_full_test(config) -> report
+  - structured report data
+  - no CLI parsing
+2. full_test.py
+  - parse args
+  - build config
+  - call run_full_test(config)
+  - print report
+  - return process status
+3. First implemented workflow
+  - connect to technician console
+  - query id
+  - verify expected response
+
+Verified with `./bin/python full_test.py --port /dev/ttyUSB1` on actual hardware. The first run passed and returned `saTech WN2A ready`.
+
+Next implementation step is to add focused tests around `run_full_test.py` using a fake serial object before expanding into the full technician-console sequence.
+
 ## Files To Start With
 
 - `Full test.md`
