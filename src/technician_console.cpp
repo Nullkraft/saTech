@@ -37,6 +37,7 @@ enum class TechnicianCommandKind {
     Status,
     Relock,
     Info,
+    Fulltest,
     Rfin,
     Atten,
     Ifmode,
@@ -88,6 +89,72 @@ uint8_t attenCodeFromDb(double db)
 {
     const double steps = (db - ATTEN_MIN_DB) / ATTEN_STEP_DB;
     return static_cast<uint8_t>(lround(steps));
+}
+
+void printJsonReportEvent(const __FlashStringHelper* event, const __FlashStringHelper* report)
+{
+    Serial.print(F("{\"type\":\""));
+    Serial.print(event);
+    Serial.print(F("\",\"report\":\""));
+    Serial.print(report);
+    Serial.println(F("\"}"));
+}
+
+void printReferenceState(const __FlashStringHelper* prefix, uint8_t ref1, uint8_t ref2)
+{
+    Serial.print(prefix);
+    Serial.print(ref1 == HIGH ? F("on") : F("off"));
+    Serial.print(F(" : Ref2 "));
+    Serial.print(ref2 == HIGH ? F("on") : F("off"));
+}
+
+void printJsonReferenceCheck(const __FlashStringHelper* name, uint8_t expectedRef1, uint8_t expectedRef2)
+{
+    const uint8_t actualRef1 = digitalRead(PIN_REF_EN1);
+    const uint8_t actualRef2 = digitalRead(PIN_REF_EN2);
+    Serial.print(F("{\"type\":\"check\",\"name\":\""));
+    Serial.print(name);
+    Serial.print(F("\",\"expected\":\""));
+    printReferenceState(F("Ref1 "), expectedRef1, expectedRef2);
+    Serial.print(F("\",\"actual\":\""));
+    printReferenceState(F("Ref1 "), actualRef1, actualRef2);
+    Serial.print(F("\",\"result\":\""));
+    Serial.print((actualRef1 == expectedRef1 && actualRef2 == expectedRef2) ? F("PASS") : F("FAIL"));
+    Serial.println(F("\"}"));
+}
+
+void printJsonError(const __FlashStringHelper* command,
+                    const __FlashStringHelper* code,
+                    const __FlashStringHelper* message)
+{
+    Serial.print(F("{\"type\":\"error\",\"command\":\""));
+    Serial.print(command);
+    Serial.print(F("\",\"code\":\""));
+    Serial.print(code);
+    Serial.print(F("\",\"message\":\""));
+    Serial.print(message);
+    Serial.println(F("\"}"));
+}
+
+void handleFulltestCommand(char* const tokens[], size_t count)
+{
+    if (count < 2U) {
+        printJsonError(F("fulltest"), F("missing_argument"), F("Expected refcheck"));
+        return;
+    }
+    if (!equalsIgnoreCase(tokens[1], "refcheck")) {
+        printJsonError(F("fulltest"), F("unsupported_command"), F("Expected refcheck"));
+        return;
+    }
+
+    printJsonReportEvent(F("report_begin"), F("refcheck"));
+    selectRef(ReferenceTarget::Ref1);
+    printJsonReferenceCheck(F("ref1_selected"), HIGH, LOW);
+    selectRef(ReferenceTarget::Ref2);
+    printJsonReferenceCheck(F("ref2_selected"), LOW, HIGH);
+    selectRef(ReferenceTarget::None);
+    printJsonReferenceCheck(F("refs_off"), LOW, LOW);
+    printJsonReportEvent(F("report_end"), F("refcheck"));
 }
 
 bool parseControlWord(const char* token, uint32_t* word)
@@ -456,6 +523,9 @@ TechnicianCommandKind commandKindFromToken(const char* token)
     if (equalsIgnoreCase(token, "info")) {
         return TechnicianCommandKind::Info;
     }
+    if (equalsIgnoreCase(token, "fulltest")) {
+        return TechnicianCommandKind::Fulltest;
+    }
     if (equalsIgnoreCase(token, "rfin")) {
         return TechnicianCommandKind::Rfin;
     }
@@ -504,6 +574,7 @@ void printTechnicianBanner()
     Serial.println(F("  status                Report LO/IF plan, attenuator state, chip target"));
     Serial.println(F("  relock                Reinitialize MAX2871 devices"));
     Serial.println(F("  info                  Show board pin assignments"));
+    Serial.println(F("  fulltest refcheck     Report reference clock enable pin checks"));
     Serial.println(F("  atten <dB>            Program PE43711 attenuator (0.0 to 31.75 dB in 0.25 steps)"));
     Serial.println(F("  ifmode <high|low>     Set injection for the selected LO (use chip first)"));
     Serial.println(F("  lofreq <MHz>          Program the selected LO directly"));
@@ -592,6 +663,9 @@ void handleTechnicianCommand(const char* line)
             Serial.println(F("  set targets (assert HIGH):"));
             Serial.println(F("    REF_EN1    -> D5"));
             Serial.println(F("    REF_EN2    -> D6"));
+            return;
+        case TechnicianCommandKind::Fulltest:
+            handleFulltestCommand(tokens, count);
             return;
         case TechnicianCommandKind::Rfin: {
             if (count < 2U) {
