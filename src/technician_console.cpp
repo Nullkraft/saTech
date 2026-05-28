@@ -100,6 +100,15 @@ void printJsonReportEvent(const __FlashStringHelper* event, const __FlashStringH
     Serial.println(F("\"}"));
 }
 
+void printJsonValue(const __FlashStringHelper* name, double value, uint8_t digits)
+{
+    Serial.print(F("{\"type\":\"value\",\"name\":\""));
+    Serial.print(name);
+    Serial.print(F("\",\"value\":"));
+    Serial.print(value, digits);
+    Serial.println(F("}"));
+}
+
 void printReferenceState(const __FlashStringHelper* prefix, uint8_t ref1, uint8_t ref2)
 {
     Serial.print(prefix);
@@ -123,6 +132,35 @@ void printJsonReferenceCheck(const __FlashStringHelper* name, uint8_t expectedRe
     Serial.println(F("\"}"));
 }
 
+void printLoPlanValues(const __FlashStringHelper* prefix, const MAX2871& lo, double frequencyMhz)
+{
+    Serial.print(F("{\"type\":\"value\",\"name\":\""));
+    Serial.print(prefix);
+    Serial.print(F("_frequency_mhz\",\"value\":"));
+    Serial.print(frequencyMhz, 3);
+    Serial.println(F("}"));
+    Serial.print(F("{\"type\":\"value\",\"name\":\""));
+    Serial.print(prefix);
+    Serial.print(F("_m\",\"value\":"));
+    Serial.print(lo.M);
+    Serial.println(F("}"));
+    Serial.print(F("{\"type\":\"value\",\"name\":\""));
+    Serial.print(prefix);
+    Serial.print(F("_f\",\"value\":"));
+    Serial.print(lo.Frac);
+    Serial.println(F("}"));
+    Serial.print(F("{\"type\":\"value\",\"name\":\""));
+    Serial.print(prefix);
+    Serial.print(F("_n\",\"value\":"));
+    Serial.print(lo.N);
+    Serial.println(F("}"));
+    Serial.print(F("{\"type\":\"value\",\"name\":\""));
+    Serial.print(prefix);
+    Serial.print(F("_diva\",\"value\":"));
+    Serial.print(1 << lo.DIVA);
+    Serial.println(F("}"));
+}
+
 void printJsonError(const __FlashStringHelper* command,
                     const __FlashStringHelper* code,
                     const __FlashStringHelper* message)
@@ -136,14 +174,45 @@ void printJsonError(const __FlashStringHelper* command,
     Serial.println(F("\"}"));
 }
 
+void handleFulltestPlan(const char* valueToken)
+{
+    if (valueToken == nullptr) {
+        printJsonError(F("fulltest plan"), F("missing_argument"), F("RFin MHz is required"));
+        return;
+    }
+    char* endPointer = nullptr;
+    const double rfinMhz = strtod(valueToken, &endPointer);
+    if (endPointer == valueToken || *endPointer != '\0') {
+        printJsonError(F("fulltest plan"), F("invalid_argument"), F("RFin MHz must be numeric"));
+        return;
+    }
+    if (rfinMhz < ANALYZER_RF_INPUT_MIN_MHZ || rfinMhz > ANALYZER_RF_INPUT_MAX_MHZ) {
+        printJsonError(F("fulltest plan"), F("invalid_rfin"), F("RFin out of range"));
+        return;
+    }
+
+    tuneTo(rfinMhz);
+    printJsonReportEvent(F("report_begin"), F("plan"));
+    printJsonValue(F("rfin_mhz"), freqCalc.FreqRFin, 3);
+    printJsonValue(F("if1_mhz"), freqCalc.IF1, 3);
+    printJsonValue(F("if2_mhz"), freqCalc.IF2, 3);
+    printLoPlanValues(F("lo1"), lo1, freqCalc.FreqLO1);
+    printLoPlanValues(F("lo2"), lo2, freqCalc.FreqLO2);
+    printJsonReportEvent(F("report_end"), F("plan"));
+}
+
 void handleFulltestCommand(char* const tokens[], size_t count)
 {
     if (count < 2U) {
-        printJsonError(F("fulltest"), F("missing_argument"), F("Expected refcheck"));
+        printJsonError(F("fulltest"), F("missing_argument"), F("Expected refcheck or plan"));
+        return;
+    }
+    if (equalsIgnoreCase(tokens[1], "plan")) {
+        handleFulltestPlan(count >= 3U ? tokens[2] : nullptr);
         return;
     }
     if (!equalsIgnoreCase(tokens[1], "refcheck")) {
-        printJsonError(F("fulltest"), F("unsupported_command"), F("Expected refcheck"));
+        printJsonError(F("fulltest"), F("unsupported_command"), F("Expected refcheck or plan"));
         return;
     }
 
@@ -575,6 +644,7 @@ void printTechnicianBanner()
     Serial.println(F("  relock                Reinitialize MAX2871 devices"));
     Serial.println(F("  info                  Show board pin assignments"));
     Serial.println(F("  fulltest refcheck     Report reference clock enable pin checks"));
+    Serial.println(F("  fulltest plan <MHz>   Report full-test frequency plan"));
     Serial.println(F("  atten <dB>            Program PE43711 attenuator (0.0 to 31.75 dB in 0.25 steps)"));
     Serial.println(F("  ifmode <high|low>     Set injection for the selected LO (use chip first)"));
     Serial.println(F("  lofreq <MHz>          Program the selected LO directly"));
