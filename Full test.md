@@ -102,7 +102,19 @@ fulltest program lo2    Program LO2 for the current full-test frequency plan.
 
 ### Timing and Sequencing
 
+The technician is responsible for presetting the oscilloscope for proper SPI data capture before running the full test. The host should not rely on the firmware to configure the scope.
+
+The oscilloscope MCP server is responsible for switching the scope between stopped data collection and normal trigger mode as needed for each LO programming capture.
+
+The host should wait for the expected `report_end` record, or the expected single-command JSON response, before sending the next technician console command.
+
+For each LO programming step, the host should place the oscilloscope in the required trigger/capture state before sending `fulltest program lo1` or `fulltest program lo2`. Scope decode should happen immediately after the corresponding programming command completes, before the next LO is programmed.
+
+The BK390A reading should allow settling time after LO programming. The initial approach is to discard the first two BK390A readings and keep the third reading for the `315 MHz` path measurement report.
+
 ### Open Questions
+
+- Register verification is fail-early per LO. If a register count or address check fails, that LO's verification stops at the failing check. Should the full test stop after an LO failure, or continue to the next LO to collect more technician data?
 
 ## Report Formats
 
