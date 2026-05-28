@@ -27,6 +27,17 @@ bool loStateForTarget(ChipTarget target, MAX2871** targetLo, double** reportedFr
 char technicianInputBuffer[INPUT_BUFFER_SIZE];
 size_t technicianInputLength = 0U;
 
+const ChipTarget PINCHECK_TARGETS[] = {
+    ChipTarget::LO1,
+    ChipTarget::LO2,
+    ChipTarget::Attenuator,
+    ChipTarget::ADC1,
+    ChipTarget::ADC2,
+    ChipTarget::RAM,
+    ChipTarget::Flash,
+};
+constexpr size_t PINCHECK_TARGET_COUNT = sizeof(PINCHECK_TARGETS) / sizeof(PINCHECK_TARGETS[0]);
+
 constexpr double ANALYZER_RF_INPUT_MIN_MHZ = 0.0;
 constexpr double ANALYZER_RF_INPUT_MAX_MHZ = 3000.0;
 constexpr double LO_FREQUENCY_MIN_MHZ = 23.5;
@@ -93,6 +104,16 @@ uint8_t attenCodeFromDb(double db)
     return static_cast<uint8_t>(lround(steps));
 }
 
+const ChipSelectDefinition* pincheckDefinitionForTarget(ChipTarget target)
+{
+    for (size_t i = 0; i < CHIP_COUNT; ++i) {
+        if (CHIP_DEFINITIONS[i].chip == target) {
+            return &CHIP_DEFINITIONS[i];
+        }
+    }
+    return nullptr;
+}
+
 void printJsonReportEvent(const __FlashStringHelper* event, const __FlashStringHelper* report)
 {
     Serial.print(F("{\"type\":\""));
@@ -132,6 +153,66 @@ void printJsonReferenceCheck(const __FlashStringHelper* name, uint8_t expectedRe
     Serial.print(F("\",\"result\":\""));
     Serial.print((actualRef1 == expectedRef1 && actualRef2 == expectedRef2) ? F("PASS") : F("FAIL"));
     Serial.println(F("\"}"));
+}
+
+bool chipStateMatches(ChipTarget selected)
+{
+    for (size_t i = 0; i < PINCHECK_TARGET_COUNT; ++i) {
+        const ChipTarget target = PINCHECK_TARGETS[i];
+        const ChipSelectDefinition* def = pincheckDefinitionForTarget(target);
+        if (def == nullptr) {
+            return false;
+        }
+        const bool actualAsserted = digitalRead(def->pin) == def->assertedLevel;
+        const bool expectedAsserted = target == selected;
+        if (actualAsserted != expectedAsserted) {
+            return false;
+        }
+    }
+    return true;
+}
+
+void writeChipSelectState(ChipTarget selected)
+{
+    for (size_t i = 0; i < CHIP_COUNT; ++i) {
+        const ChipSelectDefinition& def = CHIP_DEFINITIONS[i];
+        digitalWrite(def.pin, (def.assertedLevel == HIGH) ? LOW : HIGH);
+    }
+    const ChipSelectDefinition* selectedDef = pincheckDefinitionForTarget(selected);
+    if (selectedDef != nullptr) {
+        digitalWrite(selectedDef->pin, selectedDef->assertedLevel);
+    }
+}
+
+void printPincheckName(size_t index)
+{
+    switch (index) {
+        case 0: Serial.print(F("lo1")); break;
+        case 1: Serial.print(F("lo2")); break;
+        case 2: Serial.print(F("atten")); break;
+        case 3: Serial.print(F("adc1")); break;
+        case 4: Serial.print(F("adc2")); break;
+        case 5: Serial.print(F("ram")); break;
+        case 6: Serial.print(F("flash")); break;
+        case 7: Serial.print(F("chips_off")); break;
+        default: break;
+    }
+}
+
+void printPincheckFailures(const bool results[])
+{
+    bool first = true;
+    Serial.print(F("failed: "));
+    for (size_t i = 0; i < 8U; ++i) {
+        if (results[i]) {
+            continue;
+        }
+        if (!first) {
+            Serial.print(F(", "));
+        }
+        printPincheckName(i);
+        first = false;
+    }
 }
 
 void printLoFrequencyCheck(const __FlashStringHelper* prefix, double expectedMhz, double actualMhz)
@@ -264,10 +345,44 @@ void handleFulltestProgram(const char* loToken)
     printJsonReportEvent(F("report_end"), report);
 }
 
+void handleFulltestPincheck()
+{
+    bool results[8];
+    printJsonReportEvent(F("report_begin"), F("pincheck"));
+    writeChipSelectState(ChipTarget::LO1);
+    results[0] = chipStateMatches(ChipTarget::LO1);
+    writeChipSelectState(ChipTarget::LO2);
+    results[1] = chipStateMatches(ChipTarget::LO2);
+    writeChipSelectState(ChipTarget::Attenuator);
+    results[2] = chipStateMatches(ChipTarget::Attenuator);
+    writeChipSelectState(ChipTarget::ADC1);
+    results[3] = chipStateMatches(ChipTarget::ADC1);
+    writeChipSelectState(ChipTarget::ADC2);
+    results[4] = chipStateMatches(ChipTarget::ADC2);
+    writeChipSelectState(ChipTarget::RAM);
+    results[5] = chipStateMatches(ChipTarget::RAM);
+    writeChipSelectState(ChipTarget::Flash);
+    results[6] = chipStateMatches(ChipTarget::Flash);
+    writeChipSelectState(ChipTarget::None);
+    results[7] = chipStateMatches(ChipTarget::None);
+    const bool passed = results[0] && results[1] && results[2] && results[3] &&
+                        results[4] && results[5] && results[6] && results[7];
+    Serial.print(F("{\"type\":\"check\",\"name\":\"pin_checks\",\"expected\":\"PASS\",\"actual\":\""));
+    if (passed) {
+        Serial.print(F("PASS"));
+    } else {
+        printPincheckFailures(results);
+    }
+    Serial.print(F("\",\"result\":\""));
+    Serial.print(passed ? F("PASS") : F("FAIL"));
+    Serial.println(F("\"}"));
+    printJsonReportEvent(F("report_end"), F("pincheck"));
+}
+
 void handleFulltestCommand(char* const tokens[], size_t count)
 {
     if (count < 2U) {
-        printJsonError(F("fulltest"), F("missing_argument"), F("Expected refcheck, plan, or program"));
+        printJsonError(F("fulltest"), F("missing_argument"), F("Expected refcheck, pincheck, plan, or program"));
         return;
     }
     if (equalsIgnoreCase(tokens[1], "plan")) {
@@ -278,8 +393,12 @@ void handleFulltestCommand(char* const tokens[], size_t count)
         handleFulltestProgram(count >= 3U ? tokens[2] : nullptr);
         return;
     }
+    if (equalsIgnoreCase(tokens[1], "pincheck")) {
+        handleFulltestPincheck();
+        return;
+    }
     if (!equalsIgnoreCase(tokens[1], "refcheck")) {
-        printJsonError(F("fulltest"), F("unsupported_command"), F("Expected refcheck, plan, or program"));
+        printJsonError(F("fulltest"), F("unsupported_command"), F("Expected refcheck, pincheck, plan, or program"));
         return;
     }
 
@@ -711,6 +830,7 @@ void printTechnicianBanner()
     Serial.println(F("  relock                Reinitialize MAX2871 devices"));
     Serial.println(F("  info                  Show board pin assignments"));
     Serial.println(F("  fulltest refcheck     Report reference clock enable pin checks"));
+    Serial.println(F("  fulltest pincheck     Report select pin checks, excluding LO3"));
     Serial.println(F("  fulltest plan <MHz>   Report full-test frequency plan"));
     Serial.println(F("  fulltest program <lo1|lo2> Program one planned LO"));
     Serial.println(F("  atten <dB>            Program PE43711 attenuator (0.0 to 31.75 dB in 0.25 steps)"));
