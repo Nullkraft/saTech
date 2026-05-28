@@ -13,9 +13,21 @@ Implement and test the full-test workflow as regular Python before turning it in
 `full_test.py` should be an entry point for argument parsing, configuration, report printing, and process exit status. The hardware orchestration, validation decisions, and structured report construction should live behind callable functions rather than being baked into CLI-only behavior.
 
 ## Implementation
-The first slice is implemented, tested with fake serial unit tests, and verified with `./bin/python full_test.py --port /dev/ttyUSB1` on actual hardware. The hardware run passed and returned `saTech WN2A ready`.
+Implemented and hardware-verified:
 
-Next implementation step is to expand the runner into the first technician-console sequence beyond the unit-id check.
+- `id` unit-identification check.
+- `fulltest refcheck` reference enable pin report.
+- `fulltest plan <MHz>` frequency-plan report.
+- `fulltest program lo1` and `fulltest program lo2` planned-LO programming reports.
+- Python runner report cleanup: public output now shows command list and parsed checks rather than raw serial transcripts.
+
+Still needed for the local full-test sequence:
+
+- `fulltest pincheck` for LO, attenuator, ADC, RAM, and Flash select pins.
+- Add `atten <dB>` to the Python runner sequence.
+- Add `fulltest plan <MHz>`, `fulltest program lo1`, and `fulltest program lo2` to the Python runner sequence.
+- Add Rigol MCP capture/decode and compare decoded LO register writes.
+- Add BK390A reading, discard-settling logic, dBm conversion, and final amplitude report.
 
 ## Files To Start With
 
