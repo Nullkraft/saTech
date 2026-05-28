@@ -22,6 +22,8 @@ The full test itself should be orchestrated by host-side code that uses the tech
 
 ### Purpose
 
+The console contract defines the commands and machine-readable responses used by the host-side full-test runner while the technician console firmware is loaded. The contract allows the technician console to remain useful for manual troubleshooting while giving the host stable output for automation, parsing, and final report collation.
+
 ### Command Format
 
 Full-test host commands should be plain-text technician console commands terminated by a newline. Commands should use lowercase command names and explicit arguments so they can be typed manually by a technician or sent by a host script.
