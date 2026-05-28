@@ -51,7 +51,6 @@ enum class TechnicianCommandKind {
     Relock,
     Fulltest,
     Rfin,
-    Atten,
     Ifmode,
     Lofreq,
     Chip,
@@ -92,12 +91,6 @@ void lowercaseInPlace(char* text)
 const __FlashStringHelper* injectionLabel(LOInjectionMode mode)
 {
     return (mode == LOInjectionMode::High) ? F("High") : F("Low");
-}
-
-uint8_t attenCodeFromDb(double db)
-{
-    const double steps = (db - ATTEN_MIN_DB) / ATTEN_STEP_DB;
-    return static_cast<uint8_t>(lround(steps));
 }
 
 const ChipSelectDefinition* pincheckDefinitionForTarget(ChipTarget target)
@@ -538,37 +531,6 @@ void printSelectedLoSnapshot(ChipTarget target)
     Serial.println(1 << targetLo->DIVA);
 }
 
-void processAttenuatorToken(const char* valueToken)
-{
-    if (valueToken == nullptr) {
-        return;
-    }
-    char* endPointer = nullptr;
-    const double requestedDb = strtod(valueToken, &endPointer);
-    if (endPointer == nullptr || *endPointer != '\0') {
-        Serial.println(F("Invalid attenuator value."));
-        return;
-    }
-    if (requestedDb < ATTEN_MIN_DB || requestedDb > ATTEN_MAX_DB) {
-        Serial.println(F("Attenuator range is 0.0 to 31.75 dB."));
-        return;
-    }
-    const double steps = (requestedDb - ATTEN_MIN_DB) / ATTEN_STEP_DB;
-    const double roundedSteps = round(steps);
-    if (fabs(steps - roundedSteps) > 0.01) {
-        Serial.println(F("Attenuator step is 0.25 dB."));
-        return;
-    }
-
-    const uint8_t code = attenCodeFromDb(requestedDb);
-    processReceivedWord(0x000008FFUL | (static_cast<uint32_t>(code) << 16));
-    Serial.print(F("Attenuator set to "));
-    Serial.print(getCurrentAttenuatorDb(), 2);
-    Serial.println(F(" dB"));
-    Serial.println(F("Reminder: expect ~51 ohms at 31.75 dB."));
-    printStatus();
-}
-
 void handleIfmodeCommand(const char* modeToken)
 {
     if (modeToken == nullptr) {
@@ -809,9 +771,6 @@ TechnicianCommandKind commandKindFromToken(const char* token)
     if (strcmp(token, "rfin") == 0) {
         return TechnicianCommandKind::Rfin;
     }
-    if (strcmp(token, "atten") == 0) {
-        return TechnicianCommandKind::Atten;
-    }
     if (strcmp(token, "ifmode") == 0) {
         return TechnicianCommandKind::Ifmode;
     }
@@ -846,25 +805,23 @@ void printInjectionSummary()
 void printTechnicianBanner()
 {
     Serial.println();
-    Serial.println(F("=== SpecAnn Technician Console ==="));
-    Serial.println(F("Commands:"));
-    Serial.println(F("  RFin <MHz>            Tune RF input to 0 to 3000 MHz"));
-    Serial.println(F("  help                  This list"));
-    Serial.println(F("  id                    Print identifyer string"));
-    Serial.println(F("  status                Settings report"));
-    Serial.println(F("  relock                Reinitialize LO's"));
-    Serial.println(F("  fulltest refcheck     Report reference clock enable pin checks"));
-    Serial.println(F("  fulltest pincheck     Report select pin checks, excluding LO3"));
-    Serial.println(F("  fulltest atten <dB>   Program and report attenuator set point"));
-    Serial.println(F("  fulltest plan <MHz>   Report full-test frequency plan"));
-    Serial.println(F("  fulltest program <lo1|lo2> Program one planned LO"));
-    Serial.println(F("  atten <dB>            Program PE43711 attenuator (0.0 to 31.75 dB in 0.25 steps)"));
-    Serial.println(F("  ifmode <high|low>     Set injection for the selected LO (use chip first)"));
-    Serial.println(F("  lofreq <MHz>          Program the selected LO directly"));
-    Serial.println(F("  chip <target|off>     Assert one CS/LE pin; off deasserts all"));
-    Serial.println(F("    targets: lo1 lo2 lo3 atten adc1 adc2 ram flash"));
-    Serial.println(F("  set <ref1|ref2|off>   Enable one reference clock; off disables both"));
-    Serial.println(F("  spi <hex32>           Send raw 32-bit word to selected device"));
+    Serial.println(F("=== Technician Console Commands ==="));
+    Serial.println(F(" RFin <MHz>            0 to 3000 MHz"));
+    Serial.println(F(" help                  This list"));
+    Serial.println(F(" id                    Print identifier"));
+    Serial.println(F(" status                Settings report"));
+    Serial.println(F(" relock                Reinitialize LO's"));
+    Serial.println(F(" fulltest refcheck     Report refclock pin checks"));
+    Serial.println(F(" fulltest pincheck     Report chip pin checks"));
+    Serial.println(F(" fulltest atten <dB>   Program and report set point"));
+    Serial.println(F(" fulltest plan <MHz>   Report frequency plan"));
+    Serial.println(F(" fulltest program <lo1|lo2> Program one planned LO"));
+    Serial.println(F(" ifmode <high|low>     Set injection for the selected LO"));
+    Serial.println(F(" lofreq <MHz>          Program the selected LO directly"));
+    Serial.println(F(" chip <target|off>     Assert target pin or set all off"));
+    Serial.println(F("   targets: lo1 lo2 lo3 atten adc1 adc2 ram flash"));
+    Serial.println(F(" set <ref1|ref2|off>   Enable one or disable both"));
+    Serial.println(F(" spi <hex32>           Send raw 32-bit word to selected LO"));
     Serial.println();
 }
 
@@ -954,13 +911,6 @@ void handleTechnicianCommand(const char* line)
             printStatus();
             return;
         }
-        case TechnicianCommandKind::Atten:
-            if (count < 2U) {
-                Serial.println(F("Usage: atten <dB>"));
-                return;
-            }
-            processAttenuatorToken(tokens[1]);
-            return;
         case TechnicianCommandKind::Ifmode:
             if (count < 2U) {
                 Serial.println(F("Usage: ifmode <high|low>"));
