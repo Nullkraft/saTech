@@ -70,6 +70,34 @@ When `decodedPresent` is false, `printJsonRegister()` should emit `"decoded":nul
 
 ### Commands
 
+The host should use existing technician console commands where they already match the required operation, and add `fulltest` commands only for full-test-specific behavior.
+
+```text
+fulltest refcheck
+set ref1
+fulltest pincheck
+chip off
+atten <dB>
+fulltest plan <RFin MHz>
+fulltest program lo1
+fulltest program lo2
+```
+
+Command mapping:
+
+```text
+fulltest refcheck       Run reference clock pin checks.
+set ref1                Select REF1 using the existing technician command.
+fulltest pincheck       Run SPI bus select-pin checks.
+chip off                Deassert all SPI bus select pins using the existing technician command.
+atten <dB>              Set attenuator using the existing technician command.
+fulltest plan <MHz>     Derive and report the frequency plan without programming both LOs as one combined tune.
+fulltest program lo1    Program LO1 for the current full-test frequency plan.
+fulltest program lo2    Program LO2 for the current full-test frequency plan.
+```
+
+`fulltest plan <MHz>` must not behave like `RFin <MHz>`. The existing `RFin <MHz>` command combines steps that the full test needs to report separately, so full-test implementation should share lower-level frequency-plan logic rather than call the `RFin <MHz>` command.
+
 ### Error Responses
 
 ### Timing and Sequencing
