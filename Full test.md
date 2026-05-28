@@ -125,7 +125,7 @@ Initial error codes:
 - `unsupported_command`
 - `hardware_state`
 
-After an error response, the command should be considered complete. The host should not wait for a `report_end` unless the command had already started a report.
+After an error response, the command should be considered complete. The host should not wait for a `report_end` unless the command had already started a report. If LO register verification fails, the overall full test stops and prints all reports produced so far, including the error report for the failed LO.
 
 ### Timing and Sequencing
 
@@ -139,9 +139,9 @@ For each LO programming step, the host should place the oscilloscope in the requ
 
 The BK390A reading should allow settling time after LO programming. The initial approach is to discard the first two BK390A readings and keep the third reading for the `315 MHz` path measurement report.
 
-### Open Questions
+### Failure Behavior
 
-- Register verification is fail-early per LO. If a register count or address check fails, that LO's verification stops at the failing check. Should the full test stop after an LO failure, or continue to the next LO to collect more technician data?
+Register verification is fail-early per LO. If a register count, address, or value check fails, that LO's verification stops at the failing check. The overall full test also stops at that point and prints all reports produced so far, including the error report for the failed LO.
 
 ## Report Formats
 
@@ -261,7 +261,7 @@ The procedure is:
 - Run reference clock pin checks.
 - Select `REF1`.
 - Run pin checks for all other SPI bus select pins.
-- Deassert all SPI bus select pins by selecting `ChipTarget::None` with `selectChip()`.
+- Deassert all SPI bus select pins with `chip off`.
 - Set the attenuator.
 - Derive the frequency plan from `RFin`.
 - Report the frequency plan.
@@ -269,7 +269,7 @@ The procedure is:
 - Capture, decode, and compare `LO1` scope data.
 - Program `LO2`.
 - Capture, decode, and compare `LO2` scope data.
-- Deassert all SPI bus select pins by selecting `ChipTarget::None` with `selectChip()`.
+- Deassert all SPI bus select pins with `chip off`.
 - Read the BK390A meter voltage.
 - Convert the voltage to dBm.
 - Report final results.
