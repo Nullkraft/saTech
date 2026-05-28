@@ -22,6 +22,8 @@ void tuneTo(double mhz);
 
 namespace {
 
+bool loStateForTarget(ChipTarget target, MAX2871** targetLo, double** reportedFreq);
+
 char technicianInputBuffer[INPUT_BUFFER_SIZE];
 size_t technicianInputLength = 0U;
 
@@ -132,13 +134,26 @@ void printJsonReferenceCheck(const __FlashStringHelper* name, uint8_t expectedRe
     Serial.println(F("\"}"));
 }
 
-void printLoPlanValues(const __FlashStringHelper* prefix, const MAX2871& lo, double frequencyMhz)
+void printLoFrequencyCheck(const __FlashStringHelper* prefix, double expectedMhz, double actualMhz)
 {
     Serial.print(F("{\"type\":\"value\",\"name\":\""));
     Serial.print(prefix);
     Serial.print(F("_frequency_mhz\",\"value\":"));
-    Serial.print(frequencyMhz, 3);
+    Serial.print(actualMhz, 3);
     Serial.println(F("}"));
+    Serial.print(F("{\"type\":\"check\",\"name\":\""));
+    Serial.print(prefix);
+    Serial.print(F("_frequency_mhz\",\"expected\":"));
+    Serial.print(expectedMhz, 3);
+    Serial.print(F(",\"actual\":"));
+    Serial.print(actualMhz, 3);
+    Serial.print(F(",\"result\":\""));
+    Serial.print(actualMhz == expectedMhz ? F("PASS") : F("FAIL"));
+    Serial.println(F("\"}"));
+}
+
+void printLoRegisterValues(const __FlashStringHelper* prefix, const MAX2871& lo)
+{
     Serial.print(F("{\"type\":\"value\",\"name\":\""));
     Serial.print(prefix);
     Serial.print(F("_m\",\"value\":"));
@@ -196,23 +211,75 @@ void handleFulltestPlan(const char* valueToken)
     printJsonValue(F("rfin_mhz"), freqCalc.FreqRFin, 3);
     printJsonValue(F("if1_mhz"), freqCalc.IF1, 3);
     printJsonValue(F("if2_mhz"), freqCalc.IF2, 3);
-    printLoPlanValues(F("lo1"), lo1, freqCalc.FreqLO1);
-    printLoPlanValues(F("lo2"), lo2, freqCalc.FreqLO2);
+    printLoFrequencyCheck(F("lo1"), freqCalc.FreqLO1, freqCalc.FreqLO1);
+    printLoRegisterValues(F("lo1"), lo1);
+    printLoFrequencyCheck(F("lo2"), freqCalc.FreqLO2, freqCalc.FreqLO2);
+    printLoRegisterValues(F("lo2"), lo2);
     printJsonReportEvent(F("report_end"), F("plan"));
+}
+
+void handleFulltestProgram(const char* loToken)
+{
+    if (loToken == nullptr) {
+        printJsonError(F("fulltest program"), F("missing_argument"), F("Expected lo1 or lo2"));
+        return;
+    }
+
+    ChipTarget target = ChipTarget::None;
+    const __FlashStringHelper* prefix = nullptr;
+    const __FlashStringHelper* report = nullptr;
+    double plannedFrequency = 0.0;
+    if (equalsIgnoreCase(loToken, "lo1")) {
+        target = ChipTarget::LO1;
+        prefix = F("lo1");
+        report = F("program_lo1");
+        plannedFrequency = freqCalc.FreqLO1;
+    } else if (equalsIgnoreCase(loToken, "lo2")) {
+        target = ChipTarget::LO2;
+        prefix = F("lo2");
+        report = F("program_lo2");
+        plannedFrequency = freqCalc.FreqLO2;
+    } else {
+        printJsonError(F("fulltest program"), F("invalid_lo"), F("Expected lo1 or lo2"));
+        return;
+    }
+
+    if (freqCalc.FreqRFin == 0.0 || plannedFrequency == 0.0) {
+        printJsonError(F("fulltest program"), F("no_frequency_plan"), F("Run fulltest plan before programming LO"));
+        return;
+    }
+
+    MAX2871* targetLo = nullptr;
+    double* reportedFreq = nullptr;
+    if (!loStateForTarget(target, &targetLo, &reportedFreq)) {
+        printJsonError(F("fulltest program"), F("invalid_lo"), F("Expected lo1 or lo2"));
+        return;
+    }
+
+    targetLo->setFrequency(plannedFrequency);
+    *reportedFreq = targetLo->fmn2freq();
+    printJsonReportEvent(F("report_begin"), report);
+    printLoFrequencyCheck(prefix, plannedFrequency, *reportedFreq);
+    printLoRegisterValues(prefix, *targetLo);
+    printJsonReportEvent(F("report_end"), report);
 }
 
 void handleFulltestCommand(char* const tokens[], size_t count)
 {
     if (count < 2U) {
-        printJsonError(F("fulltest"), F("missing_argument"), F("Expected refcheck or plan"));
+        printJsonError(F("fulltest"), F("missing_argument"), F("Expected refcheck, plan, or program"));
         return;
     }
     if (equalsIgnoreCase(tokens[1], "plan")) {
         handleFulltestPlan(count >= 3U ? tokens[2] : nullptr);
         return;
     }
+    if (equalsIgnoreCase(tokens[1], "program")) {
+        handleFulltestProgram(count >= 3U ? tokens[2] : nullptr);
+        return;
+    }
     if (!equalsIgnoreCase(tokens[1], "refcheck")) {
-        printJsonError(F("fulltest"), F("unsupported_command"), F("Expected refcheck or plan"));
+        printJsonError(F("fulltest"), F("unsupported_command"), F("Expected refcheck, plan, or program"));
         return;
     }
 
@@ -645,6 +712,7 @@ void printTechnicianBanner()
     Serial.println(F("  info                  Show board pin assignments"));
     Serial.println(F("  fulltest refcheck     Report reference clock enable pin checks"));
     Serial.println(F("  fulltest plan <MHz>   Report full-test frequency plan"));
+    Serial.println(F("  fulltest program <lo1|lo2> Program one planned LO"));
     Serial.println(F("  atten <dB>            Program PE43711 attenuator (0.0 to 31.75 dB in 0.25 steps)"));
     Serial.println(F("  ifmode <high|low>     Set injection for the selected LO (use chip first)"));
     Serial.println(F("  lofreq <MHz>          Program the selected LO directly"));
