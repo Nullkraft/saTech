@@ -24,9 +24,23 @@ The full test itself should be orchestrated by host-side code that uses the tech
 
 ### Command Format
 
+Full-test host commands should be plain-text technician console commands terminated by a newline. Commands should use lowercase command names and explicit arguments so they can be typed manually by a technician or sent by a host script.
+
+Command arguments should use the same names used in the reports where practical, such as `rfin`, `lo1`, and `lo2`.
+
 ### Response Format
 
+Full-test report output should use newline-delimited JSON. Each machine-readable response line must contain one complete JSON object and end with a newline.
+
+Human-readable technician console text may still be printed for banners, help, and manual status output. Full-test automation should rely only on the newline-delimited JSON report records.
+
 ### Parseability Rules
+
+The host should parse only lines that begin with `{` as full-test report records. Non-JSON console output should be ignored by the host automation.
+
+Each JSON record must include a `type` field. The initial record types are `report_begin`, `report_end`, `value`, `check`, and `register`.
+
+JSON records should use fixed field names and simple scalar values: strings, numbers, booleans, or `null`. Nested JSON objects are not required for the initial full-test contract.
 
 ### Firmware Output Rules
 
@@ -177,19 +191,21 @@ The `315 MHz` path measurement report only reports values. It does not produce a
 
 The procedure is:
 
-- Take `RFin`.
-- Derive the frequency plan.
-- Run a separate pin-state check before programming.
+- Run reference clock pin checks.
+- Select `REF1`.
+- Run pin checks for all other SPI bus select pins.
+- Deassert all SPI bus select pins by selecting `ChipTarget::None` with `selectChip()`.
+- Set the attenuator.
+- Derive the frequency plan from `RFin`.
+- Report the frequency plan.
 - Program `LO1`.
-- Decode the scope's 32-bit register output for `LO1`.
-- Compare the decoded values against `max2871_expected.py`.
+- Capture, decode, and compare `LO1` scope data.
 - Program `LO2`.
-- Decode the scope's 32-bit register output for `LO2`.
-- Compare the decoded values against `max2871_expected.py`.
-- Read the BK390A voltage directly.
+- Capture, decode, and compare `LO2` scope data.
+- Deassert all SPI bus select pins by selecting `ChipTarget::None` with `selectChip()`.
+- Read the BK390A meter voltage.
 - Convert the voltage to dBm.
-- Report the amplitude check for the `315 MHz` path.
-- Present separate reports for `LO1` and `LO2`.
+- Report final results.
 
 ## Voltage to dBm
 
