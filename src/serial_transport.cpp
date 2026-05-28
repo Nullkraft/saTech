@@ -12,18 +12,16 @@ char inputBuffer[INPUT_BUFFER_SIZE];
 size_t inputLength = 0U;
 SerialTransportEncoding serialTransportEncoding = SerialTransportEncoding::Ascii;
 
-bool equalsIgnoreCase(const char* lhs, const char* rhs)
+void lowercaseCopy(char* destination, size_t destinationSize, const char* source)
 {
-    while (*lhs != '\0' && *rhs != '\0') {
-        const char lc = static_cast<char>(tolower(static_cast<unsigned char>(*lhs)));
-        const char rc = static_cast<char>(tolower(static_cast<unsigned char>(*rhs)));
-        if (lc != rc) {
-            return false;
-        }
-        ++lhs;
-        ++rhs;
+    if (destinationSize == 0U) {
+        return;
     }
-    return (*lhs == '\0' && *rhs == '\0');
+    size_t i = 0U;
+    for (; i + 1U < destinationSize && source[i] != '\0'; ++i) {
+        destination[i] = static_cast<char>(tolower(static_cast<unsigned char>(source[i])));
+    }
+    destination[i] = '\0';
 }
 
 bool parseAsciiControlWord(const char* token, uint32_t* word)
@@ -70,10 +68,12 @@ bool SaTech::begin(const char* encoding)
     if (encoding == nullptr) {
         return false;
     }
-    if (equalsIgnoreCase(encoding, "ascii")) {
+    char normalized[7];
+    lowercaseCopy(normalized, sizeof(normalized), encoding);
+    if (strcmp(normalized, "ascii") == 0) {
         setSerialTransportEncoding(SerialTransportEncoding::Ascii);
         return true;
-    } else if (equalsIgnoreCase(encoding, "binary")) {
+    } else if (strcmp(normalized, "binary") == 0) {
         setSerialTransportEncoding(SerialTransportEncoding::Binary);
         return true;
     }
@@ -82,8 +82,12 @@ bool SaTech::begin(const char* encoding)
 
 bool SaTech::supportsEncoding(const char* encoding) const
 {
-    return encoding != nullptr &&
-           (equalsIgnoreCase(encoding, "ascii") || equalsIgnoreCase(encoding, "binary"));
+    if (encoding == nullptr) {
+        return false;
+    }
+    char normalized[7];
+    lowercaseCopy(normalized, sizeof(normalized), encoding);
+    return strcmp(normalized, "ascii") == 0 || strcmp(normalized, "binary") == 0;
 }
 
 SerialTransportEncoding SaTech::transportEncoding() const

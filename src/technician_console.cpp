@@ -49,7 +49,6 @@ enum class TechnicianCommandKind {
     Id,
     Status,
     Relock,
-    Info,
     Fulltest,
     Rfin,
     Atten,
@@ -59,20 +58,6 @@ enum class TechnicianCommandKind {
     Set,
     Spi,
 };
-
-bool equalsIgnoreCase(const char* lhs, const char* rhs)
-{
-    while (*lhs != '\0' && *rhs != '\0') {
-        const char lc = static_cast<char>(tolower(*lhs));
-        const char rc = static_cast<char>(tolower(*rhs));
-        if (lc != rc) {
-            return false;
-        }
-        ++lhs;
-        ++rhs;
-    }
-    return (*lhs == '\0' && *rhs == '\0');
-}
 
 void trimWhitespace(char* text)
 {
@@ -90,6 +75,17 @@ void trimWhitespace(char* text)
     while (len > 0U && isspace(text[len - 1U]) != 0) {
         text[len - 1U] = '\0';
         --len;
+    }
+}
+
+void lowercaseInPlace(char* text)
+{
+    if (text == nullptr) {
+        return;
+    }
+    while (*text != '\0') {
+        *text = static_cast<char>(tolower(static_cast<unsigned char>(*text)));
+        ++text;
     }
 }
 
@@ -338,12 +334,12 @@ void handleFulltestProgram(const char* loToken)
     const __FlashStringHelper* prefix = nullptr;
     const __FlashStringHelper* report = nullptr;
     double plannedFrequency = 0.0;
-    if (equalsIgnoreCase(loToken, "lo1")) {
+    if (strcmp(loToken, "lo1") == 0) {
         target = ChipTarget::LO1;
         prefix = F("lo1");
         report = F("program_lo1");
         plannedFrequency = freqCalc.FreqLO1;
-    } else if (equalsIgnoreCase(loToken, "lo2")) {
+    } else if (strcmp(loToken, "lo2") == 0) {
         target = ChipTarget::LO2;
         prefix = F("lo2");
         report = F("program_lo2");
@@ -413,23 +409,23 @@ void handleFulltestCommand(char* const tokens[], size_t count)
         printJsonError(F("fulltest"), F("missing_argument"), F("Expected refcheck, pincheck, plan, or program"));
         return;
     }
-    if (equalsIgnoreCase(tokens[1], "plan")) {
+    if (strcmp(tokens[1], "plan") == 0) {
         handleFulltestPlan(count >= 3U ? tokens[2] : nullptr);
         return;
     }
-    if (equalsIgnoreCase(tokens[1], "atten")) {
+    if (strcmp(tokens[1], "atten") == 0) {
         handleFulltestAtten(count >= 3U ? tokens[2] : nullptr);
         return;
     }
-    if (equalsIgnoreCase(tokens[1], "program")) {
+    if (strcmp(tokens[1], "program") == 0) {
         handleFulltestProgram(count >= 3U ? tokens[2] : nullptr);
         return;
     }
-    if (equalsIgnoreCase(tokens[1], "pincheck")) {
+    if (strcmp(tokens[1], "pincheck") == 0) {
         handleFulltestPincheck();
         return;
     }
-    if (!equalsIgnoreCase(tokens[1], "refcheck")) {
+    if (strcmp(tokens[1], "refcheck") != 0) {
         printJsonError(F("fulltest"), F("unsupported_command"), F("Expected refcheck, pincheck, plan, or program"));
         return;
     }
@@ -579,8 +575,8 @@ void handleIfmodeCommand(const char* modeToken)
         Serial.println(F("Usage: ifmode <high|low>"));
         return;
     }
-    const bool highRequested = equalsIgnoreCase(modeToken, "high");
-    const bool lowRequested  = equalsIgnoreCase(modeToken, "low");
+    const bool highRequested = strcmp(modeToken, "high") == 0;
+    const bool lowRequested  = strcmp(modeToken, "low") == 0;
     if (!highRequested && !lowRequested) {
         Serial.println(F("ifmode requires 'high' or 'low'."));
         return;
@@ -669,25 +665,25 @@ bool chipSelectorForToken(const char* targetToken, uint16_t* selector)
     if (targetToken == nullptr || selector == nullptr) {
         return false;
     }
-    if (equalsIgnoreCase(targetToken, "lo1")) {
+    if (strcmp(targetToken, "lo1") == 0) {
         *selector = 0x01FFU;
         return true;
-    } else if (equalsIgnoreCase(targetToken, "lo2")) {
+    } else if (strcmp(targetToken, "lo2") == 0) {
         *selector = 0x02FFU;
         return true;
-    } else if (equalsIgnoreCase(targetToken, "lo3")) {
+    } else if (strcmp(targetToken, "lo3") == 0) {
         *selector = 0x03FFU;
         return true;
-    } else if (equalsIgnoreCase(targetToken, "adc1")) {
+    } else if (strcmp(targetToken, "adc1") == 0) {
         *selector = 0x05FFU;
         return true;
-    } else if (equalsIgnoreCase(targetToken, "adc2")) {
+    } else if (strcmp(targetToken, "adc2") == 0) {
         *selector = 0x0DFFU;
         return true;
-    } else if (equalsIgnoreCase(targetToken, "ram")) {
+    } else if (strcmp(targetToken, "ram") == 0) {
         *selector = 0x15FFU;
         return true;
-    } else if (equalsIgnoreCase(targetToken, "flash")) {
+    } else if (strcmp(targetToken, "flash") == 0) {
         *selector = 0x1DFFU;
         return true;
     }
@@ -704,11 +700,11 @@ void processChipToken(const char* targetToken)
         processReceivedWord(static_cast<uint32_t>(selector));
         return;
     }
-    if (equalsIgnoreCase(targetToken, "atten")) {
+    if (strcmp(targetToken, "atten") == 0) {
         selectSerialChipTarget(ChipTarget::Attenuator);
         return;
     }
-    if (equalsIgnoreCase(targetToken, "off")) {
+    if (strcmp(targetToken, "off") == 0) {
         selectSerialChipTarget(ChipTarget::None);
         return;
     }
@@ -720,13 +716,13 @@ bool referenceSelectorForToken(const char* targetToken, uint16_t* selector)
     if (targetToken == nullptr || selector == nullptr) {
         return false;
     }
-    if (equalsIgnoreCase(targetToken, "ref1")) {
+    if (strcmp(targetToken, "ref1") == 0) {
         *selector = 0x0CFFU;
         return true;
-    } else if (equalsIgnoreCase(targetToken, "ref2")) {
+    } else if (strcmp(targetToken, "ref2") == 0) {
         *selector = 0x14FFU;
         return true;
-    } else if (equalsIgnoreCase(targetToken, "off")) {
+    } else if (strcmp(targetToken, "off") == 0) {
         *selector = 0x04FFU;
         return true;
     }
@@ -795,43 +791,40 @@ void processSpiToken(const char* valueToken)
 
 TechnicianCommandKind commandKindFromToken(const char* token)
 {
-    if (equalsIgnoreCase(token, "help")) {
+    if (strcmp(token, "help") == 0) {
         return TechnicianCommandKind::Help;
     }
-    if (equalsIgnoreCase(token, "id")) {
+    if (strcmp(token, "id") == 0) {
         return TechnicianCommandKind::Id;
     }
-    if (equalsIgnoreCase(token, "status")) {
+    if (strcmp(token, "status") == 0) {
         return TechnicianCommandKind::Status;
     }
-    if (equalsIgnoreCase(token, "relock")) {
+    if (strcmp(token, "relock") == 0) {
         return TechnicianCommandKind::Relock;
     }
-    if (equalsIgnoreCase(token, "info")) {
-        return TechnicianCommandKind::Info;
-    }
-    if (equalsIgnoreCase(token, "fulltest")) {
+    if (strcmp(token, "fulltest") == 0) {
         return TechnicianCommandKind::Fulltest;
     }
-    if (equalsIgnoreCase(token, "rfin")) {
+    if (strcmp(token, "rfin") == 0) {
         return TechnicianCommandKind::Rfin;
     }
-    if (equalsIgnoreCase(token, "atten")) {
+    if (strcmp(token, "atten") == 0) {
         return TechnicianCommandKind::Atten;
     }
-    if (equalsIgnoreCase(token, "ifmode")) {
+    if (strcmp(token, "ifmode") == 0) {
         return TechnicianCommandKind::Ifmode;
     }
-    if (equalsIgnoreCase(token, "lofreq")) {
+    if (strcmp(token, "lofreq") == 0) {
         return TechnicianCommandKind::Lofreq;
     }
-    if (equalsIgnoreCase(token, "chip")) {
+    if (strcmp(token, "chip") == 0) {
         return TechnicianCommandKind::Chip;
     }
-    if (equalsIgnoreCase(token, "set")) {
+    if (strcmp(token, "set") == 0) {
         return TechnicianCommandKind::Set;
     }
-    if (equalsIgnoreCase(token, "spi")) {
+    if (strcmp(token, "spi") == 0) {
         return TechnicianCommandKind::Spi;
     }
     return TechnicianCommandKind::Unknown;
@@ -855,12 +848,11 @@ void printTechnicianBanner()
     Serial.println();
     Serial.println(F("=== SpecAnn Technician Console ==="));
     Serial.println(F("Commands:"));
-    Serial.println(F("  RFin <MHz>            Tune analyzer RF input (0 to 3000 MHz)"));
-    Serial.println(F("  help                  Show this list"));
-    Serial.println(F("  id                    Print unit identification string"));
-    Serial.println(F("  status                Report LO/IF plan, attenuator state, chip target"));
-    Serial.println(F("  relock                Reinitialize MAX2871 devices"));
-    Serial.println(F("  info                  Show board pin assignments"));
+    Serial.println(F("  RFin <MHz>            Tune RF input to 0 to 3000 MHz"));
+    Serial.println(F("  help                  This list"));
+    Serial.println(F("  id                    Print identifyer string"));
+    Serial.println(F("  status                Settings report"));
+    Serial.println(F("  relock                Reinitialize LO's"));
     Serial.println(F("  fulltest refcheck     Report reference clock enable pin checks"));
     Serial.println(F("  fulltest pincheck     Report select pin checks, excluding LO3"));
     Serial.println(F("  fulltest atten <dB>   Program and report attenuator set point"));
@@ -893,6 +885,7 @@ void handleTechnicianCommand(const char* line)
     size_t count = 0;
     char* token = strtok(buffer, " ");
     while (token != nullptr && count < (sizeof(tokens) / sizeof(tokens[0]))) {
+        lowercaseInPlace(token);
         tokens[count++] = token;
         token = strtok(nullptr, " ");
     }
@@ -902,7 +895,7 @@ void handleTechnicianCommand(const char* line)
     }
 
     if (tokens[1] == nullptr) {
-        if (equalsIgnoreCase(tokens[0], "ascii") || equalsIgnoreCase(tokens[0], "binary")) {
+        if (strcmp(tokens[0], "ascii") == 0 || strcmp(tokens[0], "binary") == 0) {
             saTech.begin(tokens[0]);
             return;
         }
@@ -938,22 +931,6 @@ void handleTechnicianCommand(const char* line)
             return;
         case TechnicianCommandKind::Relock:
             processReceivedWord(0x00002FFFUL);
-            return;
-        case TechnicianCommandKind::Info:
-            Serial.println(F("Pin assignments (Metro Mini):"));
-            Serial.println(F("  chip targets (assert HIGH):"));
-            Serial.println(F("    LO1 LE     -> A3"));
-            Serial.println(F("    LO2 LE     -> D4"));
-            Serial.println(F("    LO3 LE     -> A4"));
-            Serial.println(F("    Atten CS   -> A5"));
-            Serial.println(F("  chip targets (assert LOW):"));
-            Serial.println(F("    ADC1 CS    -> see PIN_ADC1 in command_interface.h"));
-            Serial.println(F("    ADC2 CS    -> see PIN_ADC2 in command_interface.h"));
-            Serial.println(F("    RAM  CS    -> see PIN_RAM  in command_interface.h"));
-            Serial.println(F("    Flash CS   -> see PIN_FLASH in command_interface.h"));
-            Serial.println(F("  set targets (assert HIGH):"));
-            Serial.println(F("    REF_EN1    -> D5"));
-            Serial.println(F("    REF_EN2    -> D6"));
             return;
         case TechnicianCommandKind::Fulltest:
             handleFulltestCommand(tokens, count);
