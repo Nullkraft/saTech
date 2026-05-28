@@ -36,8 +36,25 @@ class FullTestCheck:
 
 
 @dataclass
+class FullTestStep:
+    name: str
+    command: str
+    response: str
+    response_hex: str
+
+    def to_dict(self):
+        return {
+            "name": self.name,
+            "command": self.command,
+            "response": self.response,
+            "response_hex": self.response_hex,
+        }
+
+
+@dataclass
 class FullTestReport:
     unit_id: str
+    steps: list
     checks: list
     raw_response_hex: str
 
@@ -49,6 +66,7 @@ class FullTestReport:
         return {
             "passed": self.passed,
             "unit_id": self.unit_id,
+            "steps": [step.to_dict() for step in self.steps],
             "checks": [check.to_dict() for check in self.checks],
             "raw_response_hex": self.raw_response_hex,
         }
@@ -59,21 +77,40 @@ def run_full_test(config, serial_factory=serial.Serial):
     with serial_factory(config.port, config.baud, timeout=0.05) as ser:
         time.sleep(config.open_delay)
         ser.reset_input_buffer()
-        ser.write(b"id\n")
-        ser.flush()
-        response = _read_response(ser, config.timeout)
+        id_step = _send_command(ser, "unit_id", "id", config.timeout)
+        id_check = FullTestCheck(
+            name="unit_id",
+            expected=config.expected_id,
+            actual=id_step.response,
+            passed=config.expected_id in id_step.response,
+        )
+        if not id_check.passed:
+            return FullTestReport(
+                unit_id=id_step.response,
+                steps=[id_step],
+                checks=[id_check],
+                raw_response_hex=id_step.response_hex,
+            )
+        set_ref1_step = _send_command(ser, "set_ref1", "set ref1", config.timeout)
+        chip_off_step = _send_command(ser, "chip_off", "chip off", config.timeout)
 
-    unit_id = _printable_text(response)
-    id_check = FullTestCheck(
-        name="unit_id",
-        expected=config.expected_id,
-        actual=unit_id,
-        passed=config.expected_id in unit_id,
-    )
     return FullTestReport(
-        unit_id=unit_id,
+        unit_id=id_step.response,
+        steps=[id_step, set_ref1_step, chip_off_step],
         checks=[id_check],
-        raw_response_hex=_hex_bytes(response),
+        raw_response_hex=id_step.response_hex,
+    )
+
+
+def _send_command(ser, name, command, timeout):
+    ser.write((command + "\n").encode("ascii"))
+    ser.flush()
+    response = _read_response(ser, timeout)
+    return FullTestStep(
+        name=name,
+        command=command,
+        response=_printable_text(response),
+        response_hex=_hex_bytes(response),
     )
 
 
