@@ -1,6 +1,7 @@
 """Reusable full-test workflow for saTech hardware."""
 
 from dataclasses import dataclass
+import json
 import string
 import time
 
@@ -47,7 +48,6 @@ class FullTestStep:
             "name": self.name,
             "command": self.command,
             "response": self.response,
-            "response_hex": self.response_hex,
         }
 
 
@@ -91,13 +91,16 @@ def run_full_test(config, serial_factory=serial.Serial):
                 checks=[id_check],
                 raw_response_hex=id_step.response_hex,
             )
+        refcheck_step = _send_command(ser, "refcheck", "fulltest refcheck", config.timeout)
         set_ref1_step = _send_command(ser, "set_ref1", "set ref1", config.timeout)
         chip_off_step = _send_command(ser, "chip_off", "chip off", config.timeout)
 
+    checks = [id_check]
+    checks.extend(_checks_from_json_step(refcheck_step))
     return FullTestReport(
         unit_id=id_step.response,
-        steps=[id_step, set_ref1_step, chip_off_step],
-        checks=[id_check],
+        steps=[id_step, refcheck_step, set_ref1_step, chip_off_step],
+        checks=checks,
         raw_response_hex=id_step.response_hex,
     )
 
@@ -112,6 +115,25 @@ def _send_command(ser, name, command, timeout):
         response=_printable_text(response),
         response_hex=_hex_bytes(response),
     )
+
+
+def _checks_from_json_step(step):
+    checks = []
+    for line in step.response.splitlines():
+        if not line.startswith("{"):
+            continue
+        record = json.loads(line)
+        if record.get("type") != "check":
+            continue
+        checks.append(
+            FullTestCheck(
+                name=record["name"],
+                expected=record["expected"],
+                actual=record["actual"],
+                passed=record["result"] == "PASS",
+            )
+        )
+    return checks
 
 
 def _read_response(ser, timeout):

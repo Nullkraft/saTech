@@ -3,6 +3,15 @@ import unittest
 from run_full_test import FullTestConfig, run_full_test
 
 
+REFCHECK_RESPONSE = (
+    b'{"type":"report_begin","report":"refcheck"}\r\n'
+    b'{"type":"check","name":"ref1_selected","expected":"Ref1 on : Ref2 off","actual":"Ref1 on : Ref2 off","result":"PASS"}\r\n'
+    b'{"type":"check","name":"ref2_selected","expected":"Ref1 off : Ref2 on","actual":"Ref1 off : Ref2 on","result":"PASS"}\r\n'
+    b'{"type":"check","name":"refs_off","expected":"Ref1 off : Ref2 off","actual":"Ref1 off : Ref2 off","result":"PASS"}\r\n'
+    b'{"type":"report_end","report":"refcheck"}\r\n'
+)
+
+
 class FakeSerial:
     instances = []
 
@@ -48,6 +57,7 @@ class RunFullTestCase(unittest.TestCase):
         FakeSerial.instances = []
         FakeSerial.responses = [
             b"saTech WN2A ready",
+            REFCHECK_RESPONSE,
             b"Reference clock set to REF1.\r\n",
             b"All chip selects deasserted.\r\n",
         ]
@@ -62,13 +72,21 @@ class RunFullTestCase(unittest.TestCase):
         self.assertEqual(fake.baud, 115200)
         self.assertEqual(fake.timeout, 0.05)
         self.assertTrue(fake.reset_called)
-        self.assertEqual(fake.writes, [b"id\n", b"set ref1\n", b"chip off\n"])
+        self.assertEqual(fake.writes, [b"id\n", b"fulltest refcheck\n", b"set ref1\n", b"chip off\n"])
         self.assertTrue(fake.flush_called)
         self.assertTrue(report.passed)
         self.assertEqual(report.unit_id, "saTech WN2A ready")
-        self.assertEqual([step.name for step in report.steps], ["unit_id", "set_ref1", "chip_off"])
-        self.assertEqual(report.steps[1].response, "Reference clock set to REF1.")
-        self.assertEqual(report.steps[2].response, "All chip selects deasserted.")
+        self.assertEqual(
+            [step.name for step in report.steps],
+            ["unit_id", "refcheck", "set_ref1", "chip_off"],
+        )
+        self.assertIn('"report":"refcheck"', report.steps[1].response)
+        self.assertEqual(report.steps[2].response, "Reference clock set to REF1.")
+        self.assertEqual(report.steps[3].response, "All chip selects deasserted.")
+        self.assertEqual(
+            [check.name for check in report.checks],
+            ["unit_id", "ref1_selected", "ref2_selected", "refs_off"],
+        )
         self.assertEqual(
             report.raw_response_hex,
             "73 61 54 65 63 68 20 57 4E 32 41 20 72 65 61 64 79",
@@ -77,6 +95,7 @@ class RunFullTestCase(unittest.TestCase):
     def test_reports_failed_id_check(self):
         FakeSerial.responses = [
             b"unexpected unit",
+            REFCHECK_RESPONSE,
             b"Reference clock set to REF1.\r\n",
             b"All chip selects deasserted.\r\n",
         ]
@@ -109,19 +128,27 @@ class RunFullTestCase(unittest.TestCase):
                         "name": "unit_id",
                         "command": "id",
                         "response": "saTech WN2A ready",
-                        "response_hex": "73 61 54 65 63 68 20 57 4E 32 41 20 72 65 61 64 79",
+                    },
+                    {
+                        "name": "refcheck",
+                        "command": "fulltest refcheck",
+                        "response": (
+                            '{"type":"report_begin","report":"refcheck"}\r\n'
+                            '{"type":"check","name":"ref1_selected","expected":"Ref1 on : Ref2 off","actual":"Ref1 on : Ref2 off","result":"PASS"}\r\n'
+                            '{"type":"check","name":"ref2_selected","expected":"Ref1 off : Ref2 on","actual":"Ref1 off : Ref2 on","result":"PASS"}\r\n'
+                            '{"type":"check","name":"refs_off","expected":"Ref1 off : Ref2 off","actual":"Ref1 off : Ref2 off","result":"PASS"}\r\n'
+                            '{"type":"report_end","report":"refcheck"}'
+                        ),
                     },
                     {
                         "name": "set_ref1",
                         "command": "set ref1",
                         "response": "Reference clock set to REF1.",
-                        "response_hex": "52 65 66 65 72 65 6E 63 65 20 63 6C 6F 63 6B 20 73 65 74 20 74 6F 20 52 45 46 31 2E 0D 0A",
                     },
                     {
                         "name": "chip_off",
                         "command": "chip off",
                         "response": "All chip selects deasserted.",
-                        "response_hex": "41 6C 6C 20 63 68 69 70 20 73 65 6C 65 63 74 73 20 64 65 61 73 73 65 72 74 65 64 2E 0D 0A",
                     },
                 ],
                 "checks": [
@@ -129,6 +156,24 @@ class RunFullTestCase(unittest.TestCase):
                         "name": "unit_id",
                         "expected": "saTech WN2A ready",
                         "actual": "saTech WN2A ready",
+                        "passed": True,
+                    },
+                    {
+                        "name": "ref1_selected",
+                        "expected": "Ref1 on : Ref2 off",
+                        "actual": "Ref1 on : Ref2 off",
+                        "passed": True,
+                    },
+                    {
+                        "name": "ref2_selected",
+                        "expected": "Ref1 off : Ref2 on",
+                        "actual": "Ref1 off : Ref2 on",
+                        "passed": True,
+                    },
+                    {
+                        "name": "refs_off",
+                        "expected": "Ref1 off : Ref2 off",
+                        "actual": "Ref1 off : Ref2 off",
                         "passed": True,
                     }
                 ],
