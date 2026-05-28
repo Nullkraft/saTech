@@ -57,6 +57,9 @@ void printJsonCheck(const __FlashStringHelper* name,
                     const __FlashStringHelper* expected,
                     const __FlashStringHelper* actual,
                     const __FlashStringHelper* result);
+void printJsonError(const __FlashStringHelper* command,
+                    const __FlashStringHelper* code,
+                    const __FlashStringHelper* message);
 void printJsonRegister(const __FlashStringHelper* lo,
                        uint8_t reg,
                        const __FlashStringHelper* state,
@@ -99,6 +102,28 @@ fulltest program lo2    Program LO2 for the current full-test frequency plan.
 `fulltest plan <MHz>` must not behave like `RFin <MHz>`. The existing `RFin <MHz>` command combines steps that the full test needs to report separately, so full-test implementation should share lower-level frequency-plan logic rather than call the `RFin <MHz>` command.
 
 ### Error Responses
+
+Error responses should use the same newline-delimited JSON format as full-test reports. Each error record should be one complete JSON object and should include `type`, `command`, `code`, and `message`.
+
+Example error responses:
+
+```json
+{"type":"error","command":"fulltest plan","code":"missing_argument","message":"RFin MHz is required"}
+{"type":"error","command":"fulltest program lo1","code":"no_frequency_plan","message":"Run fulltest plan before programming LO1"}
+{"type":"error","command":"fulltest program lo2","code":"invalid_lo","message":"Expected lo1 or lo2"}
+```
+
+Initial error codes:
+
+- `missing_argument`
+- `invalid_argument`
+- `invalid_rfin`
+- `no_frequency_plan`
+- `invalid_lo`
+- `unsupported_command`
+- `hardware_state`
+
+After an error response, the command should be considered complete. The host should not wait for a `report_end` unless the command had already started a report.
 
 ### Timing and Sequencing
 
