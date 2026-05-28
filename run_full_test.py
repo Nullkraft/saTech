@@ -18,6 +18,7 @@ class FullTestConfig:
     timeout: float = 1.0
     open_delay: float = 3.0
     expected_id: str = DEFAULT_EXPECTED_ID
+    atten_db: float = 12.0
 
 
 @dataclass
@@ -37,6 +38,18 @@ class FullTestCheck:
 
 
 @dataclass
+class FullTestValue:
+    name: str
+    value: object
+
+    def to_dict(self):
+        return {
+            "name": self.name,
+            "value": self.value,
+        }
+
+
+@dataclass
 class FullTestStep:
     name: str
     command: str
@@ -49,6 +62,7 @@ class FullTestReport:
     unit_id: str
     steps: list
     checks: list
+    values: list
 
     @property
     def passed(self):
@@ -60,6 +74,7 @@ class FullTestReport:
             "unit_id": self.unit_id,
             "commands": [step.command for step in self.steps],
             "checks": [check.to_dict() for check in self.checks],
+            "values": [value.to_dict() for value in self.values],
         }
 
 
@@ -80,17 +95,21 @@ def run_full_test(config, serial_factory=serial.Serial):
                 unit_id=id_step.response,
                 steps=[id_step],
                 checks=[id_check],
+                values=[],
             )
         refcheck_step = _send_command(ser, "refcheck", "fulltest refcheck", config.timeout)
         set_ref1_step = _send_command(ser, "set_ref1", "set ref1", config.timeout)
         chip_off_step = _send_command(ser, "chip_off", "chip off", config.timeout)
+        atten_step = _send_command(ser, "atten", f"fulltest atten {config.atten_db:.2f}", config.timeout)
 
     checks = [id_check]
     checks.extend(_checks_from_json_step(refcheck_step))
+    values = _values_from_json_step(atten_step)
     return FullTestReport(
         unit_id=id_step.response,
-        steps=[id_step, refcheck_step, set_ref1_step, chip_off_step],
+        steps=[id_step, refcheck_step, set_ref1_step, chip_off_step, atten_step],
         checks=checks,
+        values=values,
     )
 
 
@@ -123,6 +142,18 @@ def _checks_from_json_step(step):
             )
         )
     return checks
+
+
+def _values_from_json_step(step):
+    values = []
+    for line in step.response.splitlines():
+        if not line.startswith("{"):
+            continue
+        record = json.loads(line)
+        if record.get("type") != "value":
+            continue
+        values.append(FullTestValue(name=record["name"], value=record["value"]))
+    return values
 
 
 def _read_response(ser, timeout):

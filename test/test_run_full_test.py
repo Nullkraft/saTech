@@ -11,6 +11,12 @@ REFCHECK_RESPONSE = (
     b'{"type":"report_end","report":"refcheck"}\r\n'
 )
 
+ATTEN_RESPONSE = (
+    b'{"type":"report_begin","report":"atten"}\r\n'
+    b'{"type":"value","name":"atten_db","value":12.00}\r\n'
+    b'{"type":"report_end","report":"atten"}\r\n'
+)
+
 
 class FakeSerial:
     instances = []
@@ -60,6 +66,7 @@ class RunFullTestCase(unittest.TestCase):
             REFCHECK_RESPONSE,
             b"Reference clock set to REF1.\r\n",
             b"All chip selects deasserted.\r\n",
+            ATTEN_RESPONSE,
         ]
 
     def test_queries_unit_id_and_reports_pass(self):
@@ -72,17 +79,23 @@ class RunFullTestCase(unittest.TestCase):
         self.assertEqual(fake.baud, 115200)
         self.assertEqual(fake.timeout, 0.05)
         self.assertTrue(fake.reset_called)
-        self.assertEqual(fake.writes, [b"id\n", b"fulltest refcheck\n", b"set ref1\n", b"chip off\n"])
+        self.assertEqual(
+            fake.writes,
+            [b"id\n", b"fulltest refcheck\n", b"set ref1\n", b"chip off\n", b"fulltest atten 12.00\n"],
+        )
         self.assertTrue(fake.flush_called)
         self.assertTrue(report.passed)
         self.assertEqual(report.unit_id, "saTech WN2A ready")
         self.assertEqual(
             report.to_dict()["commands"],
-            ["id", "fulltest refcheck", "set ref1", "chip off"],
+            ["id", "fulltest refcheck", "set ref1", "chip off", "fulltest atten 12.00"],
         )
         self.assertIn('"report":"refcheck"', report.steps[1].response)
         self.assertEqual(report.steps[2].response, "Reference clock set to REF1.")
         self.assertEqual(report.steps[3].response, "All chip selects deasserted.")
+        self.assertIn('"report":"atten"', report.steps[4].response)
+        self.assertEqual(report.values[0].name, "atten_db")
+        self.assertEqual(report.values[0].value, 12.0)
         self.assertEqual(
             [check.name for check in report.checks],
             ["unit_id", "ref1_selected", "ref2_selected", "refs_off"],
@@ -94,6 +107,7 @@ class RunFullTestCase(unittest.TestCase):
             REFCHECK_RESPONSE,
             b"Reference clock set to REF1.\r\n",
             b"All chip selects deasserted.\r\n",
+            ATTEN_RESPONSE,
         ]
         config = FullTestConfig(port="/dev/fake", timeout=0.01, open_delay=0.0)
 
@@ -119,7 +133,7 @@ class RunFullTestCase(unittest.TestCase):
             {
                 "passed": True,
                 "unit_id": "saTech WN2A ready",
-                "commands": ["id", "fulltest refcheck", "set ref1", "chip off"],
+                "commands": ["id", "fulltest refcheck", "set ref1", "chip off", "fulltest atten 12.00"],
                 "checks": [
                     {
                         "name": "unit_id",
@@ -144,6 +158,12 @@ class RunFullTestCase(unittest.TestCase):
                         "expected": "Ref1 off : Ref2 off",
                         "actual": "Ref1 off : Ref2 off",
                         "passed": True,
+                    }
+                ],
+                "values": [
+                    {
+                        "name": "atten_db",
+                        "value": 12.0,
                     }
                 ],
             },

@@ -299,6 +299,34 @@ void handleFulltestPlan(const char* valueToken)
     printJsonReportEvent(F("report_end"), F("plan"));
 }
 
+void handleFulltestAtten(const char* valueToken)
+{
+    if (valueToken == nullptr) {
+        printJsonError(F("fulltest atten"), F("missing_argument"), F("Attenuator dB is required"));
+        return;
+    }
+    char* endPointer = nullptr;
+    const double requestedDb = strtod(valueToken, &endPointer);
+    if (endPointer == valueToken || *endPointer != '\0') {
+        printJsonError(F("fulltest atten"), F("invalid_argument"), F("Attenuator dB must be numeric"));
+        return;
+    }
+    if (requestedDb < ATTEN_MIN_DB || requestedDb > ATTEN_MAX_DB) {
+        printJsonError(F("fulltest atten"), F("invalid_argument"), F("Attenuator out of range"));
+        return;
+    }
+    const double steps = (requestedDb - ATTEN_MIN_DB) / ATTEN_STEP_DB;
+    if (fabs(steps - round(steps)) > 0.01) {
+        printJsonError(F("fulltest atten"), F("invalid_argument"), F("Attenuator step is 0.25 dB"));
+        return;
+    }
+
+    programAttenuatorDb(requestedDb);
+    printJsonReportEvent(F("report_begin"), F("atten"));
+    printJsonValue(F("atten_db"), getCurrentAttenuatorDb(), 2);
+    printJsonReportEvent(F("report_end"), F("atten"));
+}
+
 void handleFulltestProgram(const char* loToken)
 {
     if (loToken == nullptr) {
@@ -387,6 +415,10 @@ void handleFulltestCommand(char* const tokens[], size_t count)
     }
     if (equalsIgnoreCase(tokens[1], "plan")) {
         handleFulltestPlan(count >= 3U ? tokens[2] : nullptr);
+        return;
+    }
+    if (equalsIgnoreCase(tokens[1], "atten")) {
+        handleFulltestAtten(count >= 3U ? tokens[2] : nullptr);
         return;
     }
     if (equalsIgnoreCase(tokens[1], "program")) {
@@ -831,6 +863,7 @@ void printTechnicianBanner()
     Serial.println(F("  info                  Show board pin assignments"));
     Serial.println(F("  fulltest refcheck     Report reference clock enable pin checks"));
     Serial.println(F("  fulltest pincheck     Report select pin checks, excluding LO3"));
+    Serial.println(F("  fulltest atten <dB>   Program and report attenuator set point"));
     Serial.println(F("  fulltest plan <MHz>   Report full-test frequency plan"));
     Serial.println(F("  fulltest program <lo1|lo2> Program one planned LO"));
     Serial.println(F("  atten <dB>            Program PE43711 attenuator (0.0 to 31.75 dB in 0.25 steps)"));
