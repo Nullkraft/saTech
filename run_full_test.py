@@ -43,20 +43,12 @@ class FullTestStep:
     response: str
     response_hex: str
 
-    def to_dict(self):
-        return {
-            "name": self.name,
-            "command": self.command,
-            "response": self.response,
-        }
-
 
 @dataclass
 class FullTestReport:
     unit_id: str
     steps: list
     checks: list
-    raw_response_hex: str
 
     @property
     def passed(self):
@@ -66,9 +58,8 @@ class FullTestReport:
         return {
             "passed": self.passed,
             "unit_id": self.unit_id,
-            "steps": [step.to_dict() for step in self.steps],
+            "commands": [step.command for step in self.steps],
             "checks": [check.to_dict() for check in self.checks],
-            "raw_response_hex": self.raw_response_hex,
         }
 
 
@@ -89,7 +80,6 @@ def run_full_test(config, serial_factory=serial.Serial):
                 unit_id=id_step.response,
                 steps=[id_step],
                 checks=[id_check],
-                raw_response_hex=id_step.response_hex,
             )
         refcheck_step = _send_command(ser, "refcheck", "fulltest refcheck", config.timeout)
         set_ref1_step = _send_command(ser, "set_ref1", "set ref1", config.timeout)
@@ -101,7 +91,6 @@ def run_full_test(config, serial_factory=serial.Serial):
         unit_id=id_step.response,
         steps=[id_step, refcheck_step, set_ref1_step, chip_off_step],
         checks=checks,
-        raw_response_hex=id_step.response_hex,
     )
 
 

@@ -77,8 +77,8 @@ class RunFullTestCase(unittest.TestCase):
         self.assertTrue(report.passed)
         self.assertEqual(report.unit_id, "saTech WN2A ready")
         self.assertEqual(
-            [step.name for step in report.steps],
-            ["unit_id", "refcheck", "set_ref1", "chip_off"],
+            report.to_dict()["commands"],
+            ["id", "fulltest refcheck", "set ref1", "chip off"],
         )
         self.assertIn('"report":"refcheck"', report.steps[1].response)
         self.assertEqual(report.steps[2].response, "Reference clock set to REF1.")
@@ -86,10 +86,6 @@ class RunFullTestCase(unittest.TestCase):
         self.assertEqual(
             [check.name for check in report.checks],
             ["unit_id", "ref1_selected", "ref2_selected", "refs_off"],
-        )
-        self.assertEqual(
-            report.raw_response_hex,
-            "73 61 54 65 63 68 20 57 4E 32 41 20 72 65 61 64 79",
         )
 
     def test_reports_failed_id_check(self):
@@ -123,34 +119,7 @@ class RunFullTestCase(unittest.TestCase):
             {
                 "passed": True,
                 "unit_id": "saTech WN2A ready",
-                "steps": [
-                    {
-                        "name": "unit_id",
-                        "command": "id",
-                        "response": "saTech WN2A ready",
-                    },
-                    {
-                        "name": "refcheck",
-                        "command": "fulltest refcheck",
-                        "response": (
-                            '{"type":"report_begin","report":"refcheck"}\r\n'
-                            '{"type":"check","name":"ref1_selected","expected":"Ref1 on : Ref2 off","actual":"Ref1 on : Ref2 off","result":"PASS"}\r\n'
-                            '{"type":"check","name":"ref2_selected","expected":"Ref1 off : Ref2 on","actual":"Ref1 off : Ref2 on","result":"PASS"}\r\n'
-                            '{"type":"check","name":"refs_off","expected":"Ref1 off : Ref2 off","actual":"Ref1 off : Ref2 off","result":"PASS"}\r\n'
-                            '{"type":"report_end","report":"refcheck"}'
-                        ),
-                    },
-                    {
-                        "name": "set_ref1",
-                        "command": "set ref1",
-                        "response": "Reference clock set to REF1.",
-                    },
-                    {
-                        "name": "chip_off",
-                        "command": "chip off",
-                        "response": "All chip selects deasserted.",
-                    },
-                ],
+                "commands": ["id", "fulltest refcheck", "set ref1", "chip off"],
                 "checks": [
                     {
                         "name": "unit_id",
@@ -177,7 +146,6 @@ class RunFullTestCase(unittest.TestCase):
                         "passed": True,
                     }
                 ],
-                "raw_response_hex": "73 61 54 65 63 68 20 57 4E 32 41 20 72 65 61 64 79",
             },
         )
 
