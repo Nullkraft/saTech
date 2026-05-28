@@ -25,6 +25,11 @@ namespace {
 char technicianInputBuffer[INPUT_BUFFER_SIZE];
 size_t technicianInputLength = 0U;
 
+constexpr double ANALYZER_RF_INPUT_MIN_MHZ = 0.0;
+constexpr double ANALYZER_RF_INPUT_MAX_MHZ = 3000.0;
+constexpr double LO_FREQUENCY_MIN_MHZ = 23.5;
+constexpr double LO_FREQUENCY_MAX_MHZ = 6000.0;
+
 enum class TechnicianCommandKind {
     Unknown,
     Help,
@@ -277,8 +282,12 @@ void handleLofreqCommand(const char* valueToken)
     }
     char* endPointer = nullptr;
     const double requestedMhz = strtod(valueToken, &endPointer);
-    if (endPointer == nullptr || *endPointer != '\0' || !(requestedMhz > 0.0)) {
-        Serial.println(F("lofreq requires a positive frequency in MHz."));
+    if (endPointer == nullptr || *endPointer != '\0') {
+        Serial.println(F("lofreq requires a frequency in MHz."));
+        return;
+    }
+    if (requestedMhz < LO_FREQUENCY_MIN_MHZ || requestedMhz > LO_FREQUENCY_MAX_MHZ) {
+        Serial.println(F("LO frequency out of range (23.5 to 6000 MHz)."));
         return;
     }
     MAX2871* targetLo = nullptr;
@@ -485,7 +494,7 @@ void printTechnicianBanner()
     Serial.println();
     Serial.println(F("=== SpecAnn Technician Console ==="));
     Serial.println(F("Commands:"));
-    Serial.println(F("  RFin <MHz>            Tune all 3 LO's (23.5 to 6000 MHz)"));
+    Serial.println(F("  RFin <MHz>            Tune analyzer RF input (0 to 3000 MHz)"));
     Serial.println(F("  help                  Show this list"));
     Serial.println(F("  status                Report LO/IF plan, attenuator state, chip target"));
     Serial.println(F("  relock                Reinitialize MAX2871 devices"));
@@ -541,8 +550,8 @@ void handleTechnicianCommand(const char* line)
     const double mhz = strtod(tokens[0], &endPointer);
     const bool parsedNumber = (endPointer != nullptr) && (*endPointer == '\0') && (tokens[1] == nullptr);
     if (parsedNumber) {
-        if (mhz < MIN_RF_INPUT_MHZ || mhz > MAX_RF_INPUT_MHZ) {
-            Serial.println(F("Frequency out of range (23.5 to 6000 MHz)."));
+        if (mhz < ANALYZER_RF_INPUT_MIN_MHZ || mhz > ANALYZER_RF_INPUT_MAX_MHZ) {
+            Serial.println(F("RFin out of range (0 to 3000 MHz)."));
             return;
         }
         tuneTo(mhz);
@@ -587,8 +596,8 @@ void handleTechnicianCommand(const char* line)
                 Serial.println(F("Usage: RFin <MHz>"));
                 return;
             }
-            if (rfinMhz < MIN_RF_INPUT_MHZ || rfinMhz > MAX_RF_INPUT_MHZ) {
-                Serial.println(F("Frequency out of range (23.5 to 6000 MHz)."));
+            if (rfinMhz < ANALYZER_RF_INPUT_MIN_MHZ || rfinMhz > ANALYZER_RF_INPUT_MAX_MHZ) {
+                Serial.println(F("RFin out of range (0 to 3000 MHz)."));
                 return;
             }
             tuneTo(rfinMhz);
