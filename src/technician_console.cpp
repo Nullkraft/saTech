@@ -8,6 +8,7 @@
 #include <frequency_calculator.h>
 #include <math.h>
 #include <max2871.h>
+#include <avr/pgmspace.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -55,6 +56,36 @@ enum class TechnicianCommandKind {
     Set,
     Spi,
 };
+
+struct TechnicianCommandMap {
+    const char* token;
+    TechnicianCommandKind kind;
+};
+
+const char CMD_HELP[] PROGMEM = "help";
+const char CMD_ID[] PROGMEM = "id";
+const char CMD_RELOCK[] PROGMEM = "relock";
+const char CMD_FULLTEST[] PROGMEM = "fulltest";
+const char CMD_RFIN[] PROGMEM = "rfin";
+const char CMD_IFMODE[] PROGMEM = "ifmode";
+const char CMD_LOFREQ[] PROGMEM = "lofreq";
+const char CMD_CHIP[] PROGMEM = "chip";
+const char CMD_SET[] PROGMEM = "set";
+const char CMD_SPI[] PROGMEM = "spi";
+
+const TechnicianCommandMap TECHNICIAN_COMMANDS[] PROGMEM = {
+    {CMD_HELP, TechnicianCommandKind::Help},
+    {CMD_ID, TechnicianCommandKind::Id},
+    {CMD_RELOCK, TechnicianCommandKind::Relock},
+    {CMD_FULLTEST, TechnicianCommandKind::Fulltest},
+    {CMD_RFIN, TechnicianCommandKind::Rfin},
+    {CMD_IFMODE, TechnicianCommandKind::Ifmode},
+    {CMD_LOFREQ, TechnicianCommandKind::Lofreq},
+    {CMD_CHIP, TechnicianCommandKind::Chip},
+    {CMD_SET, TechnicianCommandKind::Set},
+    {CMD_SPI, TechnicianCommandKind::Spi},
+};
+constexpr size_t TECHNICIAN_COMMAND_COUNT = sizeof(TECHNICIAN_COMMANDS) / sizeof(TECHNICIAN_COMMANDS[0]);
 
 void trimWhitespace(char* text)
 {
@@ -750,39 +781,15 @@ void processSpiToken(const char* valueToken)
     processDirectRegisterData(value);
 }
 
-// Convert the string token to an enum type 'TechnicianCommandKind' that matches the string
 TechnicianCommandKind commandKindFromToken(const char* token)
 {
-    // strcmp returns 0 when both strings are identical
-    if (strcmp(token, "help") == 0) {
-        return TechnicianCommandKind::Help;
-    }
-    if (strcmp(token, "id") == 0) {
-        return TechnicianCommandKind::Id;
-    }
-    if (strcmp(token, "relock") == 0) {
-        return TechnicianCommandKind::Relock;
-    }
-    if (strcmp(token, "fulltest") == 0) {
-        return TechnicianCommandKind::Fulltest;
-    }
-    if (strcmp(token, "rfin") == 0) {
-        return TechnicianCommandKind::Rfin;
-    }
-    if (strcmp(token, "ifmode") == 0) {
-        return TechnicianCommandKind::Ifmode;
-    }
-    if (strcmp(token, "lofreq") == 0) {
-        return TechnicianCommandKind::Lofreq;
-    }
-    if (strcmp(token, "chip") == 0) {
-        return TechnicianCommandKind::Chip;
-    }
-    if (strcmp(token, "set") == 0) {
-        return TechnicianCommandKind::Set;
-    }
-    if (strcmp(token, "spi") == 0) {
-        return TechnicianCommandKind::Spi;
+    for (size_t i = 0; i < TECHNICIAN_COMMAND_COUNT; ++i) {
+        const char* commandToken = reinterpret_cast<const char*>(
+            pgm_read_word(&TECHNICIAN_COMMANDS[i].token));
+        if (strcmp_P(token, commandToken) == 0) {
+            return static_cast<TechnicianCommandKind>(
+                pgm_read_byte(&TECHNICIAN_COMMANDS[i].kind));
+        }
     }
     return TechnicianCommandKind::Unknown;
 }
@@ -833,7 +840,7 @@ void printTechnicianBanner()
     Serial.println(F(" fulltest plan <MHz>   Report frequency plan"));
     Serial.println(F(" fulltest program <lo1|lo2> Program one planned LO"));
     Serial.println(F(" ifmode <high|low>     Set injection for the selected LO"));
-    Serial.println(F(" lofreq <MHz>          Program the selected LO directly"));
+    Serial.println(F(" lofreq <MHz>          Set selected LO frequency"));
     Serial.println(F(" chip <target|off>     Assert target pin or set all off"));
     Serial.println(F("   targets: lo1 lo2 lo3 atten adc1 adc2 ram flash"));
     Serial.println(F(" set <ref1|ref2|off>   Enable one or disable both"));
