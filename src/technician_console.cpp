@@ -533,13 +533,13 @@ void printSelectedLoSnapshot(ChipTarget target)
 void handleIfmodeCommand(const char* modeToken)
 {
     if (modeToken == nullptr) {
-        Serial.println(F("Usage: ifmode <high|low>"));
+        printTechnicianBanner();
         return;
     }
     const bool highRequested = strcmp(modeToken, "high") == 0;
     const bool lowRequested  = strcmp(modeToken, "low") == 0;
     if (!highRequested && !lowRequested) {
-        Serial.println(F("ifmode requires 'high' or 'low'."));
+        printTechnicianBanner();
         return;
     }
     ConsoleState& state = consoleState();
@@ -582,7 +582,7 @@ void handleIfmodeCommand(const char* modeToken)
 void handleLofreqCommand(const char* valueToken)
 {
     if (valueToken == nullptr) {
-        Serial.println(F("Usage: lofreq <MHz>"));
+        printTechnicianBanner();
         return;
     }
     const ChipTarget chipTarget = getCurrentChipTarget();
@@ -595,7 +595,7 @@ void handleLofreqCommand(const char* valueToken)
     char* endPointer = nullptr;
     const double requestedMhz = strtod(valueToken, &endPointer);
     if (endPointer == nullptr || *endPointer != '\0') {
-        Serial.println(F("lofreq requires a frequency in MHz."));
+        printTechnicianBanner();
         return;
     }
     if (requestedMhz < LO_FREQUENCY_MIN_MHZ || requestedMhz > LO_FREQUENCY_MAX_MHZ) {
@@ -669,7 +669,7 @@ void processChipToken(const char* targetToken)
         selectSerialChipTarget(ChipTarget::None);
         return;
     }
-    Serial.println(F("chip target must be lo1, lo2, lo3, atten, adc1, adc2, ram, flash, or off."));
+    printTechnicianBanner();
 }
 
 bool referenceSelectorForToken(const char* targetToken, uint16_t* selector)
@@ -693,12 +693,12 @@ bool referenceSelectorForToken(const char* targetToken, uint16_t* selector)
 void processSetToken(const char* targetToken)
 {
     if (targetToken == nullptr) {
-        Serial.println(F("Usage: set <ref1|ref2|off>"));
+        printTechnicianBanner();
         return;
     }
     uint16_t selector = 0U;
     if (!referenceSelectorForToken(targetToken, &selector)) {
-        Serial.println(F("set target must be ref1, ref2, or off."));
+        printTechnicianBanner();
         return;
     }
     processReceivedWord(static_cast<uint32_t>(selector));
@@ -707,7 +707,7 @@ void processSetToken(const char* targetToken)
     } else if (selector == 0x14FFU) {
         Serial.println(F("Reference clock set to REF2."));
     } else {
-        Serial.println(F("Warning: all reference clocks disabled - LOs will lose lock."));
+        Serial.println(F("All reference clocks disabled."));
     }
 }
 
@@ -718,13 +718,13 @@ void processSpiToken(const char* valueToken)
     }
     ConsoleState& state = consoleState();
     if (state.chipTarget == ChipTarget::None) {
-        Serial.println(F("No chip selected. Use 'chip <target>' first."));
+        printTechnicianBanner();
         return;
     }
     char* endPointer = nullptr;
     const uint32_t value = static_cast<uint32_t>(strtoul(valueToken, &endPointer, 16));
     if (endPointer == nullptr || *endPointer != '\0') {
-        Serial.println(F("SPI value must be hexadecimal (e.g., 0x12345678 or 12345678)."));
+        printTechnicianBanner();
         return;
     }
     if (!state.manualSpiArmed) {
@@ -752,6 +752,7 @@ void processSpiToken(const char* valueToken)
 
 TechnicianCommandKind commandKindFromToken(const char* token)
 {
+    // strcmp returns 0 when both strings are identical
     if (strcmp(token, "help") == 0) {
         return TechnicianCommandKind::Help;
     }
@@ -905,13 +906,13 @@ void handleTechnicianCommand(const char* line)
             return;
         case TechnicianCommandKind::Rfin: {
             if (count < 2U) {
-                Serial.println(F("Usage: RFin <MHz>"));
+                printTechnicianBanner();
                 return;
             }
             char* rfinEndPointer;
             const double rfinMhz = strtod(tokens[1], &rfinEndPointer);
             if (rfinEndPointer == tokens[1] || *rfinEndPointer != '\0') {
-                Serial.println(F("Usage: RFin <MHz>"));
+                printTechnicianBanner();
                 return;
             }
             if (rfinMhz < ANALYZER_RF_INPUT_MIN_MHZ || rfinMhz > ANALYZER_RF_INPUT_MAX_MHZ) {
@@ -924,44 +925,42 @@ void handleTechnicianCommand(const char* line)
         }
         case TechnicianCommandKind::Ifmode:
             if (count < 2U) {
-                Serial.println(F("Usage: ifmode <high|low>"));
+                printTechnicianBanner();
                 return;
             }
             handleIfmodeCommand(tokens[1]);
             return;
         case TechnicianCommandKind::Lofreq:
             if (count < 2U) {
-                Serial.println(F("Usage: lofreq <MHz>"));
+                printTechnicianBanner();
                 return;
             }
             handleLofreqCommand(tokens[1]);
             return;
         case TechnicianCommandKind::Chip:
             if (count < 2U) {
-                Serial.println(F("Usage: chip <lo1|lo2|lo3|atten|adc1|adc2|ram|flash|off>"));
+                printTechnicianBanner();
                 return;
             }
             processChipToken(tokens[1]);
             return;
         case TechnicianCommandKind::Set:
             if (count < 2U) {
-                Serial.println(F("Usage: set <ref1|ref2|off>"));
+                printTechnicianBanner();
                 return;
             }
             processSetToken(tokens[1]);
             return;
         case TechnicianCommandKind::Spi:
             if (count < 2U) {
-                Serial.println(F("Usage: spi <hex32>"));
+                printTechnicianBanner();
                 return;
             }
             processSpiToken(tokens[1]);
             return;
         case TechnicianCommandKind::Unknown:
         default:
-            Serial.print(F("Unknown command: "));
-            Serial.println(tokens[0]);
-            Serial.println(F("Type 'help' for a list of commands."));
+            printTechnicianBanner();
             return;
     }
 }
