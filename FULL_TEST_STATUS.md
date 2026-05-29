@@ -19,13 +19,12 @@ Implemented and hardware-verified:
 - `fulltest refcheck` reference enable pin report.
 - `fulltest plan <MHz>` frequency-plan report.
 - `fulltest program lo1` and `fulltest program lo2` planned-LO programming reports.
+- `fulltest pincheck` aggregate select-pin report.
+- `fulltest atten <dB>` attenuator set-point report.
 - Python runner report cleanup: public output now shows command list and parsed checks rather than raw serial transcripts.
 
 Still needed for the local full-test sequence:
 
-- `fulltest pincheck` for LO, attenuator, ADC, RAM, and Flash select pins.
-- Add `atten <dB>` to the Python runner sequence.
-- Add `fulltest plan <MHz>`, `fulltest program lo1`, and `fulltest program lo2` to the Python runner sequence.
 - Add Rigol MCP capture/decode and compare decoded LO register writes.
 - Add BK390A reading, discard-settling logic, dBm conversion, and final amplitude report.
 

@@ -19,6 +19,7 @@ class FullTestConfig:
     open_delay: float = 3.0
     expected_id: str = DEFAULT_EXPECTED_ID
     atten_db: float = 12.0
+    rfin_mhz: float = 10.0
 
 
 @dataclass
@@ -99,15 +100,40 @@ def run_full_test(config, serial_factory=serial.Serial):
             )
         refcheck_step = _send_command(ser, "refcheck", "fulltest refcheck", config.timeout)
         set_ref1_step = _send_command(ser, "set_ref1", "set ref1", config.timeout)
+        pincheck_step = _send_command(ser, "pincheck", "fulltest pincheck", config.timeout)
         chip_off_step = _send_command(ser, "chip_off", "chip off", config.timeout)
         atten_step = _send_command(ser, "atten", f"fulltest atten {config.atten_db:.2f}", config.timeout)
+        plan_step = _send_command(ser, "plan", f"fulltest plan {config.rfin_mhz:.3f}", config.timeout)
+        program_lo1_step = _send_command(ser, "program_lo1", "fulltest program lo1", config.timeout)
+        program_lo2_step = _send_command(ser, "program_lo2", "fulltest program lo2", config.timeout)
 
     checks = [id_check]
-    checks.extend(_checks_from_json_step(refcheck_step))
-    values = _values_from_json_step(atten_step)
+    json_steps = [
+        refcheck_step,
+        pincheck_step,
+        atten_step,
+        plan_step,
+        program_lo1_step,
+        program_lo2_step,
+    ]
+    for step in json_steps:
+        checks.extend(_checks_from_json_step(step))
+    values = []
+    for step in json_steps:
+        values.extend(_values_from_json_step(step))
     return FullTestReport(
         unit_id=id_step.response,
-        steps=[id_step, refcheck_step, set_ref1_step, chip_off_step, atten_step],
+        steps=[
+            id_step,
+            refcheck_step,
+            set_ref1_step,
+            pincheck_step,
+            chip_off_step,
+            atten_step,
+            plan_step,
+            program_lo1_step,
+            program_lo2_step,
+        ],
         checks=checks,
         values=values,
     )
