@@ -750,6 +750,7 @@ void processSpiToken(const char* valueToken)
     processDirectRegisterData(value);
 }
 
+// Convert the string token to an enum type 'TechnicianCommandKind' that matches the string
 TechnicianCommandKind commandKindFromToken(const char* token)
 {
     // strcmp returns 0 when both strings are identical
