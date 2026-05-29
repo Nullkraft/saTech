@@ -17,6 +17,17 @@ void FrequencyCalculator::set_LO_frequencies(double rfin, double refClockMHz, in
                                               LOInjectionMode lo2Mode,
                                               LOInjectionMode lo3Mode)
 {
+  compute_LO_frequencies(rfin, refClockMHz, r_div, lo2Mode, lo3Mode);
+
+  _lo1.setFrequency(FreqLO1);
+  _lo2.setFrequency(FreqLO2);
+  _lo3.setFrequency(FreqLO3);
+}
+
+void FrequencyCalculator::compute_LO_frequencies(double rfin, double refClockMHz, int r_div,
+                                                  LOInjectionMode lo2Mode,
+                                                  LOInjectionMode lo3Mode)
+{
   FreqRFin         = rfin;
   R                = (uint8_t)r_div;
   LO2InjectionMode = lo2Mode;
@@ -35,13 +46,10 @@ void FrequencyCalculator::set_LO_frequencies(double rfin, double refClockMHz, in
   int sign         = hiLo1 ? 1 : -1;
 
   FreqLO1 = fpfd * round((IF1_step + sign * rfin) / fpfd);
-  _lo1.setFrequency(FreqLO1);
 
   IF1 = fabs(FreqLO1 - sign * rfin);   // fabs guards against rounding producing a tiny negative
 
   FreqLO2 = (LO2InjectionMode == LOInjectionMode::High) ? (IF1 + IF2) : (IF1 - IF2);
-  _lo2.setFrequency(FreqLO2);
 
   FreqLO3 = (LO3InjectionMode == LOInjectionMode::High) ? (IF2 + IF3) : (IF2 - IF3);
-  _lo3.setFrequency(FreqLO3);
 }

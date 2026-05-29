@@ -15,8 +15,8 @@ public:
   double RefClock1 = 66.000;
   double RefClock2 = 66.666;
 
-  // Read-only outputs — reflect the modes used in the last call to
-  // set_LO_frequencies(). Do not write these directly.
+  // Read-only outputs — reflect the modes used in the last computed plan.
+  // Do not write these directly.
   LOInjectionMode LO1InjectionMode;  // Computed internally from threshold math
   LOInjectionMode LO2InjectionMode;  // Reflects lo2Mode passed by caller
   LOInjectionMode LO3InjectionMode;  // Reflects lo3Mode passed by caller
@@ -43,6 +43,10 @@ public:
   void set_LO_frequencies(double rfin, double refClockMHz, int r_div,
                           LOInjectionMode lo2Mode,
                           LOInjectionMode lo3Mode);
+
+  void compute_LO_frequencies(double rfin, double refClockMHz, int r_div,
+                              LOInjectionMode lo2Mode,
+                              LOInjectionMode lo3Mode);
 
 private:
   I_PLLSynthesizer& _lo1;

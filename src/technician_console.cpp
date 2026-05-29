@@ -16,6 +16,7 @@ extern MAX2871 lo1;
 extern MAX2871 lo2;
 extern MAX2871 lo3;
 extern FrequencyCalculator freqCalc;
+extern double currentRfInputMhz;
 
 void recomputePlan();
 void tuneTo(double mhz);
@@ -242,21 +243,30 @@ void printPincheckFailures(const bool results[])
     }
 }
 
+long roundMilliMhz(double value)
+{
+    return static_cast<long>(round(value * 1000.0));
+}
+
 void printLoFrequencyCheck(const __FlashStringHelper* prefix, double expectedMhz, double actualMhz)
 {
+    const long expectedMilliMhz = roundMilliMhz(expectedMhz);
+    const long actualMilliMhz = roundMilliMhz(actualMhz);
+    const double expectedRoundedMhz = static_cast<double>(expectedMilliMhz) / 1000.0;
+    const double actualRoundedMhz = static_cast<double>(actualMilliMhz) / 1000.0;
     Serial.print(F("{\"type\":\"value\",\"name\":\""));
     Serial.print(prefix);
     Serial.print(F("_frequency_mhz\",\"value\":"));
-    Serial.print(actualMhz, 3);
+    Serial.print(actualRoundedMhz, 3);
     Serial.println(F("}"));
     Serial.print(F("{\"type\":\"check\",\"name\":\""));
     Serial.print(prefix);
     Serial.print(F("_frequency_mhz\",\"expected\":"));
-    Serial.print(expectedMhz, 3);
+    Serial.print(expectedRoundedMhz, 3);
     Serial.print(F(",\"actual\":"));
-    Serial.print(actualMhz, 3);
+    Serial.print(actualRoundedMhz, 3);
     Serial.print(F(",\"result\":\""));
-    Serial.print(actualMhz == expectedMhz ? F("PASS") : F("FAIL"));
+    Serial.print(actualMilliMhz == expectedMilliMhz ? F("PASS") : F("FAIL"));
     Serial.println(F("\"}"));
 }
 
@@ -297,6 +307,21 @@ void printJsonError(const __FlashStringHelper* command,
     Serial.println(F("\"}"));
 }
 
+void stageFulltestPlan(double rfinMhz)
+{
+    ConsoleState& state = consoleState();
+    currentRfInputMhz = rfinMhz;
+    state.lo1Manual = false;
+    state.lo2Manual = false;
+    state.lo3Manual = false;
+    freqCalc.compute_LO_frequencies(currentRfInputMhz, freqCalc.RefClock1, 1,
+                                    state.desiredLo2Injection,
+                                    state.desiredLo3Injection);
+    lo1.freq2FMN(freqCalc.FreqLO1);
+    lo2.freq2FMN(freqCalc.FreqLO2);
+    lo3.freq2FMN(freqCalc.FreqLO3);
+}
+
 void handleFulltestPlan(const char* valueToken)
 {
     if (valueToken == nullptr) {
@@ -314,7 +339,7 @@ void handleFulltestPlan(const char* valueToken)
         return;
     }
 
-    tuneTo(rfinMhz);
+    stageFulltestPlan(rfinMhz);
     printFulltestPlanReport();
 }
 
