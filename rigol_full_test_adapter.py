@@ -122,6 +122,8 @@ class RigolFullTestAdapter:
         fd = os.open(self.device, os.O_RDWR)
         try:
             os.write(fd, self._payload(scpi))
+            # The scope can ignore back-to-back setup writes without pacing.
+            time.sleep(self.delay)
         finally:
             os.close(fd)
 
