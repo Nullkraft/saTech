@@ -25,6 +25,7 @@ class FullTestConfig:
     expected_id: str = DEFAULT_EXPECTED_ID
     atten_db: float = 12.0
     rfin_mhz: float = 10.0
+    lo_off_target_mhz: float = 123.345
 
 
 @dataclass
@@ -136,7 +137,6 @@ def run_full_test(config, serial_factory=serial.Serial, rigol=None, expected_reg
         pincheck_step = _send_command(ser, "pincheck", "fulltest pincheck", config.timeout)
         chip_off_step = _send_command(ser, "chip_off", "chip off", config.timeout)
         atten_step = _send_command(ser, "atten", f"fulltest atten {config.atten_db:.2f}", config.timeout)
-        plan_step = _send_command(ser, "plan", f"fulltest plan {config.rfin_mhz:.3f}", config.timeout)
 
         steps = [
             id_step,
@@ -145,19 +145,26 @@ def run_full_test(config, serial_factory=serial.Serial, rigol=None, expected_reg
             pincheck_step,
             chip_off_step,
             atten_step,
-            plan_step,
         ]
         json_steps = [
             refcheck_step,
             pincheck_step,
             atten_step,
-            plan_step,
         ]
         register_checks = []
         registers = []
 
         if rigol is not None:
             _call_scope_method(rigol, "scope_setup", "setup", "rigol_ds1102e_scope_setup")
+            steps.extend(_prime_lo_for_capture(ser, "lo1", config.lo_off_target_mhz, config.timeout))
+            steps.extend(_prime_lo_for_capture(ser, "lo2", config.lo_off_target_mhz, config.timeout))
+            steps.append(_send_command(ser, "chip_off_after_prime", "chip off", config.timeout))
+
+        plan_step = _send_command(ser, "plan", f"fulltest plan {config.rfin_mhz:.3f}", config.timeout)
+        steps.append(plan_step)
+        json_steps.append(plan_step)
+
+        if rigol is not None:
             lo1_frequency = _value_from_json_step(plan_step, "lo1_frequency_mhz")
             lo2_frequency = _value_from_json_step(plan_step, "lo2_frequency_mhz")
 
@@ -166,6 +173,7 @@ def run_full_test(config, serial_factory=serial.Serial, rigol=None, expected_reg
                 rigol,
                 "lo1",
                 lo1_frequency,
+                config.lo_off_target_mhz,
                 config.timeout,
                 expected_register_provider,
             )
@@ -181,6 +189,7 @@ def run_full_test(config, serial_factory=serial.Serial, rigol=None, expected_reg
                 rigol,
                 "lo2",
                 lo2_frequency,
+                config.lo_off_target_mhz,
                 config.timeout,
                 expected_register_provider,
             )
@@ -210,8 +219,8 @@ def _send_command(ser, name, command, timeout):
     )
 
 
-def _program_and_verify_lo(ser, rigol, lo_name, frequency_mhz, timeout, expected_register_provider):
-    expected = _expected_registers(expected_register_provider, lo_name, frequency_mhz)
+def _program_and_verify_lo(ser, rigol, lo_name, frequency_mhz, previous_frequency_mhz, timeout, expected_register_provider):
+    expected = _expected_registers(expected_register_provider, lo_name, frequency_mhz, previous_frequency_mhz)
     expected_addresses = [word["address"] for word in _register_words(expected)]
     _call_scope_method(rigol, "start_new_waveform", "rigol_start_new_waveform")
     step = _send_command(ser, f"program_{lo_name}", f"fulltest program {lo_name}", timeout)
@@ -250,18 +259,29 @@ def _build_report(unit_id, steps, id_check, json_steps, register_checks, registe
     )
 
 
-def _default_expected_register_provider(lo_name, frequency_mhz):
+def _prime_lo_for_capture(ser, lo_name, frequency_mhz, timeout):
+    return [
+        _send_command(ser, f"prime_{lo_name}_select", f"chip {lo_name}", timeout),
+        _send_command(ser, f"prime_{lo_name}_frequency", f"lofreq {frequency_mhz:.3f}", timeout),
+    ]
+
+
+def _default_expected_register_provider(lo_name, frequency_mhz, previous_frequency_mhz=None):
     from max2871_expected import expected_registers_for_frequencies
 
-    startup_frequency = _startup_lo_frequency(lo_name)
-    return expected_registers_for_frequencies([startup_frequency, frequency_mhz])[-1]
+    if previous_frequency_mhz is None:
+        previous_frequency_mhz = _startup_lo_frequency(lo_name)
+    return expected_registers_for_frequencies([previous_frequency_mhz, frequency_mhz])[-1]
 
 
-def _expected_registers(provider, lo_name, frequency_mhz):
+def _expected_registers(provider, lo_name, frequency_mhz, previous_frequency_mhz=None):
     try:
-        return provider(lo_name, frequency_mhz)
+        return provider(lo_name, frequency_mhz, previous_frequency_mhz)
     except TypeError:
-        return provider(frequency_mhz)
+        try:
+            return provider(lo_name, frequency_mhz)
+        except TypeError:
+            return provider(frequency_mhz)
 
 
 def _startup_lo_frequency(lo_name):

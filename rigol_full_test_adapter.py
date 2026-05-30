@@ -33,6 +33,9 @@ class RigolFullTestAdapter:
         low_ratio=0.2,
         high_ratio=0.8,
         max_extra_edges=16,
+        clock_vertical_scale=2.0,
+        trigger_level=1.28,
+        timebase_scale="5.0us",
     ):
         self.device = device
         self.clock_channel = clock_channel
@@ -44,13 +47,21 @@ class RigolFullTestAdapter:
         self.low_ratio = low_ratio
         self.high_ratio = high_ratio
         self.max_extra_edges = max_extra_edges
+        self.clock_vertical_scale = clock_vertical_scale
+        self.trigger_level = trigger_level
+        self.timebase_scale = timebase_scale
 
     def scope_setup(self):
+        self._write(":STOP")
         self._write(f":CHAN{self.clock_channel}:DISP ON")
         self._write(f":CHAN{self.data_channel}:DISP ON")
+        self._write(f":CHAN{self.clock_channel}:SCALe {self.clock_vertical_scale:.1f}")
         self._write(":TRIGger:MODE EDGE")
+        self._write(f":TRIGger:EDGE:SOURce CHAN{self.clock_channel}")
+        self._write(f":TRIGger:EDGE:LEVel {self.trigger_level:.2f}")
         self._write(":TRIGger:EDGE:SWEep SING")
         self._write(":WAVeform:POINts:MODE RAW")
+        self._write(f":TIMebase:SCALe {self.timebase_scale}")
 
     def start_new_waveform(self):
         self._write(":RUN")

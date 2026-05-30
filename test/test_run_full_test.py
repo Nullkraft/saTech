@@ -1,5 +1,6 @@
 import unittest
 
+from rigol_full_test_adapter import RigolFullTestAdapter
 from run_full_test import FullTestConfig, run_full_test
 
 
@@ -58,6 +59,30 @@ PROGRAM_LO2_RESPONSE = (
     b'{"type":"value","name":"lo2_diva","value":1}\r\n'
     b'{"type":"report_end","report":"program_lo2"}\r\n'
 )
+
+CHIP_LO1_RESPONSE = b"Chip select set to LO1\r\n"
+CHIP_LO2_RESPONSE = b"Chip select set to LO2\r\n"
+LOFREQ_OFF_TARGET_RESPONSE = b"LO frequency set.\r\n"
+CHIP_OFF_RESPONSE = b"All chip selects deasserted.\r\n"
+
+
+def rigol_responses():
+    return [
+        b"saTech WN2A ready",
+        REFCHECK_RESPONSE,
+        b"Reference clock set to REF1.\r\n",
+        PINCHECK_RESPONSE,
+        b"All chip selects deasserted.\r\n",
+        ATTEN_RESPONSE,
+        CHIP_LO1_RESPONSE,
+        LOFREQ_OFF_TARGET_RESPONSE,
+        CHIP_LO2_RESPONSE,
+        LOFREQ_OFF_TARGET_RESPONSE,
+        CHIP_OFF_RESPONSE,
+        PLAN_RESPONSE,
+        PROGRAM_LO1_RESPONSE,
+        PROGRAM_LO2_RESPONSE,
+    ]
 
 
 class FakeSerial:
@@ -436,6 +461,7 @@ class RunFullTestCase(unittest.TestCase):
     def test_rigol_register_verification_sequences_scope_and_passes(self):
         events = []
         FakeSerial.events = events
+        FakeSerial.responses = rigol_responses()
         rigol = FakeRigol(
             [
                 decoded_from_expected(LO1_EXPECTED),
@@ -443,13 +469,19 @@ class RunFullTestCase(unittest.TestCase):
             ],
             events,
         )
+        provider_calls = []
+
+        def expected_register_provider(lo_name, frequency_mhz, previous_frequency_mhz):
+            provider_calls.append((lo_name, previous_frequency_mhz, frequency_mhz))
+            return fake_expected_registers(frequency_mhz)
+
         config = FullTestConfig(port="/dev/fake", timeout=0.01, open_delay=0.0)
 
         report = run_full_test(
             config,
             serial_factory=FakeSerial,
             rigol=rigol,
-            expected_register_provider=fake_expected_registers,
+            expected_register_provider=expected_register_provider,
         )
 
         self.assertTrue(report.passed)
@@ -462,8 +494,13 @@ class RunFullTestCase(unittest.TestCase):
                 "serial:fulltest pincheck",
                 "serial:chip off",
                 "serial:fulltest atten 12.00",
-                "serial:fulltest plan 10.000",
                 "rigol:setup",
+                "serial:chip lo1",
+                "serial:lofreq 123.345",
+                "serial:chip lo2",
+                "serial:lofreq 123.345",
+                "serial:chip off",
+                "serial:fulltest plan 10.000",
                 "rigol:new_waveform",
                 "serial:fulltest program lo1",
                 "rigol:capture",
@@ -475,6 +512,13 @@ class RunFullTestCase(unittest.TestCase):
             ],
         )
         self.assertEqual(len(report.registers), 12)
+        self.assertEqual(
+            provider_calls,
+            [
+                ("lo1", 123.345, 3630.0),
+                ("lo2", 123.345, 3935.0),
+            ],
+        )
         self.assertEqual(rigol.decode_calls[0]["expected_addresses"], [0])
         self.assertEqual(rigol.decode_calls[1]["expected_addresses"], [1, 0])
         checks = {check.name: check for check in report.checks}
@@ -485,6 +529,7 @@ class RunFullTestCase(unittest.TestCase):
     def test_rigol_register_verification_stops_after_lo1_failure(self):
         events = []
         FakeSerial.events = events
+        FakeSerial.responses = rigol_responses()
         lo1_bad = {
             "decoded_words": [
                 {"address": 0, "value": 0xBAD00000, "hex": "0xBAD00000"},
@@ -510,6 +555,7 @@ class RunFullTestCase(unittest.TestCase):
     def test_rigol_register_verification_reports_lo2_failure_after_lo1_passes(self):
         events = []
         FakeSerial.events = events
+        FakeSerial.responses = rigol_responses()
         lo2_bad = {
             "decoded_words": [
                 {"address": 1, "value": 0xBAD00001, "hex": "0xBAD00001"},
@@ -538,6 +584,35 @@ class RunFullTestCase(unittest.TestCase):
         self.assertTrue(checks["lo1_register_verification"].passed)
         self.assertFalse(checks["lo2_r1"].passed)
         self.assertFalse(checks["lo2_register_verification"].passed)
+
+
+class RigolFullTestAdapterCase(unittest.TestCase):
+    def test_scope_setup_sends_verified_scpi_sequence(self):
+        writes = []
+
+        class CaptureRigol(RigolFullTestAdapter):
+            def _write(self, scpi):
+                writes.append(scpi)
+
+        rigol = CaptureRigol()
+
+        rigol.scope_setup()
+
+        self.assertEqual(
+            writes,
+            [
+                ":STOP",
+                ":CHAN1:DISP ON",
+                ":CHAN2:DISP ON",
+                ":CHAN1:SCALe 2.0",
+                ":TRIGger:MODE EDGE",
+                ":TRIGger:EDGE:SOURce CHAN1",
+                ":TRIGger:EDGE:LEVel 1.28",
+                ":TRIGger:EDGE:SWEep SING",
+                ":WAVeform:POINts:MODE RAW",
+                ":TIMebase:SCALe 5.0us",
+            ],
+        )
 
 
 if __name__ == "__main__":
