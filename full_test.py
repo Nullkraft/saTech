@@ -4,6 +4,7 @@
 import argparse
 import json
 
+from rigol_full_test_adapter import RigolFullTestAdapter
 from run_full_test import DEFAULT_EXPECTED_ID, FullTestConfig, run_full_test
 
 
@@ -40,7 +41,7 @@ def main():
         open_delay=args.open_delay,
         expected_id=args.expected_id,
     )
-    report = run_full_test(config)
+    report = run_full_test(config, rigol=RigolFullTestAdapter())
     print(json.dumps(report.to_dict(), indent=2))
     return 0 if report.passed else 1
 

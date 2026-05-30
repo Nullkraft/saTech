@@ -105,9 +105,7 @@ class RigolFullTestAdapter:
             status = self._query_text(":TRIGger:STATus?").upper()
             if status == "STOP":
                 return
-            if status == "WAIT":
-                self._write(":STOP")
-        raise RuntimeError(f"scope did not enter STOP state after :STOP; last status was {status!r}")
+        raise RuntimeError(f"scope did not trigger and stop; last status was {status!r}")
 
     def _write(self, scpi):
         fd = os.open(self.device, os.O_RDWR)
