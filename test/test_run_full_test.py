@@ -154,10 +154,10 @@ class FakeRigol:
     def scope_setup(self):
         self.events.append("rigol:setup")
 
-    def prepare_for_new_sweep(self):
-        self.events.append("rigol:prepare")
+    def start_new_waveform(self):
+        self.events.append("rigol:new_waveform")
 
-    def capture_waveform_channels(self):
+    def capture_waveform(self):
         self.events.append("rigol:capture")
         return {"capture": len(self.decode_calls)}
 
@@ -464,11 +464,11 @@ class RunFullTestCase(unittest.TestCase):
                 "serial:fulltest atten 12.00",
                 "serial:fulltest plan 10.000",
                 "rigol:setup",
-                "rigol:prepare",
+                "rigol:new_waveform",
                 "serial:fulltest program lo1",
                 "rigol:capture",
                 "rigol:decode",
-                "rigol:prepare",
+                "rigol:new_waveform",
                 "serial:fulltest program lo2",
                 "rigol:capture",
                 "rigol:decode",

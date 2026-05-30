@@ -143,15 +143,15 @@ Clean host flow for the Rigol/register-verification slice:
 fulltest plan <MHz>
 rigol_ds1102e_scope_setup()          # Once before per-LO programming.
 
-rigol_prepare_for_new_sweep()
+rigol_start_new_waveform()
 fulltest program lo1
-capture_waveform_channels()
+capture_waveform()
 rigol_ds1102e_spi_decode()
 compare LO1 registers
 
-rigol_prepare_for_new_sweep()
+rigol_start_new_waveform()
 fulltest program lo2
-capture_waveform_channels()
+capture_waveform()
 rigol_ds1102e_spi_decode()
 compare LO2 registers
 ```

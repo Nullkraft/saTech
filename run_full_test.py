@@ -212,9 +212,9 @@ def _send_command(ser, name, command, timeout):
 def _program_and_verify_lo(ser, rigol, lo_name, frequency_mhz, timeout, expected_register_provider):
     expected = _expected_registers(expected_register_provider, lo_name, frequency_mhz)
     expected_addresses = [word["address"] for word in _register_words(expected)]
-    _call_scope_method(rigol, "prepare_for_new_sweep", "rigol_prepare_for_new_sweep")
+    _call_scope_method(rigol, "start_new_waveform", "rigol_start_new_waveform")
     step = _send_command(ser, f"program_{lo_name}", f"fulltest program {lo_name}", timeout)
-    capture = _call_scope_method(rigol, "capture_waveform_channels")
+    capture = _call_scope_method(rigol, "capture_waveform", "capture_waveform_channels")
     decoded = _call_scope_method(
         rigol,
         "spi_decode",

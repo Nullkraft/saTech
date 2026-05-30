@@ -33,7 +33,6 @@ class RigolFullTestAdapter:
         low_ratio=0.2,
         high_ratio=0.8,
         max_extra_edges=16,
-        freeze=True,
     ):
         self.device = device
         self.clock_channel = clock_channel
@@ -45,7 +44,6 @@ class RigolFullTestAdapter:
         self.low_ratio = low_ratio
         self.high_ratio = high_ratio
         self.max_extra_edges = max_extra_edges
-        self.freeze = freeze
 
     def scope_setup(self):
         self._write(f":CHAN{self.clock_channel}:DISP ON")
@@ -54,15 +52,11 @@ class RigolFullTestAdapter:
         self._write(":TRIGger:EDGE:SWEep SING")
         self._write(":WAVeform:POINts:MODE RAW")
 
-    def prepare_for_new_sweep(self):
-        self._write(":TRIGger:EDGE:SWEep SING")
+    def start_new_waveform(self):
         self._write(":RUN")
 
-    def capture_waveform_channels(self):
-        if self.freeze:
-            self._write(":STOP")
-            self._require_stopped_scope()
-        self._write(":WAVeform:POINts:MODE RAW")
+    def capture_waveform(self):
+        self._require_stopped_scope()
         return {
             "channels": {
                 str(self.clock_channel): self._query_waveform_payload(self.clock_channel),
