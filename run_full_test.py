@@ -215,15 +215,20 @@ def _program_and_verify_lo(ser, rigol, lo_name, frequency_mhz, timeout, expected
     expected_addresses = [word["address"] for word in _register_words(expected)]
     _call_scope_method(rigol, "start_new_waveform", "rigol_start_new_waveform")
     step = _send_command(ser, f"program_{lo_name}", f"fulltest program {lo_name}", timeout)
-    capture = _call_scope_method(rigol, "capture_waveform", "capture_waveform_channels")
-    decoded = _call_scope_method(
-        rigol,
-        "spi_decode",
-        "rigol_ds1102e_spi_decode",
-        capture,
-        expected_writes=len(expected_addresses),
-        expected_addresses=expected_addresses,
-    )
+    try:
+        capture = _call_scope_method(rigol, "capture_waveform", "capture_waveform_channels")
+        decoded = _call_scope_method(
+            rigol,
+            "spi_decode",
+            "rigol_ds1102e_spi_decode",
+            capture,
+            expected_writes=len(expected_addresses),
+            expected_addresses=expected_addresses,
+        )
+    except Exception as exc:
+        checks = [_register_summary_check(lo_name, False, f"decode_error: {type(exc).__name__}: {exc}")]
+        registers = _register_records(lo_name, expected, expected_addresses, {})
+        return step, checks, registers
     checks, registers = _verify_registers(lo_name, expected, decoded)
     return step, checks, registers
 
