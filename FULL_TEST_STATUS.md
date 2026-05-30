@@ -2,7 +2,7 @@
 
 ## Current Focus
 
-Implement the full-test technician-console flow described in `Full test.md`.
+Implement the BK390A / final amplitude slice described in `Full test.md`.
 
 The full test runs while technician console firmware is loaded. Host-side code orchestrates the test, talks to the technician console, uses the Rigol MCP server for scope capture/decode, uses the BK390A for voltage measurement, and collates the final report.
 
@@ -21,19 +21,22 @@ Implemented and hardware-verified:
 - `fulltest program lo1` and `fulltest program lo2` planned-LO programming reports.
 - `fulltest pincheck` aggregate select-pin report.
 - `fulltest atten <dB>` attenuator set-point report.
+- Rigol MCP capture/decode for LO1 and LO2 register verification.
+- Sequential Rigol SCPI setup with pacing between writes so the scope accepts the setup commands reliably.
 - Python runner report cleanup: public output now shows command list and parsed checks rather than raw serial transcripts.
 
 Still needed for the local full-test sequence:
 
-- Add Rigol MCP capture/decode and compare decoded LO register writes.
 - Add BK390A reading, discard-settling logic, dBm conversion, and final amplitude report.
 
 ## Files To Start With
 
+- `BRING_UP_PLAN.md`
 - `Full test.md`
+- `full_test.py`
+- `run_full_test.py`
 - `src/technician_console.cpp`
 - `src/main_entry.cpp`
 - `src/command_interface.cpp`
 - `src/command_interface.h`
 - `src/frequency_calculator.cpp`
-- `max2871_expected.py`

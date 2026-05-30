@@ -131,17 +131,24 @@ After an error response, the command should be considered complete. The host sho
 
 The technician is responsible for presetting the oscilloscope for proper SPI data capture before running the full test. The host should not rely on the firmware to configure the scope.
 
-The oscilloscope MCP server is responsible for switching the scope between stopped data collection and normal trigger mode as needed for each LO programming capture.
+The host-side Rigol adapter is responsible for switching the scope between stopped data collection and normal trigger mode as needed for each LO programming capture. Rigol SCPI setup writes should be paced; back-to-back write-only setup commands can be ignored by the scope.
 
 The host should wait for the expected `report_end` record, or the expected single-command JSON response, before sending the next technician console command.
 
-For each LO programming step, the host should place the oscilloscope in the required trigger/capture state before sending `fulltest program lo1` or `fulltest program lo2`. Scope decode should happen immediately after the corresponding programming command completes, before the next LO is programmed.
+To guarantee observable dirty-register writes for the Rigol capture, the host should first prime LO1 and LO2 to a known off-target frequency, then run `fulltest plan <MHz>`, then arm and capture each planned LO programming event.
+
+Scope decode should happen immediately after the corresponding programming command completes, before the next LO is programmed.
 
 Clean host flow for the Rigol/register-verification slice:
 
 ```text
+rigol_ds1102e_scope_setup()          # Once before per-LO programming; pace setup writes.
+chip lo1
+lofreq 123.345
+chip lo2
+lofreq 123.345
+chip off
 fulltest plan <MHz>
-rigol_ds1102e_scope_setup()          # Once before per-LO programming.
 
 rigol_start_new_waveform()
 fulltest program lo1
