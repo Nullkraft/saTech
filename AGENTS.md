@@ -8,8 +8,8 @@
 - For focused full-test Python work, use `./bin/python -m unittest discover -s test -p '*full_test.py'`
 - Run the broader `./bin/python -m unittest discover -s test -p '*test.py'` before commits or when touching shared serial/command behavior
 
-## SA port handling
-- When the user says to open the SA port, start a persistent interactive harness/PTY session that opens the serial port once and holds it open across several tests.
+## SA Interactive Persistent Port Handling
+- When the user says to open the SA port, start a Python REPL/harness in a PTY session, keep it running, and feed commands into it across multiple turns.
 - Do not use one-shot probes for SA-port work unless the user explicitly asks for a single command/test.
 
 ## Firmware size budget
