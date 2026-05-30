@@ -116,6 +116,7 @@ def run_full_test(config, serial_factory=serial.Serial, rigol=None, expected_reg
     with serial_factory(config.port, config.baud, timeout=0.05) as ser:
         time.sleep(config.open_delay)
         ser.reset_input_buffer()
+        _drain_serial_until_quiet(ser)
         id_step = _send_command(ser, "unit_id", "id", config.timeout)
         id_check = FullTestCheck(
             name="unit_id",
@@ -477,6 +478,20 @@ def _read_response(ser, timeout):
         time.sleep(0.01)
 
     return b"".join(chunks)
+
+
+def _drain_serial_until_quiet(ser, timeout=8.0, quiet_period=0.5):
+    deadline = time.monotonic() + timeout
+    quiet_deadline = time.monotonic() + quiet_period
+    while time.monotonic() < deadline:
+        waiting = ser.in_waiting
+        if waiting:
+            ser.read(waiting)
+            quiet_deadline = time.monotonic() + quiet_period
+            continue
+        if time.monotonic() >= quiet_deadline:
+            return
+        time.sleep(0.01)
 
 
 def _hex_bytes(data):
