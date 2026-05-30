@@ -29,7 +29,7 @@ class RigolFullTestAdapter:
         delay=0.2,
         read_size=1200000,
         threshold=5,
-        slope_threshold=10,
+        slope_threshold=5,
         low_ratio=0.2,
         high_ratio=0.8,
         max_extra_edges=16,
