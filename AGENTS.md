@@ -12,6 +12,9 @@
 - When the user says to open the SA port, start a Python REPL/harness in a PTY session, keep it running, and feed commands into it across multiple turns.
 - Do not use one-shot probes for SA-port work unless the user explicitly asks for a single command/test.
 
+## Rigol SCPI command handling
+- Send Rigol SCPI setup commands sequentially, not in parallel. Scope setup commands can depend on prior settings, for example channel vertical scale must be applied before trigger level.
+
 ## Firmware size budget
 - Treat 80% flash usage in `pio run -e technician` as a hard limit for new feature work
 - When technician firmware reaches 80% flash, stop adding features and begin mitigation work first
