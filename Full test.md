@@ -137,6 +137,25 @@ The host should wait for the expected `report_end` record, or the expected singl
 
 For each LO programming step, the host should place the oscilloscope in the required trigger/capture state before sending `fulltest program lo1` or `fulltest program lo2`. Scope decode should happen immediately after the corresponding programming command completes, before the next LO is programmed.
 
+Clean host flow for the Rigol/register-verification slice:
+
+```text
+fulltest plan <MHz>
+rigol_ds1102e_scope_setup()          # Once before per-LO programming.
+
+rigol_prepare_for_new_sweep()
+fulltest program lo1
+capture_waveform_channels()
+rigol_ds1102e_spi_decode()
+compare LO1 registers
+
+rigol_prepare_for_new_sweep()
+fulltest program lo2
+capture_waveform_channels()
+rigol_ds1102e_spi_decode()
+compare LO2 registers
+```
+
 The BK390A reading should allow settling time after LO programming. The initial approach is to discard the first two BK390A readings and keep the third reading for the `315 MHz` path measurement report.
 
 ### Failure Behavior
@@ -234,7 +253,7 @@ register_values:
     result: PASS
 ```
 
-Register verification checks the dirty registers that were programmed on the SPI bus and reports the clean registers that were not written. The scope capture should only contain the registers that changed; this will almost always be registers 4, 1, and 0. Register verification checks fail early. Check the decoded dirty-register count first. If the count fails, report the count result and stop that LO's register verification. If the count passes, check the decoded dirty-register addresses. If the address check fails, report the count result, the address result, and stop that LO's register verification. If the address check passes, compare the expected and decoded 32-bit register values for dirty registers and report each comparison up to and including the first failing value. Clean registers should still be included in the register report as `CLEAN` with `decoded: not_written`.
+Register verification checks the dirty registers that were programmed on the SPI bus and reports the clean registers that were not written. The expected dirty-register count, addresses, and values must come from `max2871_expected.py` for the LO's starting state and target frequency rather than from a hard-coded register-address list. Register verification checks fail early. Check the decoded dirty-register count first. If the count fails, report the count result and stop that LO's register verification. If the count passes, check the decoded dirty-register addresses. If the address check fails, report the count result, the address result, and stop that LO's register verification. If the address check passes, compare the expected and decoded 32-bit register values for dirty registers and report each comparison up to and including the first failing value. Clean registers should still be included in the register report as `CLEAN` with `decoded: not_written`.
 
 Register result vocabulary:
 

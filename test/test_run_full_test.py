@@ -62,6 +62,7 @@ PROGRAM_LO2_RESPONSE = (
 
 class FakeSerial:
     instances = []
+    events = None
 
     def __init__(self, port, baud, timeout):
         self.port = port
@@ -89,6 +90,8 @@ class FakeSerial:
 
     def write(self, data):
         self.writes.append(data)
+        if FakeSerial.events is not None:
+            FakeSerial.events.append(f"serial:{data.decode('ascii').strip()}")
         self.response = self.responses.pop(0)
 
     def flush(self):
@@ -100,9 +103,78 @@ class FakeSerial:
         return chunk
 
 
+LO1_EXPECTED = {
+    "writes": [
+        {"address": 0, "value": 0xAAA00000, "hex": "0xAAA00000"},
+    ],
+    "registers": {
+        5: "0xAAA00005",
+        4: "0xAAA00004",
+        3: "0xAAA00003",
+        2: "0xAAA00002",
+        1: "0xAAA00001",
+        0: "0xAAA00000",
+    },
+}
+
+LO2_EXPECTED = {
+    "writes": [
+        {"address": 1, "value": 0xBBB00001, "hex": "0xBBB00001"},
+        {"address": 0, "value": 0xBBB00000, "hex": "0xBBB00000"},
+    ],
+    "registers": {
+        5: "0xBBB00005",
+        4: "0xBBB00004",
+        3: "0xBBB00003",
+        2: "0xBBB00002",
+        1: "0xBBB00001",
+        0: "0xBBB00000",
+    },
+}
+
+
+def fake_expected_registers(frequency_mhz):
+    if frequency_mhz == 3630.0:
+        return LO1_EXPECTED
+    if frequency_mhz == 3935.0:
+        return LO2_EXPECTED
+    raise AssertionError(f"unexpected frequency {frequency_mhz}")
+
+
+def decoded_from_expected(expected):
+    return {"decoded_words": list(expected["writes"])}
+
+
+class FakeRigol:
+    def __init__(self, decodes, events):
+        self.decodes = list(decodes)
+        self.events = events
+        self.decode_calls = []
+
+    def scope_setup(self):
+        self.events.append("rigol:setup")
+
+    def prepare_for_new_sweep(self):
+        self.events.append("rigol:prepare")
+
+    def capture_waveform_channels(self):
+        self.events.append("rigol:capture")
+        return {"capture": len(self.decode_calls)}
+
+    def spi_decode(self, capture, expected_writes, expected_addresses):
+        self.events.append("rigol:decode")
+        self.decode_calls.append({
+            "capture": capture,
+            "expected_writes": expected_writes,
+            "expected_addresses": expected_addresses,
+        })
+        return self.decodes.pop(0)
+
+
 class RunFullTestCase(unittest.TestCase):
     def setUp(self):
         FakeSerial.instances = []
+        FakeSerial.events = None
         FakeSerial.responses = [
             b"saTech WN2A ready",
             REFCHECK_RESPONSE,
@@ -360,6 +432,112 @@ class RunFullTestCase(unittest.TestCase):
                 ],
             },
         )
+
+    def test_rigol_register_verification_sequences_scope_and_passes(self):
+        events = []
+        FakeSerial.events = events
+        rigol = FakeRigol(
+            [
+                decoded_from_expected(LO1_EXPECTED),
+                decoded_from_expected(LO2_EXPECTED),
+            ],
+            events,
+        )
+        config = FullTestConfig(port="/dev/fake", timeout=0.01, open_delay=0.0)
+
+        report = run_full_test(
+            config,
+            serial_factory=FakeSerial,
+            rigol=rigol,
+            expected_register_provider=fake_expected_registers,
+        )
+
+        self.assertTrue(report.passed)
+        self.assertEqual(
+            events,
+            [
+                "serial:id",
+                "serial:fulltest refcheck",
+                "serial:set ref1",
+                "serial:fulltest pincheck",
+                "serial:chip off",
+                "serial:fulltest atten 12.00",
+                "serial:fulltest plan 10.000",
+                "rigol:setup",
+                "rigol:prepare",
+                "serial:fulltest program lo1",
+                "rigol:capture",
+                "rigol:decode",
+                "rigol:prepare",
+                "serial:fulltest program lo2",
+                "rigol:capture",
+                "rigol:decode",
+            ],
+        )
+        self.assertEqual(len(report.registers), 12)
+        self.assertEqual(rigol.decode_calls[0]["expected_addresses"], [0])
+        self.assertEqual(rigol.decode_calls[1]["expected_addresses"], [1, 0])
+        checks = {check.name: check for check in report.checks}
+        self.assertTrue(checks["lo1_register_verification"].passed)
+        self.assertTrue(checks["lo2_register_verification"].passed)
+        self.assertIn("registers", report.to_dict())
+
+    def test_rigol_register_verification_stops_after_lo1_failure(self):
+        events = []
+        FakeSerial.events = events
+        lo1_bad = {
+            "decoded_words": [
+                {"address": 0, "value": 0xBAD00000, "hex": "0xBAD00000"},
+            ]
+        }
+        rigol = FakeRigol([lo1_bad], events)
+        config = FullTestConfig(port="/dev/fake", timeout=0.01, open_delay=0.0)
+
+        report = run_full_test(
+            config,
+            serial_factory=FakeSerial,
+            rigol=rigol,
+            expected_register_provider=fake_expected_registers,
+        )
+
+        self.assertFalse(report.passed)
+        self.assertNotIn("serial:fulltest program lo2", events)
+        self.assertEqual(report.to_dict()["commands"][-1], "fulltest program lo1")
+        checks = {check.name: check for check in report.checks}
+        self.assertFalse(checks["lo1_r0"].passed)
+        self.assertFalse(checks["lo1_register_verification"].passed)
+
+    def test_rigol_register_verification_reports_lo2_failure_after_lo1_passes(self):
+        events = []
+        FakeSerial.events = events
+        lo2_bad = {
+            "decoded_words": [
+                {"address": 1, "value": 0xBAD00001, "hex": "0xBAD00001"},
+                {"address": 0, "value": 0xBBB00000, "hex": "0xBBB00000"},
+            ]
+        }
+        rigol = FakeRigol(
+            [
+                decoded_from_expected(LO1_EXPECTED),
+                lo2_bad,
+            ],
+            events,
+        )
+        config = FullTestConfig(port="/dev/fake", timeout=0.01, open_delay=0.0)
+
+        report = run_full_test(
+            config,
+            serial_factory=FakeSerial,
+            rigol=rigol,
+            expected_register_provider=fake_expected_registers,
+        )
+
+        self.assertFalse(report.passed)
+        self.assertIn("serial:fulltest program lo2", events)
+        checks = {check.name: check for check in report.checks}
+        self.assertTrue(checks["lo1_register_verification"].passed)
+        self.assertFalse(checks["lo2_r1"].passed)
+        self.assertFalse(checks["lo2_register_verification"].passed)
 
 
 if __name__ == "__main__":

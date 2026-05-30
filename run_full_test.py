@@ -1,7 +1,8 @@
 """Reusable full-test workflow for saTech hardware."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import json
+import math
 import string
 import time
 
@@ -9,6 +10,10 @@ import serial
 
 
 DEFAULT_EXPECTED_ID = "saTech WN2A ready"
+STARTUP_RF_MHZ = 1735.113
+REF_CLOCK_MHZ = 66.0
+IF1_CENTER_MHZ = 3600.0
+IF2_MHZ = 315.0
 
 
 @dataclass
@@ -25,8 +30,8 @@ class FullTestConfig:
 @dataclass
 class FullTestCheck:
     name: str
-    expected: str
-    actual: str
+    expected: object
+    actual: object
     passed: bool
 
     def to_dict(self):
@@ -59,28 +64,55 @@ class FullTestStep:
 
 
 @dataclass
+class FullTestRegister:
+    lo: str
+    register: str
+    state: str
+    expected: object
+    decoded: object
+    result: str
+
+    def to_dict(self):
+        return {
+            "lo": self.lo,
+            "register": self.register,
+            "state": self.state,
+            "expected": self.expected,
+            "decoded": self.decoded,
+            "result": self.result,
+        }
+
+
+@dataclass
 class FullTestReport:
     unit_id: str
     steps: list
     checks: list
     values: list
+    registers: list = field(default_factory=list)
 
     @property
     def passed(self):
         return all(check.passed for check in self.checks)
 
     def to_dict(self):
-        return {
+        result = {
             "passed": self.passed,
             "unit_id": self.unit_id,
             "commands": [step.command for step in self.steps],
             "checks": [check.to_dict() for check in self.checks],
             "values": [value.to_dict() for value in self.values],
         }
+        if self.registers:
+            result["registers"] = [register.to_dict() for register in self.registers]
+        return result
 
 
-def run_full_test(config, serial_factory=serial.Serial):
+def run_full_test(config, serial_factory=serial.Serial, rigol=None, expected_register_provider=None):
     """Run the first full-test slice and return a structured report."""
+    if rigol is not None and expected_register_provider is None:
+        expected_register_provider = _default_expected_register_provider
+
     with serial_factory(config.port, config.baud, timeout=0.05) as ser:
         time.sleep(config.open_delay)
         ser.reset_input_buffer()
@@ -104,26 +136,8 @@ def run_full_test(config, serial_factory=serial.Serial):
         chip_off_step = _send_command(ser, "chip_off", "chip off", config.timeout)
         atten_step = _send_command(ser, "atten", f"fulltest atten {config.atten_db:.2f}", config.timeout)
         plan_step = _send_command(ser, "plan", f"fulltest plan {config.rfin_mhz:.3f}", config.timeout)
-        program_lo1_step = _send_command(ser, "program_lo1", "fulltest program lo1", config.timeout)
-        program_lo2_step = _send_command(ser, "program_lo2", "fulltest program lo2", config.timeout)
 
-    checks = [id_check]
-    json_steps = [
-        refcheck_step,
-        pincheck_step,
-        atten_step,
-        plan_step,
-        program_lo1_step,
-        program_lo2_step,
-    ]
-    for step in json_steps:
-        checks.extend(_checks_from_json_step(step))
-    values = []
-    for step in json_steps:
-        values.extend(_values_from_json_step(step))
-    return FullTestReport(
-        unit_id=id_step.response,
-        steps=[
+        steps = [
             id_step,
             refcheck_step,
             set_ref1_step,
@@ -131,12 +145,56 @@ def run_full_test(config, serial_factory=serial.Serial):
             chip_off_step,
             atten_step,
             plan_step,
-            program_lo1_step,
-            program_lo2_step,
-        ],
-        checks=checks,
-        values=values,
-    )
+        ]
+        json_steps = [
+            refcheck_step,
+            pincheck_step,
+            atten_step,
+            plan_step,
+        ]
+        register_checks = []
+        registers = []
+
+        if rigol is not None:
+            _call_scope_method(rigol, "scope_setup", "setup", "rigol_ds1102e_scope_setup")
+            lo1_frequency = _value_from_json_step(plan_step, "lo1_frequency_mhz")
+            lo2_frequency = _value_from_json_step(plan_step, "lo2_frequency_mhz")
+
+            program_lo1_step, lo1_checks, lo1_registers = _program_and_verify_lo(
+                ser,
+                rigol,
+                "lo1",
+                lo1_frequency,
+                config.timeout,
+                expected_register_provider,
+            )
+            steps.append(program_lo1_step)
+            json_steps.append(program_lo1_step)
+            register_checks.extend(lo1_checks)
+            registers.extend(lo1_registers)
+            if not _checks_passed(lo1_checks):
+                return _build_report(id_step.response, steps, id_check, json_steps, register_checks, registers)
+
+            program_lo2_step, lo2_checks, lo2_registers = _program_and_verify_lo(
+                ser,
+                rigol,
+                "lo2",
+                lo2_frequency,
+                config.timeout,
+                expected_register_provider,
+            )
+            steps.append(program_lo2_step)
+            json_steps.append(program_lo2_step)
+            register_checks.extend(lo2_checks)
+            registers.extend(lo2_registers)
+            return _build_report(id_step.response, steps, id_check, json_steps, register_checks, registers)
+
+        program_lo1_step = _send_command(ser, "program_lo1", "fulltest program lo1", config.timeout)
+        program_lo2_step = _send_command(ser, "program_lo2", "fulltest program lo2", config.timeout)
+        steps.extend([program_lo1_step, program_lo2_step])
+        json_steps.extend([program_lo1_step, program_lo2_step])
+
+    return _build_report(id_step.response, steps, id_check, json_steps, [], [])
 
 
 def _send_command(ser, name, command, timeout):
@@ -149,6 +207,230 @@ def _send_command(ser, name, command, timeout):
         response=_printable_text(response),
         response_hex=_hex_bytes(response),
     )
+
+
+def _program_and_verify_lo(ser, rigol, lo_name, frequency_mhz, timeout, expected_register_provider):
+    expected = _expected_registers(expected_register_provider, lo_name, frequency_mhz)
+    expected_addresses = [word["address"] for word in _register_words(expected)]
+    _call_scope_method(rigol, "prepare_for_new_sweep", "rigol_prepare_for_new_sweep")
+    step = _send_command(ser, f"program_{lo_name}", f"fulltest program {lo_name}", timeout)
+    capture = _call_scope_method(rigol, "capture_waveform_channels")
+    decoded = _call_scope_method(
+        rigol,
+        "spi_decode",
+        "rigol_ds1102e_spi_decode",
+        capture,
+        expected_writes=len(expected_addresses),
+        expected_addresses=expected_addresses,
+    )
+    checks, registers = _verify_registers(lo_name, expected, decoded)
+    return step, checks, registers
+
+
+def _build_report(unit_id, steps, id_check, json_steps, register_checks, registers):
+    checks = [id_check]
+    for step in json_steps:
+        checks.extend(_checks_from_json_step(step))
+    checks.extend(register_checks)
+    values = []
+    for step in json_steps:
+        values.extend(_values_from_json_step(step))
+    return FullTestReport(
+        unit_id=unit_id,
+        steps=steps,
+        checks=checks,
+        values=values,
+        registers=registers,
+    )
+
+
+def _default_expected_register_provider(lo_name, frequency_mhz):
+    from max2871_expected import expected_registers_for_frequencies
+
+    startup_frequency = _startup_lo_frequency(lo_name)
+    return expected_registers_for_frequencies([startup_frequency, frequency_mhz])[-1]
+
+
+def _expected_registers(provider, lo_name, frequency_mhz):
+    try:
+        return provider(lo_name, frequency_mhz)
+    except TypeError:
+        return provider(frequency_mhz)
+
+
+def _startup_lo_frequency(lo_name):
+    lo1_frequency, lo2_frequency = _planned_lo_frequencies(STARTUP_RF_MHZ)
+    if lo_name == "lo1":
+        return lo1_frequency
+    if lo_name == "lo2":
+        return lo2_frequency
+    raise ValueError(f"unsupported LO {lo_name}")
+
+
+def _planned_lo_frequencies(rfin_mhz):
+    fpfd = REF_CLOCK_MHZ
+    if1_step = fpfd * math.floor((IF1_CENTER_MHZ / fpfd) + 0.5)
+    hi_lo1 = rfin_mhz < 2343.0001
+    sign = 1 if hi_lo1 else -1
+    lo1_frequency = fpfd * math.floor(((if1_step + sign * rfin_mhz) / fpfd) + 0.5)
+    if1 = abs(lo1_frequency - sign * rfin_mhz)
+    lo2_frequency = if1 + IF2_MHZ
+    return lo1_frequency, lo2_frequency
+
+
+def _call_scope_method(scope, *names, **kwargs):
+    args = ()
+    if names and not isinstance(names[-1], str):
+        args = (names[-1],)
+        names = names[:-1]
+    for name in names:
+        method = getattr(scope, name, None)
+        if method is not None:
+            return method(*args, **kwargs)
+    raise AttributeError(f"scope does not provide any of: {', '.join(names)}")
+
+
+def _checks_passed(checks):
+    return all(check.passed for check in checks)
+
+
+def _verify_registers(lo_name, expected, decoded):
+    expected_words = _register_words(expected)
+    decoded_words = _register_words(decoded)
+    expected_addresses = [word["address"] for word in expected_words]
+    decoded_addresses = [word["address"] for word in decoded_words]
+    expected_map = _register_map(expected_words)
+    decoded_map = _register_map(decoded_words)
+    registers = _register_records(lo_name, expected, expected_addresses, decoded_map)
+    checks = []
+
+    count_passed = len(decoded_words) == len(expected_words)
+    checks.append(FullTestCheck(
+        name=f"{lo_name}_register_count",
+        expected=len(expected_words),
+        actual=len(decoded_words),
+        passed=count_passed,
+    ))
+    if not count_passed:
+        checks.append(_register_summary_check(lo_name, False, "register_count"))
+        return checks, registers
+
+    addresses_passed = decoded_addresses == expected_addresses
+    checks.append(FullTestCheck(
+        name=f"{lo_name}_register_addresses",
+        expected=expected_addresses,
+        actual=decoded_addresses,
+        passed=addresses_passed,
+    ))
+    if not addresses_passed:
+        checks.append(_register_summary_check(lo_name, False, "register_addresses"))
+        return checks, registers
+
+    values_passed = True
+    for address in expected_addresses:
+        expected_hex = expected_map.get(address)
+        decoded_hex = decoded_map.get(address)
+        passed = expected_hex == decoded_hex
+        checks.append(FullTestCheck(
+            name=f"{lo_name}_r{address}",
+            expected=expected_hex,
+            actual=decoded_hex,
+            passed=passed,
+        ))
+        if not passed:
+            values_passed = False
+            break
+
+    checks.append(_register_summary_check(lo_name, values_passed, "PASS" if values_passed else "register_values"))
+    return checks, registers
+
+
+def _register_summary_check(lo_name, passed, detail):
+    return FullTestCheck(
+        name=f"{lo_name}_register_verification",
+        expected="PASS",
+        actual="PASS" if passed else detail,
+        passed=passed,
+    )
+
+
+def _register_records(lo_name, expected, dirty_addresses, decoded_map):
+    expected_registers = expected.get("registers", {})
+    records = []
+    for address in range(5, -1, -1):
+        expected_hex = _hex_value(expected_registers.get(address))
+        decoded_hex = decoded_map.get(address)
+        state = "DIRTY" if address in dirty_addresses else "CLEAN"
+        if state == "DIRTY" and decoded_hex == expected_hex:
+            result = "PASS"
+        elif state == "DIRTY" and decoded_hex is None:
+            result = "MISSING"
+        elif state == "DIRTY":
+            result = "FAIL"
+        elif decoded_hex is None:
+            result = "CLEAN"
+        else:
+            result = "UNEXPECTED_WRITE"
+        records.append(FullTestRegister(
+            lo=lo_name.upper(),
+            register=f"R{address}",
+            state=state,
+            expected=expected_hex,
+            decoded=decoded_hex,
+            result=result,
+        ))
+    return records
+
+
+def _register_words(register_data):
+    if isinstance(register_data, list):
+        return [_register_word_from_value(value, None) for value in register_data]
+    for key in ("writes", "decoded_words"):
+        if key in register_data:
+            return [_register_word_from_mapping(word, index) for index, word in enumerate(register_data[key])]
+    if "address_map" in register_data:
+        words = []
+        for address, value in register_data["address_map"].items():
+            if value is not None:
+                words.append(_register_word_from_value(value, int(address)))
+        return words
+    return []
+
+
+def _register_word_from_mapping(word, index):
+    value = word.get("value", word.get("hex"))
+    if value is None:
+        value = word.get("decoded")
+    address = word.get("address")
+    return _register_word_from_value(value, int(address) if address is not None else None)
+
+
+def _register_word_from_value(value, fallback_address):
+    numeric_value = int(value, 16) if isinstance(value, str) else int(value)
+    return {
+        "address": numeric_value & 0x7 if fallback_address is None else int(fallback_address),
+        "value": numeric_value,
+        "hex": f"0x{numeric_value:08X}",
+    }
+
+
+def _register_map(words):
+    return {word["address"]: word["hex"] for word in words}
+
+
+def _hex_value(value):
+    if value is None:
+        return None
+    if isinstance(value, str):
+        return f"0x{int(value, 16):08X}"
+    return f"0x{int(value):08X}"
+
+
+def _value_from_json_step(step, name):
+    for value in _values_from_json_step(step):
+        if value.name == name:
+            return value.value
+    raise ValueError(f"{name} was not reported by {step.command}")
 
 
 def _checks_from_json_step(step):
