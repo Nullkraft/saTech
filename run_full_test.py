@@ -109,7 +109,7 @@ class FullTestReport:
         return result
 
 
-def run_full_test(config, serial_factory=serial.Serial, rigol=None, expected_register_provider=None):
+def run_full_test(config, serial_factory=serial.Serial, rigol=None, meter=None, expected_register_provider=None):
     """Run the first full-test slice and return a structured report."""
     if rigol is not None and expected_register_provider is None:
         expected_register_provider = _default_expected_register_provider
@@ -164,6 +164,8 @@ def run_full_test(config, serial_factory=serial.Serial, rigol=None, expected_reg
         steps.append(plan_step)
         json_steps.append(plan_step)
 
+        measurement_values = []
+
         if rigol is not None:
             lo1_frequency = _value_from_json_step(plan_step, "lo1_frequency_mhz")
             lo2_frequency = _value_from_json_step(plan_step, "lo2_frequency_mhz")
@@ -197,14 +199,19 @@ def run_full_test(config, serial_factory=serial.Serial, rigol=None, expected_reg
             json_steps.append(program_lo2_step)
             register_checks.extend(lo2_checks)
             registers.extend(lo2_registers)
-            return _build_report(id_step.response, steps, id_check, json_steps, register_checks, registers)
+            if not _checks_passed(lo2_checks):
+                return _build_report(id_step.response, steps, id_check, json_steps, register_checks, registers)
+        else:
+            program_lo1_step = _send_command(ser, "program_lo1", "fulltest program lo1", config.timeout)
+            program_lo2_step = _send_command(ser, "program_lo2", "fulltest program lo2", config.timeout)
+            steps.extend([program_lo1_step, program_lo2_step])
+            json_steps.extend([program_lo1_step, program_lo2_step])
 
-        program_lo1_step = _send_command(ser, "program_lo1", "fulltest program lo1", config.timeout)
-        program_lo2_step = _send_command(ser, "program_lo2", "fulltest program lo2", config.timeout)
-        steps.extend([program_lo1_step, program_lo2_step])
-        json_steps.extend([program_lo1_step, program_lo2_step])
+        if meter is not None:
+            steps.append(_send_command(ser, "chip_off_final", "chip off", config.timeout))
+            measurement_values.extend(_measure_path_output(meter))
 
-    return _build_report(id_step.response, steps, id_check, json_steps, [], [])
+    return _build_report(id_step.response, steps, id_check, json_steps, register_checks, registers, measurement_values)
 
 
 def _send_command(ser, name, command, timeout):
@@ -242,7 +249,7 @@ def _program_and_verify_lo(ser, rigol, lo_name, frequency_mhz, previous_frequenc
     return step, checks, registers
 
 
-def _build_report(unit_id, steps, id_check, json_steps, register_checks, registers):
+def _build_report(unit_id, steps, id_check, json_steps, register_checks, registers, measurement_values=None):
     checks = [id_check]
     for step in json_steps:
         checks.extend(_checks_from_json_step(step))
@@ -250,6 +257,8 @@ def _build_report(unit_id, steps, id_check, json_steps, register_checks, registe
     values = []
     for step in json_steps:
         values.extend(_values_from_json_step(step))
+    if measurement_values is not None:
+        values.extend(measurement_values)
     return FullTestReport(
         unit_id=unit_id,
         steps=steps,
@@ -457,6 +466,41 @@ def _value_from_json_step(step, name):
         if value.name == name:
             return value.value
     raise ValueError(f"{name} was not reported by {step.command}")
+
+
+def _measure_path_output(meter):
+    reading = None
+    for _ in range(3):
+        reading = _call_meter_method(meter, "read_measurement", "bk390a_read")
+    voltage_v = _measurement_voltage_volts(reading["measurement"])
+    power_dbm = _volts_to_dbm(voltage_v)
+    return [
+        FullTestValue(name="bk390a_voltage_v", value=voltage_v),
+        FullTestValue(name="logamp_power_dbm", value=power_dbm),
+    ]
+
+
+def _call_meter_method(meter, *names, **kwargs):
+    for name in names:
+        method = getattr(meter, name, None)
+        if method is not None:
+            return method(**kwargs)
+    raise AttributeError(f"meter does not provide any of: {', '.join(names)}")
+
+
+def _measurement_voltage_volts(measurement):
+    value = measurement["value"]
+    unit = measurement["unit"]
+    if unit == "V":
+        return value
+    if unit == "mV":
+        return value / 1000.0
+    raise ValueError(f"unsupported BK390A unit {unit!r}")
+
+
+def _volts_to_dbm(voltage):
+    x = voltage
+    return (((((((-9.460927 * x + 110.57352) * x - 538.8610489) * x + 1423.9059205) * x - 2219.08322) * x + 2073.3123) * x - 1122.5121) * x + 355.7665) * x - 112.663
 
 
 def _checks_from_json_step(step):

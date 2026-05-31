@@ -85,6 +85,10 @@ def rigol_responses():
     ]
 
 
+def rigol_meter_responses():
+    return rigol_responses() + [CHIP_OFF_RESPONSE]
+
+
 class FakeSerial:
     instances = []
     events = None
@@ -194,6 +198,33 @@ class FakeRigol:
             "expected_addresses": expected_addresses,
         })
         return self.decodes.pop(0)
+
+
+class FakeMeter:
+    def __init__(self, readings, events=None):
+        self.readings = list(readings)
+        self.events = events
+        self.calls = 0
+
+    def read_measurement(self):
+        self.calls += 1
+        if self.events is not None:
+            self.events.append("meter:read")
+        return self.readings.pop(0)
+
+
+def meter_reading(value, unit="mV"):
+    return {
+        "measurement": {
+            "value": value,
+            "unit": unit,
+        }
+    }
+
+
+def volts_to_dbm(voltage):
+    x = voltage
+    return (((((((-9.460927 * x + 110.57352) * x - 538.8610489) * x + 1423.9059205) * x - 2219.08322) * x + 2073.3123) * x - 1122.5121) * x + 355.7665) * x - 112.663
 
 
 class RunFullTestCase(unittest.TestCase):
@@ -584,6 +615,84 @@ class RunFullTestCase(unittest.TestCase):
         self.assertTrue(checks["lo1_register_verification"].passed)
         self.assertFalse(checks["lo2_r1"].passed)
         self.assertFalse(checks["lo2_register_verification"].passed)
+
+    def test_rigol_and_meter_report_final_measurement_from_third_read(self):
+        events = []
+        FakeSerial.events = events
+        FakeSerial.responses = rigol_meter_responses()
+        rigol = FakeRigol(
+            [
+                decoded_from_expected(LO1_EXPECTED),
+                decoded_from_expected(LO2_EXPECTED),
+            ],
+            events,
+        )
+        meter = FakeMeter(
+            [
+                meter_reading(1.1),
+                meter_reading(1.2),
+                meter_reading(1.3),
+            ],
+            events,
+        )
+        config = FullTestConfig(port="/dev/fake", timeout=0.01, open_delay=0.0)
+
+        report = run_full_test(
+            config,
+            serial_factory=FakeSerial,
+            rigol=rigol,
+            meter=meter,
+            expected_register_provider=fake_expected_registers,
+        )
+
+        self.assertTrue(report.passed)
+        self.assertEqual(meter.calls, 3)
+        self.assertEqual(
+            events[-5:],
+            [
+                "rigol:decode",
+                "serial:chip off",
+                "meter:read",
+                "meter:read",
+                "meter:read",
+            ],
+        )
+        values = {value.name: value.value for value in report.values}
+        self.assertEqual(values["bk390a_voltage_v"], 0.0013)
+        self.assertEqual(values["logamp_power_dbm"], volts_to_dbm(0.0013))
+        self.assertEqual(report.to_dict()["commands"][-1], "chip off")
+
+    def test_meter_does_not_run_after_lo2_failure(self):
+        events = []
+        FakeSerial.events = events
+        FakeSerial.responses = rigol_responses()
+        lo2_bad = {
+            "decoded_words": [
+                {"address": 1, "value": 0xBAD00001, "hex": "0xBAD00001"},
+                {"address": 0, "value": 0xBBB00000, "hex": "0xBBB00000"},
+            ]
+        }
+        rigol = FakeRigol(
+            [
+                decoded_from_expected(LO1_EXPECTED),
+                lo2_bad,
+            ],
+            events,
+        )
+        meter = FakeMeter([meter_reading(1.3)], events)
+        config = FullTestConfig(port="/dev/fake", timeout=0.01, open_delay=0.0)
+
+        report = run_full_test(
+            config,
+            serial_factory=FakeSerial,
+            rigol=rigol,
+            meter=meter,
+            expected_register_provider=fake_expected_registers,
+        )
+
+        self.assertFalse(report.passed)
+        self.assertEqual(meter.calls, 0)
+        self.assertNotIn("meter:read", events)
 
 
 class RigolFullTestAdapterCase(unittest.TestCase):
