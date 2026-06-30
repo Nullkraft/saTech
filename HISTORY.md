@@ -1,2 +1,2 @@
-Run `./bin/python full_test.py --port /dev/ttyUSB1` and report the results cleanly.
-Records a local hardware full-test run against the SA port and summarizes the outcome.
+The standalone host-side full-test runner was retired.
+Future full-test automation will only orchestrate semantic MCP server operations.
