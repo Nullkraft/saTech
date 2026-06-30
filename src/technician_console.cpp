@@ -862,7 +862,7 @@ void printTechnicianBanner()
     Serial.println(F(" fulltest refcheck     Report refclock pin checks"));
     Serial.println(F(" fulltest pincheck     Report chip pin checks"));
     Serial.println(F(" fulltest atten <dB>   Program and report set point"));
-    Serial.println(F(" fulltest plan <MHz>   Report frequency plan"));
+    Serial.println(F(" fulltest plan <MHz>   Frequency plan (Report only)"));
     Serial.println(F(" fulltest program <lo1|lo2> Program one planned LO"));
     Serial.println(F(" ifmode <high|low>     Set injection for the selected LO"));
     Serial.println(F(" lofreq <MHz>          Set selected LO frequency"));
