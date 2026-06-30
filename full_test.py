@@ -12,7 +12,7 @@ from rigol_full_test_adapter import RigolFullTestAdapter
 from run_full_test import DEFAULT_EXPECTED_ID, FullTestConfig, run_full_test
 
 
-BK390A_PROJECT = Path("~/projects/BK-Precision-390A").expanduser()
+BK390A_PROJECT = Path("~/projects/MCP/BK-Precision-390A-MCP").expanduser()
 BK390A_DEFAULT_PORT = "/dev/serial/by-id/usb-Prolific_Technology_Inc._USB-Serial_Controller_D-if00-port0"
 BK390A_PORT_MARKERS = (
     "usb-Prolific_Technology_Inc._USB-Serial_Controller",

@@ -6,7 +6,7 @@ import sys
 import time
 
 
-RIGOL_PROJECT = Path("~/projects/Rigol-DS1102E-Oscilloscope").expanduser()
+RIGOL_PROJECT = Path("~/projects/MCP/Rigol-DS1102E-Oscope-MCP").expanduser()
 if str(RIGOL_PROJECT) not in sys.path:
     sys.path.insert(0, str(RIGOL_PROJECT))
 
