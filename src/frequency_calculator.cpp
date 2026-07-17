@@ -1,8 +1,7 @@
 #include "frequency_calculator.h"
 #include <math.h>   // round(), fabs()
 
-// Overload A: Tech and Normal operation.
-// Delegates to Overload B with both LO2 and LO3 set to High.
+// Default plan path for standard operation: LO2 and LO3 use high-side injection.
 void FrequencyCalculator::set_LO_frequencies(double rfin, double refClockMHz, int r_div)
 {
   set_LO_frequencies(rfin, refClockMHz, r_div,
@@ -10,9 +9,8 @@ void FrequencyCalculator::set_LO_frequencies(double rfin, double refClockMHz, in
                      LOInjectionMode::High);
 }
 
-// Overload B: Calibration operation.
-// Caller explicitly specifies LO2 and LO3 injection modes.
-// LO1 injection mode is computed internally from the frequency plan threshold.
+// Alternate plan path for cases that need to set LO2 and LO3 injection side.
+// LO1 remains automatically selected from the RF crossover.
 void FrequencyCalculator::set_LO_frequencies(double rfin, double refClockMHz, int r_div,
                                               LOInjectionMode lo2Mode,
                                               LOInjectionMode lo3Mode)
@@ -47,7 +45,7 @@ void FrequencyCalculator::compute_LO_frequencies(double rfin, double refClockMHz
 
   FreqLO1 = fpfd * round((IF1_step + sign * rfin) / fpfd);
 
-  IF1 = fabs(FreqLO1 - sign * rfin);   // fabs guards against rounding producing a tiny negative
+  IF1 = fabs(FreqLO1 - sign * rfin);   // Guarantees IF1 never goes negative
 
   FreqLO2 = (LO2InjectionMode == LOInjectionMode::High) ? (IF1 + IF2) : (IF1 - IF2);
 
