@@ -14,6 +14,8 @@ public:
   double IF3 = 45.0;
   double RefClock1 = 66.000;
   double RefClock2 = 66.666;
+  static constexpr double LO1_REF1_THRESHOLD_MHZ = 2343.0001;
+  static constexpr double LO1_REF2_THRESHOLD_MHZ = 2403.2731;
 
   // Read-only outputs — reflect the modes used in the last computed plan.
   // Do not write these directly.

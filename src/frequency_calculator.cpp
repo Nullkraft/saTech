@@ -35,7 +35,7 @@ void FrequencyCalculator::compute_LO_frequencies(double rfin, double refClockMHz
 
   // RF crossover where LO1 changes injection side based on which refClock is selected.
   // Below this threshold LO1 uses high-side injection; above it LO1 uses low-side.
-  double threshold = (refClockMHz == RefClock1) ? 2343.0001 : 2403.2731;
+  double threshold = (refClockMHz == RefClock1) ? LO1_REF1_THRESHOLD_MHZ : LO1_REF2_THRESHOLD_MHZ;
 
   double fpfd     = refClockMHz / R;
   double IF1_step = fpfd * round(IF1_center / fpfd);
