@@ -17,7 +17,7 @@ public:
   static constexpr double LO1_REF1_THRESHOLD_MHZ = 2343.0001;
   static constexpr double LO1_REF2_THRESHOLD_MHZ = 2403.2731;
 
-  // Read-only outputs --> LO high/low side injection mode is always set by the latest frequency plan.
+  // Read-only outputs — injection modes selected by the most recent frequency plan.
   LOInjectionMode LO1InjectionMode;  // LO1 injection side chosen automatically from the plan crossover.
   LOInjectionMode LO2InjectionMode;  // LO2 injection side used in the computed plan.
   LOInjectionMode LO3InjectionMode;  // LO3 injection side used in the computed plan.
