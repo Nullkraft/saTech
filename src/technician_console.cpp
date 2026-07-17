@@ -31,6 +31,7 @@ size_t technicianInputLength = 0U;
 const ChipTarget PINCHECK_TARGETS[] = {
     ChipTarget::LO1,
     ChipTarget::LO2,
+    // TODO:     ChipTarget::LO3
     ChipTarget::Attenuator,
     ChipTarget::ADC1,
     ChipTarget::ADC2,
