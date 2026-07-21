@@ -2,6 +2,7 @@
 .pio
 .vscode
 *code-workspace
+platformio_override.ini
 docs/
 
 # AI developement files
