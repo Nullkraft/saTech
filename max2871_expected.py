@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 """Compute expected MAX2871 register writes with the project C++ library."""
 
-from __future__ import annotations
-
 import argparse
 import re
 import subprocess

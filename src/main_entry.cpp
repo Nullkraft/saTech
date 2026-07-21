@@ -91,6 +91,13 @@ void setup()
         // Wait briefly for USB serial on boards that need it.
     }
 
+    // SPI.begin() is actually being called in ArduinoHAL::begin().
+    // It enables the optional SPI functionality on the I/O pins.
+    // Because ArduinoHAL is in another project folder SPI.begin()
+    // is hidden from this project and no amount of searching will
+    // reveal its true location. I duplicated it here to reduce
+    // confusion.
+    SPI.begin();
     resetConsoleState();
     saTech.begin("ascii");
     // saTech.begin("binary");
