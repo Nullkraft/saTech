@@ -9,9 +9,9 @@ constexpr uint8_t PIN_LE_LO1  = A3;
 constexpr uint8_t PIN_LE_LO2  = 4;
 constexpr uint8_t PIN_LE_LO3  = A4;
 
-// LE / chip-select pins — ADC1, ADC2, RAM, and Flash assert LOW
-constexpr uint8_t PIN_ADC1    = 3;
-constexpr uint8_t PIN_ADC2    = 2;
+// LE / chip-select pins — ADC_1, ADC_2, RAM, and Flash assert LOW
+constexpr uint8_t PIN_ADC_1    = 3;
+constexpr uint8_t PIN_ADC_2    = 2;
 constexpr uint8_t PIN_RAM     = A0;
 constexpr uint8_t PIN_FLASH   = A1;
 
@@ -19,7 +19,7 @@ constexpr uint8_t PIN_FLASH   = A1;
 constexpr uint8_t PIN_REF_EN1 = 5;
 constexpr uint8_t PIN_REF_EN2 = 6;
 
-enum class ChipTarget { None, LO1, LO2, LO3, Attenuator, ADC1, ADC2, RAM, Flash };
+enum class ChipTarget { None, LO1, LO2, LO3, Attenuator, ADC_1, ADC_2, RAM, Flash };
 enum class ReferenceTarget { None, Ref1, Ref2 };
 enum class SerialTransportEncoding { Ascii, Binary };
 

@@ -113,8 +113,8 @@ void setup()
     pinMode(PIN_ATTEN,   OUTPUT);
     pinMode(PIN_REF_EN1, OUTPUT);
     pinMode(PIN_REF_EN2, OUTPUT);
-    pinMode(PIN_ADC1,    OUTPUT);
-    pinMode(PIN_ADC2,    OUTPUT);
+    pinMode(PIN_ADC_1,    OUTPUT);
+    pinMode(PIN_ADC_2,    OUTPUT);
     pinMode(PIN_RAM,     OUTPUT);
     pinMode(PIN_FLASH,   OUTPUT);
     pinMode(LED_BUILTIN, OUTPUT);
