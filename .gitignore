@@ -1,5 +1,6 @@
 .pio
 .vscode
+*code-workspace
 docs/
 
 # AI developement files
