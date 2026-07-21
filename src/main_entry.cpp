@@ -5,6 +5,7 @@
 #include <arduino_hal.h>
 #include <frequency_calculator.h>
 #include <max2871.h>
+#include <w25n_Flash.h>
 #include "command_interface.h"
 #include "console_state.h"
 #include "technician_console.h"
