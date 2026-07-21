@@ -266,11 +266,11 @@ void handleControlWord(uint32_t word)
         return;
     }
     if (selector == 0x05FFU) {
-        selectSerialChipTarget(ChipTarget::ADC1);
+        selectSerialChipTarget(ChipTarget::ADC_1);
         return;
     }
     if (selector == 0x0DFFU) {
-        selectSerialChipTarget(ChipTarget::ADC2);
+        selectSerialChipTarget(ChipTarget::ADC_2);
         return;
     }
     if (selector == 0x15FFU) {
@@ -321,11 +321,11 @@ void handleDirectRegisterDataWord(uint32_t dataWord)
         case ChipTarget::Attenuator:
             programAttenuatorRaw(static_cast<uint8_t>(dataWord & 0x7FU));
             break;
-        case ChipTarget::ADC1:
-            spiWrite32(PIN_ADC1, true, dataWord);
+        case ChipTarget::ADC_1:
+            spiWrite32(PIN_ADC_1, true, dataWord);
             break;
-        case ChipTarget::ADC2:
-            spiWrite32(PIN_ADC2, true, dataWord);
+        case ChipTarget::ADC_2:
+            spiWrite32(PIN_ADC_2, true, dataWord);
             break;
         case ChipTarget::RAM:
             spiWrite32(PIN_RAM, true, dataWord);

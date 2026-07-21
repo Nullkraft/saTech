@@ -70,8 +70,8 @@ const ChipSelectDefinition CHIP_DEFINITIONS[] = {
     {ChipTarget::LO3,        PIN_LE_LO3, HIGH},
     {ChipTarget::RAM,        PIN_RAM,    LOW},
     {ChipTarget::Flash,      PIN_FLASH,  LOW},
-    {ChipTarget::ADC1,       PIN_ADC1,   LOW},
-    {ChipTarget::ADC2,       PIN_ADC2,   LOW},
+    {ChipTarget::ADC_1,       PIN_ADC_1,   LOW},
+    {ChipTarget::ADC_2,       PIN_ADC_2,   LOW},
 };
 
 const size_t CHIP_COUNT =
@@ -188,8 +188,8 @@ const __FlashStringHelper* chipTargetName(ChipTarget target)
         case ChipTarget::LO2:        return F("LO2");
         case ChipTarget::LO3:        return F("LO3");
         case ChipTarget::Attenuator: return F("Attenuator");
-        case ChipTarget::ADC1:       return F("ADC1");
-        case ChipTarget::ADC2:       return F("ADC2");
+        case ChipTarget::ADC_1:       return F("ADC_1");
+        case ChipTarget::ADC_2:       return F("ADC_2");
         case ChipTarget::RAM:        return F("RAM");
         case ChipTarget::Flash:      return F("FLASH");
         case ChipTarget::None:

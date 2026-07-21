@@ -33,8 +33,8 @@ const ChipTarget PINCHECK_TARGETS[] = {
     ChipTarget::LO2,
     // TODO:     ChipTarget::LO3
     ChipTarget::Attenuator,
-    ChipTarget::ADC1,
-    ChipTarget::ADC2,
+    ChipTarget::ADC_1,
+    ChipTarget::ADC_2,
     ChipTarget::RAM,
     ChipTarget::Flash,
 };
@@ -428,10 +428,10 @@ void handleFulltestPincheck()
     results[1] = chipStateMatches(ChipTarget::LO2);
     writeChipSelectState(ChipTarget::Attenuator);
     results[2] = chipStateMatches(ChipTarget::Attenuator);
-    writeChipSelectState(ChipTarget::ADC1);
-    results[3] = chipStateMatches(ChipTarget::ADC1);
-    writeChipSelectState(ChipTarget::ADC2);
-    results[4] = chipStateMatches(ChipTarget::ADC2);
+    writeChipSelectState(ChipTarget::ADC_1);
+    results[3] = chipStateMatches(ChipTarget::ADC_1);
+    writeChipSelectState(ChipTarget::ADC_2);
+    results[4] = chipStateMatches(ChipTarget::ADC_2);
     writeChipSelectState(ChipTarget::RAM);
     results[5] = chipStateMatches(ChipTarget::RAM);
     writeChipSelectState(ChipTarget::Flash);
