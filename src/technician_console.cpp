@@ -57,7 +57,7 @@ enum class TechnicianCommandKind {
     Chip,
     Set,
     Spi,
-    wId,
+    IdFlash,
 };
 
 struct TechnicianCommandMap {
@@ -75,6 +75,7 @@ const char CMD_LOFREQ[] = "lofreq";
 const char CMD_CHIP[] = "chip";
 const char CMD_SET[] = "set";
 const char CMD_SPI[] = "spi";
+const char CMD_IDFLASH[] = "idflash";
 
 const TechnicianCommandMap TECHNICIAN_COMMANDS[] PROGMEM = {
     {CMD_HELP, TechnicianCommandKind::Help},
@@ -87,6 +88,7 @@ const TechnicianCommandMap TECHNICIAN_COMMANDS[] PROGMEM = {
     {CMD_CHIP, TechnicianCommandKind::Chip},
     {CMD_SET, TechnicianCommandKind::Set},
     {CMD_SPI, TechnicianCommandKind::Spi},
+    {CMD_IDFLASH, TechnicianCommandKind::IdFlash},
 };
 constexpr size_t TECHNICIAN_COMMAND_COUNT = sizeof(TECHNICIAN_COMMANDS) / sizeof(TECHNICIAN_COMMANDS[0]);
 
