@@ -874,6 +874,7 @@ void printTechnicianBanner()
     Serial.println(F("   targets: lo1 lo2 lo3 atten adc1 adc2 ram flash"));
     Serial.println(F(" set <ref1|ref2|off>   Enable one or disable both"));
     Serial.println(F(" spi <hex32>           Send raw 32-bit word to selected LO"));
+    Serial.println(F(" idflash <hex32>       Send raw 32-bit word to rint flash ID"));
     Serial.println();
 }
 
