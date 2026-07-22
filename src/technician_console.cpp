@@ -996,6 +996,9 @@ void handleTechnicianCommand(const char* line)
             }
             processSpiToken(tokens[1]);
             return;
+        case TechnicianCommandKind::IdFlash:
+            processReceivedWord(0x9FU);
+            return;
         case TechnicianCommandKind::Unknown:
         default:
             printTechnicianBanner();
