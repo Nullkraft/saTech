@@ -287,7 +287,7 @@ void handleControlWord(uint32_t word)
         const uint8_t nibble = static_cast<uint8_t>((word >> shift) & 0x0FU);
         Serial.print(hexDigits[nibble]);
     }
-    Serial.print(F(" ignored."));
+    Serial.println(F(" ignored."));
 }
 
 void handleFmnDataWord(uint32_t packedFMN)
