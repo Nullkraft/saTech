@@ -880,17 +880,23 @@ void printTechnicianBanner()
 
 void handleTechnicianCommand(const char* line)
 {
+    // Exit, nothing to do
     if (line == nullptr) {
         return;
     }
+
+    // Else, convert 'line' to a null-terminated string
     char buffer[INPUT_BUFFER_SIZE];
     strncpy(buffer, line, sizeof(buffer) - 1U);
     buffer[sizeof(buffer) - 1U] = '\0';
     trimWhitespace(buffer);
+
+    // Exit if technician just pressed "enter" ('buffer' is an empty string)
     if (buffer[0] == '\0') {
         return;
     }
 
+    // Split command string into individual words and store in tokens array
     char* tokens[4] = {nullptr, nullptr, nullptr, nullptr};
     size_t count = 0;
     char* token = strtok(buffer, " ");
@@ -898,10 +904,6 @@ void handleTechnicianCommand(const char* line)
         lowercaseInPlace(token);
         tokens[count++] = token;
         token = strtok(nullptr, " ");
-    }
-
-    if (tokens[0] == nullptr) {
-        return;
     }
 
     if (tokens[1] == nullptr) {
@@ -1012,17 +1014,18 @@ void pollTechnicianConsole()
     while (Serial.available() > 0) {
         const char incomingChar = static_cast<char>(Serial.read());
         const uint8_t incomingByte = static_cast<uint8_t>(incomingChar);
-        // Submits technician command
+        // Terminate and submit technician command
         if (incomingChar == '\n') {
             technicianInputBuffer[technicianInputLength] = '\0';
             handleTechnicianCommand(technicianInputBuffer);
             technicianInputLength = 0U;
             continue;
         }
-        // Skip non-printable characters
+        // Skip non-printable characters including '\r'
         if (isprint(incomingByte) == 0) {
             continue;
         }
+        // append char to command string
         if (technicianInputLength < (INPUT_BUFFER_SIZE - 1U)) {
             technicianInputBuffer[technicianInputLength++] = incomingChar;
             continue;
