@@ -894,10 +894,11 @@ void handleTechnicianCommand(const char* line)
     }
 
     // Split command string into individual words
-    char* tokens[4] = {nullptr, nullptr, nullptr, nullptr};
+    constexpr size_t NUM_TOKENS = 4U;
+    char* tokens[NUM_TOKENS] = {};   // Initializes to zero's (nullptr's)
     size_t count = 0;
     char* token = strtok(buffer, " ");
-    while (token != nullptr && count < (sizeof(tokens) / sizeof(tokens[0]))) {
+    while (token != nullptr && count < NUM_TOKENS) {
         lowercaseInPlace(token);
         tokens[count++] = token;
         token = strtok(nullptr, " ");
