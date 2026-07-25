@@ -8,6 +8,7 @@
 #include <w25n_Flash.h>
 #include "command_interface.h"
 #include "console_state.h"
+#include "serial_transport.h"
 #include "technician_console.h"
 
 // Metro Mini pinout (see MAX2871 examples/specAnn/specAnn.ino)
@@ -100,8 +101,7 @@ void setup()
     // confusion.
     SPI.begin();
     resetConsoleState();
-    saTech.begin("ascii");
-    // saTech.begin("binary");
+    saTech.begin(SerialEncoding::Ascii);
 
     freqCalc.RefClock1 = REF_MHZ;
 

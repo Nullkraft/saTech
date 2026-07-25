@@ -160,11 +160,11 @@ void handleControlWord(uint32_t word)
     const uint16_t selector = static_cast<uint16_t>(word & 0xFFFFU);
     if (serialRxState.payloadMode == SerialPayloadMode::Command) {
         if (word == 0x000106FFUL) {
-            setSerialTransportEncoding(SerialTransportEncoding::Ascii);
+            setSerialTransportEncoding(SerialEncoding::Ascii);
             return;
         }
         if (word == 0x000206FFUL) {
-            setSerialTransportEncoding(SerialTransportEncoding::Binary);
+            setSerialTransportEncoding(SerialEncoding::Binary);
             return;
         }
     }

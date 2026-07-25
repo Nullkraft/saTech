@@ -2,6 +2,7 @@
 
 #include "command_interface.h"
 #include "console_state.h"
+#include "serial_transport.h"
 
 #include <arduino_hal.h>
 #include <ctype.h>
@@ -907,8 +908,12 @@ void handleTechnicianCommand(const char* line)
     }
 
     if (tokens[1] == nullptr) {
-        if (strcmp(tokens[0], "ascii") == 0 || strcmp(tokens[0], "binary") == 0) {
-            saTech.begin(tokens[0]);
+        if (strcmp(tokens[0], "ascii") == 0) {
+            setSerialTransportEncoding(SerialEncoding::Ascii);
+            return;
+        }
+        if (strcmp(tokens[0], "binary") == 0) {
+            setSerialTransportEncoding(SerialEncoding::Binary);
             return;
         }
         uint32_t controlWord = 0U;

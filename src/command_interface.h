@@ -21,13 +21,11 @@ constexpr uint8_t PIN_REF_EN2 = 6;
 
 enum class ChipTarget { None, LO1, LO2, LO3, Attenuator, ADC_1, ADC_2, RAM, Flash };
 enum class ReferenceTarget { None, Ref1, Ref2 };
-enum class SerialTransportEncoding { Ascii, Binary };
+enum class SerialEncoding { Ascii, Binary };
 
 class SaTech {
 public:
-    bool begin(const char* encoding);
-    bool supportsEncoding(const char* encoding) const;
-    SerialTransportEncoding transportEncoding() const;
+    void begin(SerialEncoding encoding);
 };
 
 extern SaTech saTech;
