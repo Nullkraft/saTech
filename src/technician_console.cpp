@@ -909,11 +909,11 @@ void handleTechnicianCommand(const char* line)
 
     if (tokens[1] == nullptr) {
         if (strcmp(tokens[0], "ascii") == 0) {
-            setSerialTransportEncoding(SerialEncoding::Ascii);
+            setSerialEncoding(SerialEncoding::Ascii);
             return;
         }
         if (strcmp(tokens[0], "binary") == 0) {
-            setSerialTransportEncoding(SerialEncoding::Binary);
+            setSerialEncoding(SerialEncoding::Binary);
             return;
         }
         uint32_t controlWord = 0U;

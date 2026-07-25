@@ -56,7 +56,7 @@ void SaTech::begin(SerialEncoding encoding)
     serialEncoding = encoding;
 }
 
-void setSerialTransportEncoding(SerialEncoding encoding)
+void setSerialEncoding(SerialEncoding encoding)
 {
     serialEncoding = encoding;
 }

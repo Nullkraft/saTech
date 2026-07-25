@@ -2,4 +2,4 @@
 
 #include "command_interface.h"
 
-void setSerialTransportEncoding(SerialEncoding encoding);
+void setSerialEncoding(SerialEncoding encoding);
