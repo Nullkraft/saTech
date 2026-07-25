@@ -92,25 +92,6 @@ const TechnicianCommandMap TECHNICIAN_COMMANDS[] PROGMEM = {
 };
 constexpr size_t TECHNICIAN_COMMAND_COUNT = sizeof(TECHNICIAN_COMMANDS) / sizeof(TECHNICIAN_COMMANDS[0]);
 
-void trimWhitespace(char* text)
-{
-    if (text == nullptr) {
-        return;
-    }
-    char* start = text;
-    while (*start != '\0' && isspace(*start) != 0) {
-        ++start;
-    }
-    if (start != text) {
-        memmove(text, start, strlen(start) + 1U);
-    }
-    size_t len = strlen(text);
-    while (len > 0U && isspace(text[len - 1U]) != 0) {
-        text[len - 1U] = '\0';
-        --len;
-    }
-}
-
 void lowercaseInPlace(char* text)
 {
     if (text == nullptr) {
@@ -886,12 +867,6 @@ void handleTechnicianCommand(const char* line)
     char buffer[INPUT_BUFFER_SIZE];
     strncpy(buffer, line, sizeof(buffer) - 1U);
     buffer[sizeof(buffer) - 1U] = '\0';
-    trimWhitespace(buffer);
-
-    // Exit if technician just pressed "enter" ('buffer' is an empty string)
-    if (buffer[0] == '\0') {
-        return;
-    }
 
     // Split command string into individual words
     constexpr size_t NUM_TOKENS = 4U;
@@ -902,6 +877,10 @@ void handleTechnicianCommand(const char* line)
         lowercaseInPlace(token);
         tokens[count++] = token;
         token = strtok(nullptr, " ");
+    }
+
+    if (count == 0U) {
+        return;
     }
 
     if (tokens[1] == nullptr) {
