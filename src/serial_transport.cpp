@@ -10,7 +10,7 @@ namespace {
 
 char inputBuffer[INPUT_BUFFER_SIZE];
 size_t inputLength = 0U;
-SerialEncoding serialTransportEncoding = SerialEncoding::Ascii;
+SerialEncoding serialEncoding = SerialEncoding::Ascii;
 
 bool parseAsciiControlWord(const char* token, uint32_t* word)
 {
@@ -53,12 +53,12 @@ SaTech saTech;
 
 void SaTech::begin(SerialEncoding encoding)
 {
-    serialTransportEncoding = encoding;
+    serialEncoding = encoding;
 }
 
 void setSerialTransportEncoding(SerialEncoding encoding)
 {
-    serialTransportEncoding = encoding;
+    serialEncoding = encoding;
 }
 
 void pollSerial()
@@ -66,7 +66,7 @@ void pollSerial()
     while (Serial.available() > 0) {
         const char incomingChar = static_cast<char>(Serial.read());
         const uint8_t incomingByte = static_cast<uint8_t>(incomingChar);
-        if (serialTransportEncoding == SerialEncoding::Binary) {
+        if (serialEncoding == SerialEncoding::Binary) {
             processBinarySerialByte(incomingByte);
             continue;
         }
