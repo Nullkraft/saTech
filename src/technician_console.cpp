@@ -494,9 +494,6 @@ void handleFulltestCommand(char* const tokens[], size_t count)
 
 bool parseControlWord(const char* token, uint32_t* word)
 {
-    if (token == nullptr || word == nullptr) {
-        return false;
-    }
     char* endPointer = nullptr;
     *word = static_cast<uint32_t>(strtoul(token, &endPointer, 16));
     return endPointer != token && *endPointer == '\0';
