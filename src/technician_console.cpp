@@ -1012,16 +1012,15 @@ void pollTechnicianConsole()
     while (Serial.available() > 0) {
         const char incomingChar = static_cast<char>(Serial.read());
         const uint8_t incomingByte = static_cast<uint8_t>(incomingChar);
-        if (incomingChar != '\r' && incomingChar != '\n' && isprint(incomingByte) == 0) {
-            continue;
-        }
-        if (incomingChar == '\r') {
-            continue;
-        }
+        // Submits technician command
         if (incomingChar == '\n') {
             technicianInputBuffer[technicianInputLength] = '\0';
             handleTechnicianCommand(technicianInputBuffer);
             technicianInputLength = 0U;
+            continue;
+        }
+        // Skip non-printable characters
+        if (isprint(incomingByte) == 0) {
             continue;
         }
         if (technicianInputLength < (INPUT_BUFFER_SIZE - 1U)) {
