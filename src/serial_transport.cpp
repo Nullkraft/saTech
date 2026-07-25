@@ -31,7 +31,7 @@ void collectAsciiByte(char incoming, uint8_t incomingByte)
     }
     if (incoming == '\n') {
         inputBuffer[inputLength] = '\0';
-        uint32_t word = 0U;
+        uint32_t word;
         if (parseAsciiControlWord(inputBuffer, &word)) {
             processReceivedWord(word);
         }

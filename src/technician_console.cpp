@@ -382,10 +382,10 @@ void handleFulltestProgram(const char* loToken)
         return;
     }
 
-    ChipTarget target = ChipTarget::None;
-    const __FlashStringHelper* prefix = nullptr;
-    const __FlashStringHelper* report = nullptr;
-    double plannedFrequency = 0.0;
+    ChipTarget target;
+    const __FlashStringHelper* prefix;
+    const __FlashStringHelper* report;
+    double plannedFrequency;
     if (strcmp(loToken, "lo1") == 0) {
         target = ChipTarget::LO1;
         prefix = F("lo1");
@@ -406,8 +406,8 @@ void handleFulltestProgram(const char* loToken)
         return;
     }
 
-    MAX2871* targetLo = nullptr;
-    double* reportedFreq = nullptr;
+    MAX2871* targetLo;
+    double* reportedFreq;
     if (!loStateForTarget(target, &targetLo, &reportedFreq)) {
         printJsonError(F("fulltest program"), F("invalid_lo"), F("Expected lo1 or lo2"));
         return;
@@ -549,9 +549,9 @@ bool loStateForTarget(ChipTarget target, MAX2871** targetLo, double** reportedFr
 
 void printSelectedLoSnapshot(ChipTarget target)
 {
-    const MAX2871* targetLo = nullptr;
-    const __FlashStringHelper* label = nullptr;
-    double freq = 0.0;
+    const MAX2871* targetLo;
+    const __FlashStringHelper* label;
+    double freq;
     switch (target) {
         case ChipTarget::LO1:
             targetLo = &lo1;
@@ -659,8 +659,8 @@ void handleLofreqCommand(const char* valueToken)
         Serial.println(F("LO frequency out of range (23.5 to 6000 MHz)."));
         return;
     }
-    MAX2871* targetLo = nullptr;
-    double* reportedFreq = nullptr;
+    MAX2871* targetLo;
+    double* reportedFreq;
     if (!loStateForTarget(chipTarget, &targetLo, &reportedFreq)) {
         return;
     }
@@ -713,7 +713,7 @@ void processChipToken(const char* targetToken)
     if (targetToken == nullptr) {
         return;
     }
-    uint16_t selector = 0U;
+    uint16_t selector;
     if (chipSelectorForToken(targetToken, &selector)) {
         processReceivedWord(static_cast<uint32_t>(selector));
         return;
@@ -753,7 +753,7 @@ void processSetToken(const char* targetToken)
         printTechnicianBanner();
         return;
     }
-    uint16_t selector = 0U;
+    uint16_t selector;
     if (!referenceSelectorForToken(targetToken, &selector)) {
         printTechnicianBanner();
         return;
@@ -912,7 +912,7 @@ void handleTechnicianCommand(const char* line)
             setSerialEncoding(SerialEncoding::Binary);
             return;
         }
-        uint32_t controlWord = 0U;
+        uint32_t controlWord;
         if (parseControlWord(tokens[0], &controlWord)) {
             processReceivedWord(controlWord);
             return;

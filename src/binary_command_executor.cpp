@@ -138,8 +138,8 @@ void deassertProgrammingPins()
 
 void applyLoOutputSelect(ChipTarget target, RFOutPort port)
 {
-    MAX2871* targetLo = nullptr;
-    double* reportedFreq = nullptr;
+    MAX2871* targetLo;
+    double* reportedFreq;
     if (loStateForTarget(target, &targetLo, &reportedFreq)) {
         targetLo->outputSelect(port);
     }
@@ -147,8 +147,8 @@ void applyLoOutputSelect(ChipTarget target, RFOutPort port)
 
 void applyLoOutputPower(ChipTarget target, int dBm)
 {
-    MAX2871* targetLo = nullptr;
-    double* reportedFreq = nullptr;
+    MAX2871* targetLo;
+    double* reportedFreq;
     if (loStateForTarget(target, &targetLo, &reportedFreq)) {
         targetLo->outputPower(dBm, RF_B);
     }
@@ -219,7 +219,7 @@ void handleControlWord(uint32_t word)
         selectRef(ReferenceTarget::Ref2);
         return;
     }
-    ChipTarget loTarget = ChipTarget::None;
+    ChipTarget loTarget;
     if (loTargetForControlSelector(selector, &loTarget)) {
         selectSerialChipTarget(loTarget);
         return;
@@ -291,8 +291,8 @@ void handleControlWord(uint32_t word)
 
 void handleFmnDataWord(uint32_t packedFMN)
 {
-    MAX2871* targetLo = nullptr;
-    double* reportedFreq = nullptr;
+    MAX2871* targetLo;
+    double* reportedFreq;
     const ChipTarget target = serialRxState.selectedBinaryTarget;
     if (!loStateForTarget(target, &targetLo, &reportedFreq)) {
         return;
