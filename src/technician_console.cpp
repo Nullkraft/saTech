@@ -332,7 +332,7 @@ void handleFulltestPlan(const char* valueToken)
         printJsonError(F("fulltest plan"), F("missing_argument"), F("RFin MHz is required"));
         return;
     }
-    char* endPointer = nullptr;
+    char* endPointer;
     const double rfinMhz = strtod(valueToken, &endPointer);
     if (endPointer == valueToken || *endPointer != '\0') {
         printJsonError(F("fulltest plan"), F("invalid_argument"), F("RFin MHz must be numeric"));
@@ -353,7 +353,7 @@ void handleFulltestAtten(const char* valueToken)
         printJsonError(F("fulltest atten"), F("missing_argument"), F("Attenuator dB is required"));
         return;
     }
-    char* endPointer = nullptr;
+    char* endPointer;
     const double requestedDb = strtod(valueToken, &endPointer);
     if (endPointer == valueToken || *endPointer != '\0') {
         printJsonError(F("fulltest atten"), F("invalid_argument"), F("Attenuator dB must be numeric"));
@@ -494,7 +494,7 @@ void handleFulltestCommand(char* const tokens[], size_t count)
 
 bool parseControlWord(const char* token, uint32_t* word)
 {
-    char* endPointer = nullptr;
+    char* endPointer;
     *word = static_cast<uint32_t>(strtoul(token, &endPointer, 16));
     return endPointer != token && *endPointer == '\0';
 }
@@ -649,9 +649,9 @@ void handleLofreqCommand(const char* valueToken)
         Serial.println(F("Select lo1, lo2, or lo3 with 'chip' before using lofreq."));
         return;
     }
-    char* endPointer = nullptr;
+    char* endPointer;
     const double requestedMhz = strtod(valueToken, &endPointer);
-    if (endPointer == nullptr || *endPointer != '\0') {
+    if (*endPointer != '\0') {
         printTechnicianBanner();
         return;
     }
@@ -778,9 +778,9 @@ void processSpiToken(const char* valueToken)
         printTechnicianBanner();
         return;
     }
-    char* endPointer = nullptr;
+    char* endPointer;
     const uint32_t value = static_cast<uint32_t>(strtoul(valueToken, &endPointer, 16));
-    if (endPointer == nullptr || *endPointer != '\0') {
+    if (*endPointer != '\0') {
         printTechnicianBanner();
         return;
     }
@@ -919,9 +919,9 @@ void handleTechnicianCommand(const char* line)
         }
     }
 
-    char* endPointer = nullptr;
+    char* endPointer;
     const double mhz = strtod(tokens[0], &endPointer);
-    const bool parsedNumber = (endPointer != nullptr) && (*endPointer == '\0') && (tokens[1] == nullptr);
+    const bool parsedNumber = (*endPointer == '\0') && (tokens[1] == nullptr);
     if (parsedNumber) {
         if (mhz < ANALYZER_RF_INPUT_MIN_MHZ || mhz > ANALYZER_RF_INPUT_MAX_MHZ) {
             Serial.println(F("RFin out of range (0 to 3000 MHz)."));
