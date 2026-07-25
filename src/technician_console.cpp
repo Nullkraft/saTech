@@ -893,7 +893,7 @@ void handleTechnicianCommand(const char* line)
         return;
     }
 
-    // Split command string into individual words and store in tokens array
+    // Split command string into individual words
     char* tokens[4] = {nullptr, nullptr, nullptr, nullptr};
     size_t count = 0;
     char* token = strtok(buffer, " ");
