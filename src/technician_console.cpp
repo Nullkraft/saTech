@@ -2,7 +2,6 @@
 
 #include "command_interface.h"
 #include "console_state.h"
-#include "serial_transport.h"
 
 #include <arduino_hal.h>
 #include <ctype.h>

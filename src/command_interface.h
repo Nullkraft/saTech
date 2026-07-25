@@ -74,6 +74,7 @@ void selectSerialChipTarget(ChipTarget target);
 void selectRef(ReferenceTarget target);
 
 void pollSerial();
+void setSerialEncoding(SerialEncoding encoding);
 void processReceivedWord(uint32_t word);
 void processDirectRegisterData(uint32_t value);
 

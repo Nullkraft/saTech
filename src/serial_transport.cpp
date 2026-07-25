@@ -1,7 +1,6 @@
 #include "command_interface.h"
 
 #include "binary_command_executor.h"
-#include "serial_transport.h"
 
 #include <ctype.h>
 #include <stdlib.h>

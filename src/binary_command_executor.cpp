@@ -3,7 +3,6 @@
 #include "binary_command_executor.h"
 #include "board_control.h"
 #include "console_state.h"
-#include "serial_transport.h"
 #include "technician_console.h"
 
 #include <SPI.h>

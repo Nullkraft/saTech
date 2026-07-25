@@ -8,7 +8,6 @@
 #include <w25n_Flash.h>
 #include "command_interface.h"
 #include "console_state.h"
-#include "serial_transport.h"
 #include "technician_console.h"
 
 // Metro Mini pinout (see MAX2871 examples/specAnn/specAnn.ino)
