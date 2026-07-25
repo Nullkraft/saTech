@@ -389,13 +389,6 @@ void processReceivedWord(uint32_t mode)
 // cppcheck-suppress unusedFunction
 void processDirectRegisterData(uint32_t value)
 {
-    const SerialPayloadMode previousMode = serialRxState.payloadMode;
     serialRxState.selectedBinaryTarget = state.chipTarget;
-    processReceivedWord(0x16FFU);
-    if ((value & 0xFFU) == 0xFFU) {
-        handleDirectRegisterDataWord(value);
-    } else {
-        processReceivedWord(value);
-    }
-    setSerialPayloadMode(previousMode);
+    handleDirectRegisterDataWord(value);
 }
