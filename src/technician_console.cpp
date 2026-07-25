@@ -65,17 +65,17 @@ struct TechnicianCommandMap {
     TechnicianCommandKind kind;
 };
 
-const char CMD_HELP[] = "help";
-const char CMD_ID[] = "id";
-const char CMD_RELOCK[] = "relock";
-const char CMD_FULLTEST[] = "fulltest";
-const char CMD_RFIN[] = "rfin";
-const char CMD_IFMODE[] = "ifmode";
-const char CMD_LOFREQ[] = "lofreq";
-const char CMD_CHIP[] = "chip";
-const char CMD_SET[] = "set";
-const char CMD_SPI[] = "spi";
-const char CMD_IDFLASH[] = "idflash";
+const char CMD_HELP[] PROGMEM = "help";
+const char CMD_ID[] PROGMEM = "id";
+const char CMD_RELOCK[] PROGMEM = "relock";
+const char CMD_FULLTEST[] PROGMEM = "fulltest";
+const char CMD_RFIN[] PROGMEM = "rfin";
+const char CMD_IFMODE[] PROGMEM = "ifmode";
+const char CMD_LOFREQ[] PROGMEM = "lofreq";
+const char CMD_CHIP[] PROGMEM = "chip";
+const char CMD_SET[] PROGMEM = "set";
+const char CMD_SPI[] PROGMEM = "spi";
+const char CMD_IDFLASH[] PROGMEM = "idflash";
 
 const TechnicianCommandMap TECHNICIAN_COMMANDS[] PROGMEM = {
     {CMD_HELP, TechnicianCommandKind::Help},
