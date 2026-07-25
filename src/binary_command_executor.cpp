@@ -131,7 +131,7 @@ void deassertProgrammingPins()
         const ChipSelectDefinition& def = CHIP_DEFINITIONS[i];
         digitalWrite(def.pin, (def.assertedLevel == HIGH) ? LOW : HIGH);
     }
-    state.chipTarget = ChipTarget::None;
+    state.chipTarget = ChipTarget::Off;
     state.manualSpiArmed = false;
     state.pendingSpiConfirmation = false;
 }
@@ -208,7 +208,7 @@ void handleControlWord(uint32_t word)
         return;
     }
     if (selector == 0x04FFU) {
-        selectRef(ReferenceTarget::None);
+        selectRef(ReferenceTarget::Off);
         return;
     }
     if (selector == 0x0CFFU) {
@@ -332,6 +332,7 @@ void handleDirectRegisterDataWord(uint32_t dataWord)
         case ChipTarget::Flash:
             spiWrite32(PIN_FLASH, true, dataWord);
             break;
+        case ChipTarget::Off:
         case ChipTarget::None:
         default:
             wroteTarget = false;

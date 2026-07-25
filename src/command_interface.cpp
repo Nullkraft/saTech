@@ -91,7 +91,7 @@ const ChipSelectDefinition* chipSelectDefinitionForTarget(ChipTarget target)
 // selectChip — public low-level primitive.
 //
 // Deasserts all CS/LE pins to their idle levels, then asserts the requested
-// target's pin. ChipTarget::None deasserts everything and leaves it that way.
+// target's pin. ChipTarget::Off deasserts everything and leaves it that way.
 // Resets the SPI arming state on every call so a chip switch cannot carry over
 // a previously armed write.
 //
@@ -115,7 +115,7 @@ void selectChip(ChipTarget target)
     s.manualSpiArmed        = false;
     s.pendingSpiConfirmation = false;
 
-    if (target == ChipTarget::None) {
+    if (target == ChipTarget::Off) {
         Serial.println(F("All chip selects deasserted."));
     } else {
         Serial.print(F("Chip select set to "));
@@ -127,8 +127,8 @@ void selectChip(ChipTarget target)
 // selectRef — public low-level primitive.
 //
 // Deasserts both REF_EN pins, then asserts the requested reference clock.
-// ReferenceTarget::None disables both clocks.
-// Any target value other than Ref1, Ref2, or None leaves both clocks disabled.
+// ReferenceTarget::Off disables both clocks.
+// Any target value other than Ref1, Ref2, or Off leaves both clocks disabled.
 //
 // This function owns state.ref1Enabled and state.ref2Enabled and is the only
 // site that writes those flags.
@@ -153,8 +153,8 @@ void selectRef(ReferenceTarget target)
         digitalWrite(PIN_REF_EN2, HIGH);
         s.ref2Enabled = true;
         break;
-    case ReferenceTarget::None:
-        // ReferenceTarget::None - both clocks remain deasserted.
+    case ReferenceTarget::Off:
+        // ReferenceTarget::Off - both clocks remain deasserted.
         break;
     default:
         break;
@@ -192,6 +192,7 @@ const __FlashStringHelper* chipTargetName(ChipTarget target)
         case ChipTarget::ADC_2:       return F("ADC_2");
         case ChipTarget::RAM:        return F("RAM");
         case ChipTarget::Flash:      return F("FLASH");
+        case ChipTarget::Off:        return F("Off");
         case ChipTarget::None:
         default:                     return F("None");
     }

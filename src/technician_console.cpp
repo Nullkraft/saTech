@@ -420,8 +420,8 @@ void handleFulltestPincheck()
     results[5] = chipStateMatches(ChipTarget::RAM);
     writeChipSelectState(ChipTarget::Flash);
     results[6] = chipStateMatches(ChipTarget::Flash);
-    writeChipSelectState(ChipTarget::None);
-    results[7] = chipStateMatches(ChipTarget::None);
+    writeChipSelectState(ChipTarget::Off);
+    results[7] = chipStateMatches(ChipTarget::Off);
     const bool passed = results[0] && results[1] && results[2] && results[3] &&
                         results[4] && results[5] && results[6] && results[7];
     Serial.print(F("{\"type\":\"check\",\"name\":\"pin_checks\",\"expected\":\"PASS\",\"actual\":\""));
@@ -468,7 +468,7 @@ void handleFulltestCommand(char* const tokens[], size_t count)
     printJsonReferenceCheck(F("ref1_selected"), HIGH, LOW);
     selectRef(ReferenceTarget::Ref2);
     printJsonReferenceCheck(F("ref2_selected"), LOW, HIGH);
-    selectRef(ReferenceTarget::None);
+    selectRef(ReferenceTarget::Off);
     printJsonReferenceCheck(F("refs_off"), LOW, LOW);
     printJsonReportEvent(F("report_end"), F("refcheck"));
 }
@@ -659,94 +659,65 @@ void handleLofreqCommand(const char* valueToken)
     Serial.println();
 }
 
-bool chipSelectorForToken(const char* targetToken, uint16_t* selector)
-{
-    if (targetToken == nullptr || selector == nullptr) {
-        return false;
-    }
-    if (strcmp(targetToken, "lo1") == 0) {
-        *selector = 0x01FFU;
-        return true;
-    } else if (strcmp(targetToken, "lo2") == 0) {
-        *selector = 0x02FFU;
-        return true;
-    } else if (strcmp(targetToken, "lo3") == 0) {
-        *selector = 0x03FFU;
-        return true;
-    } else if (strcmp(targetToken, "adc1") == 0) {
-        *selector = 0x05FFU;
-        return true;
-    } else if (strcmp(targetToken, "adc2") == 0) {
-        *selector = 0x0DFFU;
-        return true;
-    } else if (strcmp(targetToken, "ram") == 0) {
-        *selector = 0x15FFU;
-        return true;
-    } else if (strcmp(targetToken, "flash") == 0) {
-        *selector = 0x1DFFU;
-        return true;
-    }
-    return false;
-}
-
 void processChipToken(const char* targetToken)
 {
-    if (targetToken == nullptr) {
-        return;
+    ChipTarget target = ChipTarget::None;
+    if (strcmp(targetToken, "lo1") == 0) {
+        target = ChipTarget::LO1;
     }
-    uint16_t selector;
-    if (chipSelectorForToken(targetToken, &selector)) {
-        processReceivedWord(static_cast<uint32_t>(selector));
-        return;
+    if (strcmp(targetToken, "lo2") == 0) {
+        target = ChipTarget::LO2;
+    }
+    if (strcmp(targetToken, "lo3") == 0) {
+        target = ChipTarget::LO3;
     }
     if (strcmp(targetToken, "atten") == 0) {
-        selectSerialChipTarget(ChipTarget::Attenuator);
-        return;
+        target = ChipTarget::Attenuator;
+    }
+    if (strcmp(targetToken, "adc1") == 0) {
+        target = ChipTarget::ADC_1;
+    }
+    if (strcmp(targetToken, "adc2") == 0) {
+        target = ChipTarget::ADC_2;
+    }
+    if (strcmp(targetToken, "ram") == 0) {
+        target = ChipTarget::RAM;
+    }
+    if (strcmp(targetToken, "flash") == 0) {
+        target = ChipTarget::Flash;
     }
     if (strcmp(targetToken, "off") == 0) {
-        selectSerialChipTarget(ChipTarget::None);
+        target = ChipTarget::Off;
+    }
+    if (target == ChipTarget::None) {
+        printTechnicianBanner();
         return;
     }
-    printTechnicianBanner();
-}
-
-bool referenceSelectorForToken(const char* targetToken, uint16_t* selector)
-{
-    if (targetToken == nullptr || selector == nullptr) {
-        return false;
-    }
-    if (strcmp(targetToken, "ref1") == 0) {
-        *selector = 0x0CFFU;
-        return true;
-    } else if (strcmp(targetToken, "ref2") == 0) {
-        *selector = 0x14FFU;
-        return true;
-    } else if (strcmp(targetToken, "off") == 0) {
-        *selector = 0x04FFU;
-        return true;
-    }
-    return false;
+    selectSerialChipTarget(target);
 }
 
 void processSetToken(const char* targetToken)
 {
-    if (targetToken == nullptr) {
+    ReferenceTarget target = ReferenceTarget::None;
+    const __FlashStringHelper* message;
+    if (strcmp(targetToken, "ref1") == 0) {
+        target = ReferenceTarget::Ref1;
+        message = F("Reference clock set to REF1.");
+    }
+    if (strcmp(targetToken, "ref2") == 0) {
+        target = ReferenceTarget::Ref2;
+        message = F("Reference clock set to REF2.");
+    }
+    if (strcmp(targetToken, "off") == 0) {
+        target = ReferenceTarget::Off;
+        message = F("All reference clocks disabled.");
+    }
+    if (target == ReferenceTarget::None) {
         printTechnicianBanner();
         return;
     }
-    uint16_t selector;
-    if (!referenceSelectorForToken(targetToken, &selector)) {
-        printTechnicianBanner();
-        return;
-    }
-    processReceivedWord(static_cast<uint32_t>(selector));
-    if (selector == 0x0CFFU) {
-        Serial.println(F("Reference clock set to REF1."));
-    } else if (selector == 0x14FFU) {
-        Serial.println(F("Reference clock set to REF2."));
-    } else {
-        Serial.println(F("All reference clocks disabled."));
-    }
+    selectRef(target);
+    Serial.println(message);
 }
 
 void processSpiToken(const char* valueToken)
@@ -755,7 +726,7 @@ void processSpiToken(const char* valueToken)
         return;
     }
     ConsoleState& state = consoleState();
-    if (state.chipTarget == ChipTarget::None) {
+    if (state.chipTarget == ChipTarget::None || state.chipTarget == ChipTarget::Off) {
         printTechnicianBanner();
         return;
     }

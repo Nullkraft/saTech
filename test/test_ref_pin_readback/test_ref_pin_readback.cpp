@@ -12,7 +12,7 @@ void test_ref_off_deasserts_reference_enable_outputs(void)
     pinMode(PIN_REF_EN2, OUTPUT);
 
     selectRef(ReferenceTarget::Ref1);
-    selectRef(ReferenceTarget::None);
+    selectRef(ReferenceTarget::Off);
 
     TEST_ASSERT_EQUAL_INT(LOW, digitalRead(PIN_REF_EN1));
     TEST_ASSERT_EQUAL_INT(LOW, digitalRead(PIN_REF_EN2));

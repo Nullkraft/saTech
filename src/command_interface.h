@@ -19,8 +19,8 @@ constexpr uint8_t PIN_FLASH   = A1;
 constexpr uint8_t PIN_REF_EN1 = 5;
 constexpr uint8_t PIN_REF_EN2 = 6;
 
-enum class ChipTarget { None, LO1, LO2, LO3, Attenuator, ADC_1, ADC_2, RAM, Flash };
-enum class ReferenceTarget { None, Ref1, Ref2 };
+enum class ChipTarget { None, Off, LO1, LO2, LO3, Attenuator, ADC_1, ADC_2, RAM, Flash };
+enum class ReferenceTarget { None, Off, Ref1, Ref2 };
 enum class SerialEncoding { Ascii, Binary };
 
 class SaTech {
@@ -63,13 +63,13 @@ constexpr size_t INPUT_BUFFER_SIZE = 96;
 // ---------------------------------------------------------------------------
 
 // Deasserts all CS/LE pins, then asserts the requested target's pin.
-// ChipTarget::None deasserts everything and leaves it that way.
+// ChipTarget::Off deasserts everything and leaves it that way.
 // Resets the SPI arming state on every call.
 void selectChip(ChipTarget target);
 void selectSerialChipTarget(ChipTarget target);
 
 // Deasserts both REF_EN pins, then asserts the requested reference clock.
-// ReferenceTarget::Ref1 or Ref2 selects that clock; ReferenceTarget::None
+// ReferenceTarget::Ref1 or Ref2 selects that clock; ReferenceTarget::Off
 // disables both clocks.
 void selectRef(ReferenceTarget target);
 
