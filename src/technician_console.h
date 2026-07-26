@@ -2,7 +2,7 @@
 
 #include <Arduino.h>
 
-#include "technician_fulltest.h"
+#include "fulltest.h"
 
 void printTechnicianBanner();
 void handleTechnicianCommand(const char* line);

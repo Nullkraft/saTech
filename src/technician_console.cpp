@@ -2,7 +2,7 @@
 
 #include "command_interface.h"
 #include "console_state.h"
-#include "technician_fulltest.h"
+#include "fulltest.h"
 
 #include <arduino_hal.h>
 #include <ctype.h>
