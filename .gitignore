@@ -3,7 +3,6 @@
 .vscode
 *code-workspace
 platformio_override.ini
-local.ini
 docs/
 
 # AI developement files
@@ -45,3 +44,5 @@ waveform_api.fix
 *_callTree.html
 Proposed_Flash_Data_Storage_Structure.md
 Spectrum Analyzer Combined Notes.md
+.DS_Store
+control-page1.png
