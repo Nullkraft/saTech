@@ -3,7 +3,7 @@
 .vscode
 *code-workspace
 platformio_override.ini
-platformio.local.ini
+local.ini
 docs/
 
 # AI developement files
