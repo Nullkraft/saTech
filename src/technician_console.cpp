@@ -45,64 +45,6 @@ constexpr double ANALYZER_RF_INPUT_MAX_MHZ = 3000.0;
 constexpr double LO_FREQUENCY_MIN_MHZ = 23.5;
 constexpr double LO_FREQUENCY_MAX_MHZ = 6000.0;
 
-enum class TechnicianCommandKind {
-    Unknown,
-    Help,
-    Id,
-    Relock,
-    Fulltest,
-    Rfin,
-    Ifmode,
-    Lofreq,
-    Chip,
-    Set,
-    Spi,
-    IdFlash,
-};
-
-struct TechnicianCommandMap {
-    const char* token;
-    TechnicianCommandKind kind;
-};
-
-const char CMD_HELP[] PROGMEM = "help";
-const char CMD_ID[] PROGMEM = "id";
-const char CMD_RELOCK[] PROGMEM = "relock";
-const char CMD_FULLTEST[] PROGMEM = "fulltest";
-const char CMD_RFIN[] PROGMEM = "rfin";
-const char CMD_IFMODE[] PROGMEM = "ifmode";
-const char CMD_LOFREQ[] PROGMEM = "lofreq";
-const char CMD_CHIP[] PROGMEM = "chip";
-const char CMD_SET[] PROGMEM = "set";
-const char CMD_SPI[] PROGMEM = "spi";
-const char CMD_IDFLASH[] PROGMEM = "idflash";
-
-const TechnicianCommandMap TECHNICIAN_COMMANDS[] PROGMEM = {
-    {CMD_HELP, TechnicianCommandKind::Help},
-    {CMD_ID, TechnicianCommandKind::Id},
-    {CMD_RELOCK, TechnicianCommandKind::Relock},
-    {CMD_FULLTEST, TechnicianCommandKind::Fulltest},
-    {CMD_RFIN, TechnicianCommandKind::Rfin},
-    {CMD_IFMODE, TechnicianCommandKind::Ifmode},
-    {CMD_LOFREQ, TechnicianCommandKind::Lofreq},
-    {CMD_CHIP, TechnicianCommandKind::Chip},
-    {CMD_SET, TechnicianCommandKind::Set},
-    {CMD_SPI, TechnicianCommandKind::Spi},
-    {CMD_IDFLASH, TechnicianCommandKind::IdFlash},
-};
-constexpr size_t TECHNICIAN_COMMAND_COUNT = sizeof(TECHNICIAN_COMMANDS) / sizeof(TECHNICIAN_COMMANDS[0]);
-
-void lowercaseInPlace(char* text)
-{
-    if (text == nullptr) {
-        return;
-    }
-    while (*text != '\0') {
-        *text = static_cast<char>(tolower(static_cast<unsigned char>(*text)));
-        ++text;
-    }
-}
-
 const __FlashStringHelper* injectionLabel(LOInjectionMode mode)
 {
     return (mode == LOInjectionMode::High) ? F("High") : F("Low");
@@ -473,13 +415,6 @@ void handleFulltestCommand(char* const tokens[], size_t count)
     printJsonReportEvent(F("report_end"), F("refcheck"));
 }
 
-bool parseControlWord(const char* token, uint32_t* word)
-{
-    char* endPointer;
-    *word = static_cast<uint32_t>(strtoul(token, &endPointer, 16));
-    return endPointer != token && *endPointer == '\0';
-}
-
 void logManualWrite(uint32_t value)
 {
     Serial.print(F("[SPI] target="));
@@ -659,67 +594,6 @@ void handleLofreqCommand(const char* valueToken)
     Serial.println();
 }
 
-void processChipToken(const char* targetToken)
-{
-    ChipTarget target = ChipTarget::None;
-    if (strcmp(targetToken, "lo1") == 0) {
-        target = ChipTarget::LO1;
-    }
-    if (strcmp(targetToken, "lo2") == 0) {
-        target = ChipTarget::LO2;
-    }
-    if (strcmp(targetToken, "lo3") == 0) {
-        target = ChipTarget::LO3;
-    }
-    if (strcmp(targetToken, "atten") == 0) {
-        target = ChipTarget::Attenuator;
-    }
-    if (strcmp(targetToken, "adc1") == 0) {
-        target = ChipTarget::ADC_1;
-    }
-    if (strcmp(targetToken, "adc2") == 0) {
-        target = ChipTarget::ADC_2;
-    }
-    if (strcmp(targetToken, "ram") == 0) {
-        target = ChipTarget::RAM;
-    }
-    if (strcmp(targetToken, "flash") == 0) {
-        target = ChipTarget::Flash;
-    }
-    if (strcmp(targetToken, "off") == 0) {
-        target = ChipTarget::Off;
-    }
-    if (target == ChipTarget::None) {
-        printTechnicianBanner();
-        return;
-    }
-    selectSerialChipTarget(target);
-}
-
-void processSetToken(const char* targetToken)
-{
-    ReferenceTarget target = ReferenceTarget::None;
-    const __FlashStringHelper* message;
-    if (strcmp(targetToken, "ref1") == 0) {
-        target = ReferenceTarget::Ref1;
-        message = F("Reference clock set to REF1.");
-    }
-    if (strcmp(targetToken, "ref2") == 0) {
-        target = ReferenceTarget::Ref2;
-        message = F("Reference clock set to REF2.");
-    }
-    if (strcmp(targetToken, "off") == 0) {
-        target = ReferenceTarget::Off;
-        message = F("All reference clocks disabled.");
-    }
-    if (target == ReferenceTarget::None) {
-        printTechnicianBanner();
-        return;
-    }
-    selectRef(target);
-    Serial.println(message);
-}
-
 void processSpiToken(const char* valueToken)
 {
     if (valueToken == nullptr) {
@@ -757,19 +631,6 @@ void processSpiToken(const char* valueToken)
 
     logManualWrite(value);
     processDirectRegisterData(value);
-}
-
-TechnicianCommandKind commandKindFromToken(const char* token)
-{
-    for (size_t i = 0; i < TECHNICIAN_COMMAND_COUNT; ++i) {
-        const char* commandToken = reinterpret_cast<const char*>(
-            pgm_read_word(&TECHNICIAN_COMMANDS[i].token));
-        if (strcmp_P(token, commandToken) == 0) {
-            return static_cast<TechnicianCommandKind>(
-                pgm_read_byte(&TECHNICIAN_COMMANDS[i].kind));
-        }
-    }
-    return TechnicianCommandKind::Unknown;
 }
 
 } // namespace
@@ -845,7 +706,9 @@ void handleTechnicianCommand(const char* line)
     size_t count = 0;
     char* token = strtok(buffer, " ");
     while (token != nullptr && count < NUM_TOKENS) {
-        lowercaseInPlace(token);
+        for (char* character = token; *character != '\0'; ++character) {
+            *character = static_cast<char>(tolower(static_cast<unsigned char>(*character)));
+        }
         tokens[count++] = token;
         token = strtok(nullptr, " ");
     }
@@ -863,101 +726,149 @@ void handleTechnicianCommand(const char* line)
             setSerialEncoding(SerialEncoding::Binary);
             return;
         }
-        uint32_t controlWord;
-        if (parseControlWord(tokens[0], &controlWord)) {
+        char* controlWordEnd;
+        const uint32_t controlWord = static_cast<uint32_t>(strtoul(tokens[0], &controlWordEnd, 16));
+        if (controlWordEnd != tokens[0] && *controlWordEnd == '\0') {
             processReceivedWord(controlWord);
             return;
         }
     }
 
-    char* endPointer;
-    const double mhz = strtod(tokens[0], &endPointer);
-    const bool parsedNumber = (*endPointer == '\0') && (tokens[1] == nullptr);
-    if (parsedNumber) {
-        if (mhz < ANALYZER_RF_INPUT_MIN_MHZ || mhz > ANALYZER_RF_INPUT_MAX_MHZ) {
+    const bool rfinCommand = strcmp_P(tokens[0], PSTR("rfin")) == 0;
+    if (rfinCommand && tokens[1] == nullptr) {
+        printTechnicianBanner();
+        return;
+    }
+    const char* rfinToken = rfinCommand ? tokens[1] : tokens[0];
+    char* rfinEndPointer;
+    const double rfinMhz = strtod(rfinToken, &rfinEndPointer);
+    const bool parsedRfin = *rfinEndPointer == '\0' &&
+                            (rfinCommand || tokens[1] == nullptr);
+    if (parsedRfin) {
+        if (rfinMhz < ANALYZER_RF_INPUT_MIN_MHZ || rfinMhz > ANALYZER_RF_INPUT_MAX_MHZ) {
             Serial.println(F("RFin out of range (0 to 3000 MHz)."));
             return;
         }
-        tuneTo(mhz);
+        tuneTo(rfinMhz);
         printFulltestPlanReport();
         return;
     }
-
-    switch (commandKindFromToken(tokens[0])) {
-        case TechnicianCommandKind::Help:
+    if (rfinCommand) {
+        printTechnicianBanner();
+        return;
+    }
+    if (strcmp_P(tokens[0], PSTR("help")) == 0) {
+        printTechnicianBanner();
+        return;
+    }
+    if (strcmp_P(tokens[0], PSTR("id")) == 0) {
+        processReceivedWord(0x000017FFUL);
+        return;
+    }
+    if (strcmp_P(tokens[0], PSTR("relock")) == 0) {
+        processReceivedWord(0x00002FFFUL);
+        return;
+    }
+    if (strcmp_P(tokens[0], PSTR("fulltest")) == 0) {
+        handleFulltestCommand(tokens, count);
+        return;
+    }
+    if (strcmp_P(tokens[0], PSTR("ifmode")) == 0) {
+        if (count < 2U) {
             printTechnicianBanner();
-            return;
-        case TechnicianCommandKind::Id:
-            processReceivedWord(0x000017FFUL);
-            return;
-        case TechnicianCommandKind::Relock:
-            processReceivedWord(0x00002FFFUL);
-            return;
-        case TechnicianCommandKind::Fulltest:
-            handleFulltestCommand(tokens, count);
-            return;
-        case TechnicianCommandKind::Rfin: {
-            if (count < 2U) {
-                printTechnicianBanner();
-                return;
-            }
-            char* rfinEndPointer;
-            const double rfinMhz = strtod(tokens[1], &rfinEndPointer);
-            if (rfinEndPointer == tokens[1] || *rfinEndPointer != '\0') {
-                printTechnicianBanner();
-                return;
-            }
-            if (rfinMhz < ANALYZER_RF_INPUT_MIN_MHZ || rfinMhz > ANALYZER_RF_INPUT_MAX_MHZ) {
-                Serial.println(F("RFin out of range (0 to 3000 MHz)."));
-                return;
-            }
-            tuneTo(rfinMhz);
-            printFulltestPlanReport();
             return;
         }
-        case TechnicianCommandKind::Ifmode:
-            if (count < 2U) {
-                printTechnicianBanner();
-                return;
-            }
-            handleIfmodeCommand(tokens[1]);
-            return;
-        case TechnicianCommandKind::Lofreq:
-            if (count < 2U) {
-                printTechnicianBanner();
-                return;
-            }
-            handleLofreqCommand(tokens[1]);
-            return;
-        case TechnicianCommandKind::Chip:
-            if (count < 2U) {
-                printTechnicianBanner();
-                return;
-            }
-            processChipToken(tokens[1]);
-            return;
-        case TechnicianCommandKind::Set:
-            if (count < 2U) {
-                printTechnicianBanner();
-                return;
-            }
-            processSetToken(tokens[1]);
-            return;
-        case TechnicianCommandKind::Spi:
-            if (count < 2U) {
-                printTechnicianBanner();
-                return;
-            }
-            processSpiToken(tokens[1]);
-            return;
-        case TechnicianCommandKind::IdFlash:
-            processReceivedWord(0x9FU);
-            return;
-        case TechnicianCommandKind::Unknown:
-        default:
+        handleIfmodeCommand(tokens[1]);
+        return;
+    }
+    if (strcmp_P(tokens[0], PSTR("lofreq")) == 0) {
+        if (count < 2U) {
             printTechnicianBanner();
             return;
+        }
+        handleLofreqCommand(tokens[1]);
+        return;
     }
+    if (strcmp_P(tokens[0], PSTR("chip")) == 0) {
+        if (count < 2U) {
+            printTechnicianBanner();
+            return;
+        }
+        ChipTarget target = ChipTarget::None;
+        if (strcmp(tokens[1], "lo1") == 0) {
+            target = ChipTarget::LO1;
+        }
+        if (strcmp(tokens[1], "lo2") == 0) {
+            target = ChipTarget::LO2;
+        }
+        if (strcmp(tokens[1], "lo3") == 0) {
+            target = ChipTarget::LO3;
+        }
+        if (strcmp(tokens[1], "atten") == 0) {
+            target = ChipTarget::Attenuator;
+        }
+        if (strcmp(tokens[1], "adc1") == 0) {
+            target = ChipTarget::ADC_1;
+        }
+        if (strcmp(tokens[1], "adc2") == 0) {
+            target = ChipTarget::ADC_2;
+        }
+        if (strcmp(tokens[1], "ram") == 0) {
+            target = ChipTarget::RAM;
+        }
+        if (strcmp(tokens[1], "flash") == 0) {
+            target = ChipTarget::Flash;
+        }
+        if (strcmp(tokens[1], "off") == 0) {
+            target = ChipTarget::Off;
+        }
+        if (target == ChipTarget::None) {
+            printTechnicianBanner();
+            return;
+        }
+        selectSerialChipTarget(target);
+        return;
+    }
+    if (strcmp_P(tokens[0], PSTR("set")) == 0) {
+        if (count < 2U) {
+            printTechnicianBanner();
+            return;
+        }
+        ReferenceTarget target = ReferenceTarget::None;
+        const __FlashStringHelper* message;
+        if (strcmp(tokens[1], "ref1") == 0) {
+            target = ReferenceTarget::Ref1;
+            message = F("Reference clock set to REF1.");
+        }
+        if (strcmp(tokens[1], "ref2") == 0) {
+            target = ReferenceTarget::Ref2;
+            message = F("Reference clock set to REF2.");
+        }
+        if (strcmp(tokens[1], "off") == 0) {
+            target = ReferenceTarget::Off;
+            message = F("All reference clocks disabled.");
+        }
+        if (target == ReferenceTarget::None) {
+            printTechnicianBanner();
+            return;
+        }
+        selectRef(target);
+        Serial.println(message);
+        return;
+    }
+    if (strcmp_P(tokens[0], PSTR("spi")) == 0) {
+        if (count < 2U) {
+            printTechnicianBanner();
+            return;
+        }
+        processSpiToken(tokens[1]);
+        return;
+    }
+    if (strcmp_P(tokens[0], PSTR("idflash")) == 0) {
+        processReceivedWord(0x9FU);
+        return;
+    }
+    printTechnicianBanner();
 }
 
 // cppcheck-suppress unusedFunction
