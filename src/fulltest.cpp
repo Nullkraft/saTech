@@ -226,9 +226,9 @@ void stageFulltestPlan(double rfinMhz)
 {
     ConsoleState& state = consoleState();
     currentRfInputMhz = rfinMhz;
-    state.lo1Manual = false;
-    state.lo2Manual = false;
-    state.lo3Manual = false;
+    state.lo1Manual = false;        // set to automatic frequency control for LO1
+    state.lo2Manual = false;        // set to automatic frequency control for LO2
+    state.lo3Manual = false;        // set to automatic frequency control for LO3
     freqCalc.compute_LO_frequencies(currentRfInputMhz, freqCalc.RefClock1, 1,
                                     state.desiredLo2Injection,
                                     state.desiredLo3Injection);

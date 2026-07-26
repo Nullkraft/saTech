@@ -9,6 +9,7 @@
 #include <arduino_hal.h>
 #include <frequency_calculator.h>
 #include <max2871.h>
+#include "w25n_Flash.h"
 
 extern ArduinoHAL halLo1;
 extern ArduinoHAL halLo2;
@@ -278,6 +279,10 @@ void handleControlWord(uint32_t word)
     }
     if (selector == 0x9FU) {
         selectSerialChipTarget(ChipTarget::Flash);
+        W25N_Flash flash = W25N_Flash();
+        uint32_t jedecId = flash.getJedecID();
+        Serial.print(F("Flash JEDEC ID: "));
+        Serial.println(jedecId, HEX);
         return;
     }
     Serial.print(F("[WN2A] binary word 0x"));

@@ -8,6 +8,7 @@
 #include <ctype.h>
 #include <frequency_calculator.h>
 #include <max2871.h>
+#include "w25n_Flash.h"
 #include <avr/pgmspace.h>
 #include <stdlib.h>
 #include <string.h>
@@ -303,16 +304,16 @@ void handleTechnicianCommand(const char* line, uint16_t bufferSize)
     char buffer[bufferSize];
     strncpy(buffer, line, bufferSize);
 
-    // Split command string into individual words
+    // Splits the command string, a.k.a. buffer contents, into individual null-terminated tokens.
     constexpr size_t NUM_TOKENS = 4U;
     char* tokens[NUM_TOKENS] = {};   // Initializes to zero's (nullptr's)
     size_t count = 0;
-    char* token = strtok(buffer, " ");
+    char* token = strtok(buffer, " "); // Works only on the first token, index 0, in the buffer
     while (token != nullptr && count < NUM_TOKENS) {
         for (char* character = token; *character != '\0'; ++character) {
             *character = static_cast<char>(tolower(static_cast<unsigned char>(*character)));
         }
-        tokens[count++] = token;
+        tokens[count++] = token;    // Works on tokens at index 1 and later
         token = strtok(nullptr, " ");
     }
 
@@ -320,7 +321,8 @@ void handleTechnicianCommand(const char* line, uint16_t bufferSize)
         return;
     }
 
-    if (tokens[1] == nullptr) {
+    if (tokens[1] == nullptr) { // this statement assumes that tokens[0] contains a pointer to a string
+        // and it's the only token in the command line. If there is a second token, it will be ignored in this block.
         if (strcmp(tokens[0], "ascii") == 0) {
             setSerialEncoding(SerialEncoding::Ascii);
             return;
