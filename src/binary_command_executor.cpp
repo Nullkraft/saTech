@@ -276,7 +276,7 @@ void handleControlWord(uint32_t word)
         selectSerialChipTarget(ChipTarget::RAM);
         return;
     }
-    if (selector == 0x1DFFU) {
+    if (selector == 0x9FU) {
         selectSerialChipTarget(ChipTarget::Flash);
         return;
     }
