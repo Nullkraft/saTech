@@ -25,7 +25,7 @@ namespace {
 
 bool loStateForTarget(ChipTarget target, MAX2871** targetLo, double** reportedFreq);
 
-char technicianInputBuffer[INPUT_BUFFER_SIZE];
+char lineInputBuffer[INPUT_BUFFER_SIZE];
 size_t technicianInputLength = 0U;
 
 constexpr double ANALYZER_RF_INPUT_MIN_MHZ = 0.0;
@@ -469,7 +469,7 @@ void handleTechnicianCommand(const char* line)
         return;
     }
     if (strcmp_P(tokens[0], PSTR("idflash")) == 0) {
-        processReceivedWord(0x9FU);
+        // processReceivedWord(0x9FU);
         return;
     }
     printTechnicianBanner();
@@ -483,8 +483,8 @@ void pollTechnicianConsole()
         const uint8_t incomingByte = static_cast<uint8_t>(incomingChar);
         // Terminate and submit technician command
         if (incomingChar == '\n') {
-            technicianInputBuffer[technicianInputLength] = '\0';
-            handleTechnicianCommand(technicianInputBuffer);
+            lineInputBuffer[technicianInputLength] = '\0';
+            handleTechnicianCommand(lineInputBuffer);
             technicianInputLength = 0U;
             continue;
         }
@@ -494,7 +494,7 @@ void pollTechnicianConsole()
         }
         // append char to command string
         if (technicianInputLength < (INPUT_BUFFER_SIZE - 1U)) {
-            technicianInputBuffer[technicianInputLength++] = incomingChar;
+            lineInputBuffer[technicianInputLength++] = incomingChar;
             continue;
         }
         technicianInputLength = 0U;
