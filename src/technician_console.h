@@ -2,8 +2,9 @@
 
 #include <Arduino.h>
 
+#include "technician_fulltest.h"
+
 void printTechnicianBanner();
-void printFulltestPlanReport();
 void handleTechnicianCommand(const char* line);
 void pollTechnicianConsole();
 void printInjectionSummary();
