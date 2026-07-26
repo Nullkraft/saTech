@@ -292,7 +292,7 @@ void printTechnicianBanner()
     Serial.println();
 }
 
-void handleTechnicianCommand(const char* line)
+void handleTechnicianCommand(const char* line, uint16_t bufferSize)
 {
     // Exit, nothing to do
     if (line == nullptr) {
@@ -300,9 +300,8 @@ void handleTechnicianCommand(const char* line)
     }
 
     // Else, convert 'line' to a null-terminated string
-    char buffer[INPUT_BUFFER_SIZE];
-    strncpy(buffer, line, sizeof(buffer) - 1U);
-    buffer[sizeof(buffer) - 1U] = '\0';
+    char buffer[bufferSize];
+    strncpy(buffer, line, bufferSize);
 
     // Split command string into individual words
     constexpr size_t NUM_TOKENS = 4U;
@@ -469,7 +468,7 @@ void handleTechnicianCommand(const char* line)
         return;
     }
     if (strcmp_P(tokens[0], PSTR("idflash")) == 0) {
-        // processReceivedWord(0x9FU);
+        processReceivedWord(0x9FU);
         return;
     }
     printTechnicianBanner();
@@ -484,7 +483,7 @@ void pollTechnicianConsole()
         // Terminate and submit technician command
         if (incomingChar == '\n') {
             lineInputBuffer[technicianInputLength] = '\0';
-            handleTechnicianCommand(lineInputBuffer);
+            handleTechnicianCommand(lineInputBuffer, technicianInputLength + 1U);
             technicianInputLength = 0U;
             continue;
         }
