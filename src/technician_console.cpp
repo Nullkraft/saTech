@@ -26,7 +26,7 @@ namespace {
 bool loStateForTarget(ChipTarget target, MAX2871** targetLo, double** reportedFreq);
 
 char lineInputBuffer[INPUT_BUFFER_SIZE];
-size_t technicianInputLength = 0U;
+size_t bufferIndex = 0U;
 
 constexpr double ANALYZER_RF_INPUT_MIN_MHZ = 0.0;
 constexpr double ANALYZER_RF_INPUT_MAX_MHZ = 3000.0;
@@ -482,9 +482,10 @@ void pollTechnicianConsole()
         const uint8_t incomingByte = static_cast<uint8_t>(incomingChar);
         // Terminate and submit technician command
         if (incomingChar == '\n') {
-            lineInputBuffer[technicianInputLength] = '\0';
-            handleTechnicianCommand(lineInputBuffer, technicianInputLength + 1U);
-            technicianInputLength = 0U;
+            lineInputBuffer[bufferIndex] = '\0';
+            uint16_t bufferSize = static_cast<uint16_t>(bufferIndex + 1U);
+            handleTechnicianCommand(lineInputBuffer, bufferSize);
+            bufferIndex = 0U;
             continue;
         }
         // Skip non-printable characters including '\r'
@@ -492,11 +493,11 @@ void pollTechnicianConsole()
             continue;
         }
         // append char to command string
-        if (technicianInputLength < (INPUT_BUFFER_SIZE - 1U)) {
-            lineInputBuffer[technicianInputLength++] = incomingChar;
+        if (bufferIndex < (INPUT_BUFFER_SIZE - 1U)) {
+            lineInputBuffer[bufferIndex++] = incomingChar;
             continue;
         }
-        technicianInputLength = 0U;
+        bufferIndex = 0U;
         Serial.println(F("Input too long, line cleared."));
     }
 }
