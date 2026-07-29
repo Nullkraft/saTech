@@ -46,7 +46,7 @@ constexpr double ATTEN_MAX_DB     = 31.75;
 constexpr double ATTEN_STEP_DB    = 0.25;
 constexpr uint32_t ATTEN_SPI_HZ   = 1000000UL;
 constexpr uint32_t SPI_DEFAULT_HZ = 16000000UL;  // Default for ADC, RAM, Flash raw writes.
-constexpr size_t INPUT_BUFFER_SIZE = 96;
+constexpr uint8_t INPUT_BUFFER_SIZE = 40;
 
 // ---------------------------------------------------------------------------
 // Low-level pin primitives — reusable across technician, calibration, and
