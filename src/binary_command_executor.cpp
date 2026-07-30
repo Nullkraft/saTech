@@ -280,12 +280,12 @@ void handleControlWord(uint32_t word)
     }
     if (selector == 0x9FU) {
         selectSerialChipTarget(ChipTarget::Flash);
-        // W25N_Flash flash = W25N_Flash();
-        // flash.begin(A1);
         uint32_t manufId = flash.getManufID();
-        Serial.print(F("Flash ID: "));
+        uint16_t deviceId = flash.getDeviceID();
+        Serial.print(F("Flash ID: 0x"));
         Serial.println(manufId, HEX);
-        // Serial.print(F("Device ID 0x"));
+        Serial.print(F("Device ID: 0x"));
+        Serial.println(deviceId, HEX);
         return;
     }
     Serial.print(F("[WN2A] binary word 0x"));
