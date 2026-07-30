@@ -1,29 +1,13 @@
 #include "command_interface.h"
 
 #include "binary_command_executor.h"
+#include "board_devices.h"
 #include "board_control.h"
 #include "console_state.h"
 #include "technician_console.h"
 
 #include <SPI.h>
-#include <arduino_hal.h>
-#include <frequency_calculator.h>
-#include <max2871.h>
-#include "w25n_Flash.h"
 
-extern ArduinoHAL halLo1;
-extern ArduinoHAL halLo2;
-extern ArduinoHAL halLo3;
-extern MAX2871 lo1;
-extern MAX2871 lo2;
-extern MAX2871 lo3;
-extern FrequencyCalculator freqCalc;
-extern double currentRfInputMhz;
-
-void tuneTo(double mhz);
-void initializeLo(MAX2871& lo);
-
-extern W25N_Flash flash;
 namespace {
 
 constexpr uint8_t RECEIVED_WORD_BYTES = 4U;

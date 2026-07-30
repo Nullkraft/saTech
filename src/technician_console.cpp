@@ -1,26 +1,14 @@
 #include "technician_console.h"
 
+#include "board_devices.h"
 #include "command_interface.h"
 #include "console_state.h"
 #include "fulltest.h"
 
-#include <arduino_hal.h>
 #include <ctype.h>
-#include <frequency_calculator.h>
-#include <max2871.h>
-#include "w25n_Flash.h"
 #include <avr/pgmspace.h>
 #include <stdlib.h>
 #include <string.h>
-
-extern MAX2871 lo1;
-extern MAX2871 lo2;
-extern MAX2871 lo3;
-extern FrequencyCalculator freqCalc;
-extern double currentRfInputMhz;
-
-void recomputePlan();
-void tuneTo(double mhz);
 
 namespace {
 
