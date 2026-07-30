@@ -122,7 +122,7 @@ void setup()
     pinMode(LED_BUILTIN, OUTPUT);
     // pinMode(PIN_LE_LO2,  OUTPUT);
 
-    // selectChip((ChipTarget::Flash));
+    selectChip((ChipTarget::Flash));
     flash.begin(PIN_FLASH);
     // Deassert all CS/LE pins to idle and enable REF1 as the startup reference.
     selectChip(ChipTarget::Off);
