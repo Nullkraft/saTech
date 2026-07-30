@@ -278,6 +278,7 @@ void printTechnicianBanner()
     Serial.println(F(" set <ref1|ref2|off>   Enable one or disable both"));
     Serial.println(F(" spi <hex32>           Send raw 32-bit word to selected LO"));
     Serial.println(F(" <idflash|9F>          Type string or hex command value to print flash ID"));
+    Serial.println(F(" <F|5>                 Type hex to print status register configuration"));
     Serial.println();
 }
 
@@ -459,6 +460,10 @@ void handleTechnicianCommand(const char* line, uint16_t bufferSize)
     }
     if (strcmp_P(tokens[0], PSTR("idflash")) == 0) {
         processReceivedWord(0x9FU);
+        return;
+    }
+    if (strcmp_P(tokens[0], PSTR("readstatreg")) == 0) {
+        processReceivedWord(0x5U);
         return;
     }
     printTechnicianBanner();

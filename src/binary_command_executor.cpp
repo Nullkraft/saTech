@@ -269,6 +269,11 @@ void handleControlWord(uint32_t word)
         Serial.println(flash.getDeviceID(), HEX);
         return;
     }
+    if (selector == 0xFU || selector == 0x5U) {
+        Serial.print("This is the statreg command.");
+        Serial.println("<Value>");
+        return;
+    }
     Serial.print(F("[WN2A] binary word 0x"));
     static const char hexDigits[] = "0123456789ABCDEF";
     for (int shift = 28; shift >= 0; shift -= 4) {
