@@ -23,6 +23,7 @@ extern double currentRfInputMhz;
 void tuneTo(double mhz);
 void initializeLo(MAX2871& lo);
 
+extern W25N_Flash flash;
 namespace {
 
 constexpr uint8_t RECEIVED_WORD_BYTES = 4U;
@@ -279,10 +280,12 @@ void handleControlWord(uint32_t word)
     }
     if (selector == 0x9FU) {
         selectSerialChipTarget(ChipTarget::Flash);
-        W25N_Flash flash = W25N_Flash();
-        uint32_t jedecId = flash.getJedecID();
-        Serial.print(F("Flash JEDEC ID: "));
-        Serial.println(jedecId, HEX);
+        // W25N_Flash flash = W25N_Flash();
+        // flash.begin(A1);
+        uint32_t manufId = flash.getManufID();
+        Serial.print(F("Flash ID: "));
+        Serial.println(manufId, HEX);
+        // Serial.print(F("Device ID 0x"));
         return;
     }
     Serial.print(F("[WN2A] binary word 0x"));

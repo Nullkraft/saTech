@@ -30,6 +30,8 @@ FrequencyCalculator freqCalc(lo1, lo2, lo3);
 
 double currentRfInputMhz = STARTUP_RF_MHZ;
 
+W25N_Flash flash;
+
 // cppcheck-suppress unusedFunction
 void initializeLo(MAX2871& lo)
 {
@@ -120,6 +122,8 @@ void setup()
     pinMode(LED_BUILTIN, OUTPUT);
     // pinMode(PIN_LE_LO2,  OUTPUT);
 
+    // selectChip((ChipTarget::Flash));
+    flash.begin(PIN_FLASH);
     // Deassert all CS/LE pins to idle and enable REF1 as the startup reference.
     selectChip(ChipTarget::Off);
     selectRef(ReferenceTarget::Ref1);
