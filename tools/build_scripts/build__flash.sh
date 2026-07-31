@@ -5,5 +5,5 @@ if [ $# -eq 0 ]; then
     exit 1
 fi
 
-rm -rf .pio/libdeps/*
+rm -rf .pio/libdeps/technician/W25N*
 pio run -t clean && pio run "$@"
