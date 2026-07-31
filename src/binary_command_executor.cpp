@@ -270,8 +270,7 @@ void handleControlWord(uint32_t word)
         return;
     }
     if (selector == 0xFU || selector == 0x5U) {
-        Serial.print("This is the statreg command.");
-        Serial.println("<Value>");
+        flash.reportStatusReg(0x5);
         return;
     }
     Serial.print(F("[WN2A] binary word 0x"));
