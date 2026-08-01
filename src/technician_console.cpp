@@ -278,7 +278,7 @@ void printTechnicianBanner()
     Serial.println(F(" set <ref1|ref2|off>   Enable one or disable both"));
     Serial.println(F(" spi <hex32>           Send raw 32-bit word to selected LO"));
     Serial.println(F(" <idflash|9F>          Type string or hex command value to print flash ID"));
-    Serial.println(F(" <F|5>                 Type hex to print status register configuration"));
+    Serial.println(F(" <readStatReg|F|5>     Print status register configuration"));
     Serial.println();
 }
 
