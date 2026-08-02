@@ -270,7 +270,11 @@ void handleControlWord(uint32_t word)
         return;
     }
     if (selector == 0xFU || selector == 0x5U) {
+        selectChip(ChipTarget::Flash);
         flash.reportStatusReg(selector);
+        selectChip(ChipTarget::Off);
+        Serial.print(F("Status register report: "));
+        Serial.println(flash.getStatReg(), HEX);
         return;
     }
     Serial.print(F("[WN2A] binary word 0x"));
