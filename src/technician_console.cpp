@@ -51,11 +51,9 @@ void markLoManual(ChipTarget target)
     }
 }
 
+// Maps an LO chip target (an enum) to its MAX2871 instance and reported frequency slot.
 bool loStateForTarget(ChipTarget target, MAX2871** targetLo, double** reportedFreq)
 {
-    if (targetLo == nullptr || reportedFreq == nullptr) {
-        return false;
-    }
     switch (target) {
         case ChipTarget::LO1:
             *targetLo = &lo1;
@@ -189,9 +187,7 @@ void handleLofreqCommand(const char* valueToken)
     }
     MAX2871* targetLo;
     double* reportedFreq;
-    if (!loStateForTarget(chipTarget, &targetLo, &reportedFreq)) {
-        return;
-    }
+    loStateForTarget(chipTarget, &targetLo, &reportedFreq);
     targetLo->setFrequency(requestedMhz);
     const double actual = targetLo->fmn2freq();
     *reportedFreq = actual;
@@ -208,9 +204,6 @@ void handleLofreqCommand(const char* valueToken)
 
 void processSpiToken(const char* valueToken)
 {
-    if (valueToken == nullptr) {
-        return;
-    }
     ConsoleState& state = consoleState();
     if (state.chipTarget == ChipTarget::None || state.chipTarget == ChipTarget::Off) {
         printTechnicianBanner();
@@ -284,12 +277,7 @@ void printTechnicianBanner()
 
 void handleTechnicianCommand(const char* line, uint16_t bufferSize)
 {
-    // Exit, nothing to do
-    if (line == nullptr) {
-        return;
-    }
-
-    // Else, convert 'line' to a null-terminated string
+    // Convert 'line' to a null-terminated string
     char buffer[bufferSize];
     strncpy(buffer, line, bufferSize);
 
