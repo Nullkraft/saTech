@@ -38,17 +38,6 @@ void logManualWrite(uint32_t value)
     Serial.println();
 }
 
-void markLoManual(ChipTarget target)
-{
-    ConsoleState& state = consoleState();
-    switch (target) {
-        case ChipTarget::LO1: state.lo1Manual = true; break;
-        case ChipTarget::LO2: state.lo2Manual = true; break;
-        case ChipTarget::LO3: state.lo3Manual = true; break;
-        default: break;
-    }
-}
-
 void printSelectedLoSnapshot(ChipTarget target)
 {
     const MAX2871* targetLo;
@@ -161,24 +150,24 @@ void handleLofreqCommand(const char* valueToken)
         Serial.println(F("LO frequency out of range (23.5 to 6000 MHz)."));
         return;
     }
-    double actual = 0.0;
+    double actual;
     if (chipTarget == ChipTarget::LO1) {
         lo1.setFrequency(requestedMhz);
         actual = lo1.fmn2freq();
         freqCalc.FreqLO1 = actual;
-    }
-    if (chipTarget == ChipTarget::LO2) {
+        consoleState().lo1Manual = true;
+    } else if (chipTarget == ChipTarget::LO2) {
         lo2.setFrequency(requestedMhz);
         actual = lo2.fmn2freq();
         freqCalc.FreqLO2 = actual;
-    }
-    if (chipTarget == ChipTarget::LO3) {
+        consoleState().lo2Manual = true;
+    } else {
         lo3.setFrequency(requestedMhz);
         actual = lo3.fmn2freq();
         freqCalc.FreqLO3 = actual;
+        consoleState().lo3Manual = true;
     }
 
-    markLoManual(chipTarget);
     Serial.print(F("LO frequency set for "));
     Serial.print(chipTargetName(chipTarget));
     Serial.print(F(" -> "));
