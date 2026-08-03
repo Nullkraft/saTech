@@ -12,8 +12,6 @@
 
 namespace {
 
-bool loStateForTarget(ChipTarget target, MAX2871** targetLo, double** reportedFreq);
-
 char lineInputBuffer[INPUT_BUFFER_SIZE];
 size_t bufferIndex = 0U;
 
@@ -49,28 +47,6 @@ void markLoManual(ChipTarget target)
         case ChipTarget::LO3: state.lo3Manual = true; break;
         default: break;
     }
-}
-
-// Maps an LO chip target (an enum) to its MAX2871 instance and reported frequency slot.
-bool loStateForTarget(ChipTarget target, MAX2871** targetLo, double** reportedFreq)
-{
-    switch (target) {
-        case ChipTarget::LO1:
-            *targetLo = &lo1;
-            *reportedFreq = &freqCalc.FreqLO1;
-            return true;
-        case ChipTarget::LO2:
-            *targetLo = &lo2;
-            *reportedFreq = &freqCalc.FreqLO2;
-            return true;
-        case ChipTarget::LO3:
-            *targetLo = &lo3;
-            *reportedFreq = &freqCalc.FreqLO3;
-            return true;
-        default:
-            break;
-    }
-    return false;
 }
 
 void printSelectedLoSnapshot(ChipTarget target)
@@ -185,12 +161,23 @@ void handleLofreqCommand(const char* valueToken)
         Serial.println(F("LO frequency out of range (23.5 to 6000 MHz)."));
         return;
     }
-    MAX2871* targetLo;
-    double* reportedFreq;
-    loStateForTarget(chipTarget, &targetLo, &reportedFreq);
-    targetLo->setFrequency(requestedMhz);
-    const double actual = targetLo->fmn2freq();
-    *reportedFreq = actual;
+    double actual = 0.0;
+    if (chipTarget == ChipTarget::LO1) {
+        lo1.setFrequency(requestedMhz);
+        actual = lo1.fmn2freq();
+        freqCalc.FreqLO1 = actual;
+    }
+    if (chipTarget == ChipTarget::LO2) {
+        lo2.setFrequency(requestedMhz);
+        actual = lo2.fmn2freq();
+        freqCalc.FreqLO2 = actual;
+    }
+    if (chipTarget == ChipTarget::LO3) {
+        lo3.setFrequency(requestedMhz);
+        actual = lo3.fmn2freq();
+        freqCalc.FreqLO3 = actual;
+    }
+
     markLoManual(chipTarget);
     Serial.print(F("LO frequency set for "));
     Serial.print(chipTargetName(chipTarget));
