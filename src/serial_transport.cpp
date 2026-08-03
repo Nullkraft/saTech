@@ -13,9 +13,6 @@ SerialEncoding serialEncoding = SerialEncoding::Ascii;
 
 bool parseAsciiControlWord(const char* token, uint32_t* word)
 {
-    if (token == nullptr || word == nullptr) {
-        return false;
-    }
     char* endPointer;
     *word = static_cast<uint32_t>(strtoul(token, &endPointer, 16));
     return endPointer != token && *endPointer == '\0';
@@ -43,7 +40,6 @@ void collectAsciiByte(char incoming, uint8_t incomingByte)
         return;
     }
     inputLength = 0U;
-    Serial.println(F("Input too long, line cleared."));
 }
 
 } // namespace

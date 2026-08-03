@@ -153,10 +153,8 @@ void selectRef(ReferenceTarget target)
         digitalWrite(PIN_REF_EN2, HIGH);
         s.ref2Enabled = true;
         break;
-    case ReferenceTarget::Off:
-        // ReferenceTarget::Off - both clocks remain deasserted.
-        break;
     default:
+        // ReferenceTarget::Off - both clocks remain deasserted.
         break;
     }
 }
@@ -193,7 +191,6 @@ const __FlashStringHelper* chipTargetName(ChipTarget target)
         case ChipTarget::RAM:        return F("RAM");
         case ChipTarget::Flash:      return F("FLASH");
         case ChipTarget::Off:        return F("Off");
-        case ChipTarget::None:
         default:                     return F("None");
     }
 }

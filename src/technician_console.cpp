@@ -493,6 +493,6 @@ void pollTechnicianConsole()
             continue;
         }
         bufferIndex = 0U;
-        Serial.println(F("Input too long, line cleared."));
+        printTechnicianBanner();
     }
 }
