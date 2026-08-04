@@ -369,18 +369,12 @@ void processReceivedWord(uint32_t mode)
     // Check if the parsed 32-bit word has 0xFF (command flag) in its least-significant byte?
     const SerialPayloadMode modeType =
         ((mode & 0xFFU) == 0xFFU) ? SerialPayloadMode::Command : serialRxState.payloadMode;
-    switch (modeType) {
-        case SerialPayloadMode::Command:
-            handleControlWord(mode);
-            break;
-        case SerialPayloadMode::FMNData:
-            handleFmnDataWord(mode);
-            break;
-        case SerialPayloadMode::DirectRegisterData:
-            handleDirectRegisterDataWord(mode);
-            break;
-        default:
-            break;
+    if (modeType == SerialPayloadMode::Command) {
+        handleControlWord(mode);
+    } else if (modeType == SerialPayloadMode::FMNData) {
+        handleFmnDataWord(mode);
+    } else {  // SerialPayloadMode::DirectRegisterData
+        handleDirectRegisterDataWord(mode);
     }
 }
 
