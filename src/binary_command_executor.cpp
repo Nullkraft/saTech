@@ -55,20 +55,21 @@ bool loTargetForControlSelector(uint16_t selector, ChipTarget* target)
 
 bool loTargetForListedSelector(uint16_t selector, uint8_t baseCommand, ChipTarget* target)
 {
-    if (target == nullptr || (selector & 0x00FFU) != 0x00FFU) {
+    if ((selector & 0x00FFU) != 0x00FFU) {
         return false;
     }
     const uint8_t command = static_cast<uint8_t>((selector >> 8) & 0xFFU);
     if (command < (baseCommand + 1U) || command > (baseCommand + 3U)) {
         return false;
     }
-    switch (command - baseCommand) {
-        case 1U: *target = ChipTarget::LO1; return true;
-        case 2U: *target = ChipTarget::LO2; return true;
-        case 3U: *target = ChipTarget::LO3; return true;
-        default: break;
+    if ((command - baseCommand) == 1U) {
+        *target = ChipTarget::LO1;
+    } else if ((command - baseCommand) == 2U) {
+        *target = ChipTarget::LO2;
+    } else {
+        *target = ChipTarget::LO3;
     }
-    return false;
+    return true;
 }
 
 bool loStateForTarget(ChipTarget target, MAX2871** targetLo, double** reportedFreq)
