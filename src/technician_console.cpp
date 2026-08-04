@@ -129,10 +129,6 @@ void handleIfmodeCommand(const char* modeToken)
 
 void handleLofreqCommand(const char* valueToken)
 {
-    if (valueToken == nullptr) {
-        printTechnicianBanner();
-        return;
-    }
     const ChipTarget chipTarget = getCurrentChipTarget();
     if (chipTarget != ChipTarget::LO1 &&
         chipTarget != ChipTarget::LO2 &&
