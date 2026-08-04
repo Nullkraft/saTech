@@ -69,25 +69,34 @@ bool loTargetForListedCode(uint16_t commandCode, uint8_t baseCommand, ChipTarget
     return true;
 }
 
-bool loStateForTarget(ChipTarget target, MAX2871** targetLo, double** reportedFreq)
+MAX2871* targetLo(ChipTarget target)
 {
     switch (target) {
         case ChipTarget::LO1:
-            *targetLo = &lo1;
-            *reportedFreq = &freqCalc.FreqLO1;
-            return true;
+            return &lo1;
         case ChipTarget::LO2:
-            *targetLo = &lo2;
-            *reportedFreq = &freqCalc.FreqLO2;
-            return true;
+            return &lo2;
         case ChipTarget::LO3:
-            *targetLo = &lo3;
-            *reportedFreq = &freqCalc.FreqLO3;
-            return true;
+            return &lo3;
         default:
             break;
     }
-    return false;
+    return nullptr;
+}
+
+double* reportedFrequencyForTargetLo(ChipTarget target)
+{
+    switch (target) {
+        case ChipTarget::LO1:
+            return &freqCalc.FreqLO1;
+        case ChipTarget::LO2:
+            return &freqCalc.FreqLO2;
+        case ChipTarget::LO3:
+            return &freqCalc.FreqLO3;
+        default:
+            break;
+    }
+    return nullptr;
 }
 
 void setSerialPayloadMode(SerialPayloadMode mode)
@@ -105,22 +114,6 @@ void deassertProgrammingPins()
     state.chipTarget = ChipTarget::Off;
     state.manualSpiArmed = false;
     state.pendingSpiConfirmation = false;
-}
-
-void applyLoOutputSelect(ChipTarget target, RFOutPort port)
-{
-    MAX2871* targetLo;
-    double* reportedFreq;
-    loStateForTarget(target, &targetLo, &reportedFreq);
-    targetLo->outputSelect(port);
-}
-
-void applyLoOutputPower(ChipTarget target, int dBm)
-{
-    MAX2871* targetLo;
-    double* reportedFreq;
-    loStateForTarget(target, &targetLo, &reportedFreq);
-    targetLo->outputPower(dBm, RF_B);
 }
 
 void handleControlWord(uint32_t word)
@@ -199,27 +192,27 @@ void handleControlWord(uint32_t word)
         return;
     }
     if (loTargetForListedCode(commandCode, 0x08U, &loTarget)) {
-        applyLoOutputSelect(loTarget, RFNONE);
+        targetLo(loTarget)->outputSelect(RFNONE);
         deassertProgrammingPins();
         return;
     }
     if (loTargetForListedCode(commandCode, 0x10U, &loTarget)) {
-        applyLoOutputPower(loTarget, -4);
+        targetLo(loTarget)->outputPower(-4, RF_B);
         deassertProgrammingPins();
         return;
     }
     if (loTargetForListedCode(commandCode, 0x18U, &loTarget)) {
-        applyLoOutputPower(loTarget, -1);
+        targetLo(loTarget)->outputPower(-1, RF_B);
         deassertProgrammingPins();
         return;
     }
     if (loTargetForListedCode(commandCode, 0x20U, &loTarget)) {
-        applyLoOutputPower(loTarget, 2);
+        targetLo(loTarget)->outputPower(2, RF_B);
         deassertProgrammingPins();
         return;
     }
     if (loTargetForListedCode(commandCode, 0x28U, &loTarget)) {
-        applyLoOutputPower(loTarget, 5);
+        targetLo(loTarget)->outputPower(5, RF_B);
         deassertProgrammingPins();
         return;
     }
@@ -271,15 +264,15 @@ void handleControlWord(uint32_t word)
 
 void handleFmnDataWord(uint32_t packedFMN)
 {
-    MAX2871* targetLo;
-    double* reportedFreq;
     const ChipTarget target = serialRxState.selectedBinaryTarget;
-    if (!loStateForTarget(target, &targetLo, &reportedFreq)) {
+    MAX2871* lo = targetLo(target);
+    if (lo == nullptr) {
         return;
     }
+    double* reportedFreq = reportedFrequencyForTargetLo(target);
 
-    targetLo->setFrequency(packedFMN, targetLo->DIVA);
-    *reportedFreq = targetLo->fmn2freq();               // Okay for testing only
+    lo->setFrequency(packedFMN, lo->DIVA);
+    *reportedFreq = lo->fmn2freq();               // Okay for testing only
 
     if (target == ChipTarget::LO1) {
         state.lo1Manual = true;
