@@ -80,10 +80,6 @@ void printSelectedLoSnapshot(ChipTarget target)
 
 void handleIfmodeCommand(const char* modeToken)
 {
-    if (modeToken == nullptr) {
-        printTechnicianBanner();
-        return;
-    }
     const bool highRequested = strcmp(modeToken, "high") == 0;
     const bool lowRequested  = strcmp(modeToken, "low") == 0;
     if (!highRequested && !lowRequested) {
@@ -107,15 +103,11 @@ void handleIfmodeCommand(const char* modeToken)
         return;
     }
     const LOInjectionMode requestedMode = highRequested ? LOInjectionMode::High : LOInjectionMode::Low;
-    switch (state.chipTarget) {
-        case ChipTarget::LO2:
-            state.desiredLo2Injection = requestedMode;
-            break;
-        case ChipTarget::LO3:
-            state.desiredLo3Injection = requestedMode;
-            break;
-        default:
-            return;
+    if (state.chipTarget == ChipTarget::LO2) {
+        state.desiredLo2Injection = requestedMode;
+    } else {
+        // state.chipTarget is ChipTarget::LO3 after the target check above.
+        state.desiredLo3Injection = requestedMode;
     }
     recomputePlan();
     Serial.print(F("IF mode updated for "));
@@ -129,10 +121,6 @@ void handleIfmodeCommand(const char* modeToken)
 
 void handleLofreqCommand(const char* valueToken)
 {
-    if (valueToken == nullptr) {
-        printTechnicianBanner();
-        return;
-    }
     const ChipTarget chipTarget = getCurrentChipTarget();
     if (chipTarget != ChipTarget::LO1 &&
         chipTarget != ChipTarget::LO2 &&
