@@ -127,9 +127,8 @@ void applyLoOutputSelect(ChipTarget target, RFOutPort port)
 {
     MAX2871* targetLo;
     double* reportedFreq;
-    if (loStateForTarget(target, &targetLo, &reportedFreq)) {
-        targetLo->outputSelect(port);
-    }
+    loStateForTarget(target, &targetLo, &reportedFreq);
+    targetLo->outputSelect(port);
 }
 
 void applyLoOutputPower(ChipTarget target, int dBm)
