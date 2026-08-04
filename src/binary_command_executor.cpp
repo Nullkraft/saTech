@@ -135,9 +135,8 @@ void applyLoOutputPower(ChipTarget target, int dBm)
 {
     MAX2871* targetLo;
     double* reportedFreq;
-    if (loStateForTarget(target, &targetLo, &reportedFreq)) {
-        targetLo->outputPower(dBm, RF_B);
-    }
+    loStateForTarget(target, &targetLo, &reportedFreq);
+    targetLo->outputPower(dBm, RF_B);
 }
 
 void handleControlWord(uint32_t word)
