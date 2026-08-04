@@ -3,7 +3,7 @@
 #include "board_devices.h"
 #include "command_interface.h"
 #include "console_state.h"
-#include "fulltest.h"
+#include "technician_fulltest.h"
 
 #include <ctype.h>
 #include <avr/pgmspace.h>
