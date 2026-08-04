@@ -247,10 +247,25 @@ void handleControlWord(uint32_t word)
     }
     if (commandCode == 0xFU || commandCode == 0x5U) {
         selectChip(ChipTarget::Flash);
-        flash.reportStatusReg(commandCode);
+        flash.reportStatusReg(commandCode, 0xA0U);
         selectChip(ChipTarget::Off);
-        Serial.print(F("Status register report: "));
+        Serial.print(F("Protection register report: 0x"));
         Serial.println(flash.getStatReg(), HEX);
+        Serial.println();
+
+        selectChip(ChipTarget::Flash);
+        flash.reportStatusReg(commandCode, 0xB0U);
+        selectChip(ChipTarget::Off);
+        Serial.print(F("Configuration register report: 0x"));
+        Serial.println(flash.getStatReg(), HEX);
+        Serial.println();
+
+        selectChip(ChipTarget::Flash);
+        flash.reportStatusReg(commandCode, 0xC0U);
+        selectChip(ChipTarget::Off);
+        Serial.print(F("Status register report: 0x"));
+        Serial.println(flash.getStatReg(), HEX);
+        Serial.println();
         return;
     }
     Serial.print(F("[WN2A] binary word 0x"));
