@@ -35,9 +35,6 @@ SerialReceiveState serialRxState = {
 
 bool loTargetForControlCode(uint16_t commandCode, ChipTarget* target)
 {
-    if (target == nullptr) {
-        return false;
-    }
     if (commandCode == 0x01FFU) {
         *target = ChipTarget::LO1;
         return true;
@@ -50,7 +47,7 @@ bool loTargetForControlCode(uint16_t commandCode, ChipTarget* target)
         *target = ChipTarget::LO3;
         return true;
     }
-    return false;
+    return false;   // Handles command codes that are not LO control codes
 }
 
 bool loTargetForListedCode(uint16_t commandCode, uint8_t baseCommand, ChipTarget* target)
