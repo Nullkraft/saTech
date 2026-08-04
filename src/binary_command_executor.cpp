@@ -33,32 +33,32 @@ SerialReceiveState serialRxState = {
     0U,
 };
 
-bool loTargetForControlSelector(uint16_t selector, ChipTarget* target)
+bool loTargetForControlCode(uint16_t commandCode, ChipTarget* target)
 {
     if (target == nullptr) {
         return false;
     }
-    if (selector == 0x01FFU) {
+    if (commandCode == 0x01FFU) {
         *target = ChipTarget::LO1;
         return true;
     }
-    if (selector == 0x02FFU) {
+    if (commandCode == 0x02FFU) {
         *target = ChipTarget::LO2;
         return true;
     }
-    if (selector == 0x03FFU) {
+    if (commandCode == 0x03FFU) {
         *target = ChipTarget::LO3;
         return true;
     }
     return false;
 }
 
-bool loTargetForListedSelector(uint16_t selector, uint8_t baseCommand, ChipTarget* target)
+bool loTargetForListedCode(uint16_t commandCode, uint8_t baseCommand, ChipTarget* target)
 {
-    if ((selector & 0x00FFU) != 0x00FFU) {
+    if ((commandCode & 0x00FFU) != 0x00FFU) {
         return false;
     }
-    const uint8_t command = static_cast<uint8_t>((selector >> 8) & 0xFFU);
+    const uint8_t command = static_cast<uint8_t>((commandCode >> 8) & 0xFFU);
     if (command < (baseCommand + 1U) || command > (baseCommand + 3U)) {
         return false;
     }
@@ -203,7 +203,7 @@ void handleControlWord(uint32_t word)
         return;
     }
     ChipTarget loTarget;
-    if (loTargetForControlSelector(commandCode, &loTarget)) {
+    if (loTargetForControlCode(commandCode, &loTarget)) {
         selectSerialChipTarget(loTarget);
         return;
     }
@@ -212,38 +212,38 @@ void handleControlWord(uint32_t word)
         deassertProgrammingPins();
         return;
     }
-    if (loTargetForListedSelector(commandCode, 0x08U, &loTarget)) {
+    if (loTargetForListedCode(commandCode, 0x08U, &loTarget)) {
         applyLoOutputSelect(loTarget, RFNONE);
         deassertProgrammingPins();
         return;
     }
-    if (loTargetForListedSelector(commandCode, 0x10U, &loTarget)) {
+    if (loTargetForListedCode(commandCode, 0x10U, &loTarget)) {
         applyLoOutputPower(loTarget, -4);
         deassertProgrammingPins();
         return;
     }
-    if (loTargetForListedSelector(commandCode, 0x18U, &loTarget)) {
+    if (loTargetForListedCode(commandCode, 0x18U, &loTarget)) {
         applyLoOutputPower(loTarget, -1);
         deassertProgrammingPins();
         return;
     }
-    if (loTargetForListedSelector(commandCode, 0x20U, &loTarget)) {
+    if (loTargetForListedCode(commandCode, 0x20U, &loTarget)) {
         applyLoOutputPower(loTarget, 2);
         deassertProgrammingPins();
         return;
     }
-    if (loTargetForListedSelector(commandCode, 0x28U, &loTarget)) {
+    if (loTargetForListedCode(commandCode, 0x28U, &loTarget)) {
         applyLoOutputPower(loTarget, 5);
         deassertProgrammingPins();
         return;
     }
-    if (loTargetForListedSelector(commandCode, 0x30U, &loTarget)) {
+    if (loTargetForListedCode(commandCode, 0x30U, &loTarget)) {
         selectSerialChipTarget(loTarget);
         setSerialPayloadMode(SerialPayloadMode::FMNData);
         return;
     }
-    if (loTargetForListedSelector(commandCode, 0x38U, &loTarget) ||
-        loTargetForListedSelector(commandCode, 0x40U, &loTarget) ||
+    if (loTargetForListedCode(commandCode, 0x38U, &loTarget) ||
+        loTargetForListedCode(commandCode, 0x40U, &loTarget) ||
         commandCode == 0x4AFFU || commandCode == 0x4BFFU) {
         return;
     }
