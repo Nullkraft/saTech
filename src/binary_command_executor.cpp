@@ -97,11 +97,12 @@ bool loStateForTarget(ChipTarget target, MAX2871** targetLo, double** reportedFr
 
 void markLoManual(ChipTarget target)
 {
-    switch (target) {
-        case ChipTarget::LO1: state.lo1Manual = true; break;
-        case ChipTarget::LO2: state.lo2Manual = true; break;
-        case ChipTarget::LO3: state.lo3Manual = true; break;
-        default: break;
+    if (target == ChipTarget::LO1) {
+        state.lo1Manual = true;
+    } else if (target == ChipTarget::LO2) {
+        state.lo2Manual = true;
+    } else {  // ChipTarget::LO3:
+        state.lo3Manual = true;
     }
 }
 
