@@ -1,4 +1,4 @@
-#include "fulltest.h"
+#include "technician_fulltest.h"
 
 #include "board_devices.h"
 #include "command_interface.h"
