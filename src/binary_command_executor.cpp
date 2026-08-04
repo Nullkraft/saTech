@@ -90,17 +90,6 @@ bool loStateForTarget(ChipTarget target, MAX2871** targetLo, double** reportedFr
     return false;
 }
 
-void markLoManual(ChipTarget target)
-{
-    if (target == ChipTarget::LO1) {
-        state.lo1Manual = true;
-    } else if (target == ChipTarget::LO2) {
-        state.lo2Manual = true;
-    } else {  // ChipTarget::LO3
-        state.lo3Manual = true;
-    }
-}
-
 void setSerialPayloadMode(SerialPayloadMode mode)
 {
     serialRxState.payloadMode = mode;
@@ -291,7 +280,15 @@ void handleFmnDataWord(uint32_t packedFMN)
 
     targetLo->setFrequency(packedFMN, targetLo->DIVA);
     *reportedFreq = targetLo->fmn2freq();               // Okay for testing only
-    markLoManual(target);
+
+    if (target == ChipTarget::LO1) {
+        state.lo1Manual = true;
+    } else if (target == ChipTarget::LO2) {
+        state.lo2Manual = true;
+    } else {  // ChipTarget::LO3
+        state.lo3Manual = true;
+    }
+
     deassertProgrammingPins();
 }
 
