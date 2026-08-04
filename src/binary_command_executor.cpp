@@ -33,49 +33,44 @@ SerialReceiveState serialRxState = {
     0U,
 };
 
-bool loTargetForControlSelector(uint16_t selector, ChipTarget* target)
+bool loTargetForControlCode(uint16_t commandCode, ChipTarget* target)
 {
-    if (target == nullptr) {
-        return false;
-    }
-    if (selector == 0x01FFU) {
+    if (commandCode == 0x01FFU) {
         *target = ChipTarget::LO1;
         return true;
     }
-    if (selector == 0x02FFU) {
+    if (commandCode == 0x02FFU) {
         *target = ChipTarget::LO2;
         return true;
     }
-    if (selector == 0x03FFU) {
+    if (commandCode == 0x03FFU) {
         *target = ChipTarget::LO3;
         return true;
     }
-    return false;
+    return false;   // Handles command codes that are not LO control codes
 }
 
-bool loTargetForListedSelector(uint16_t selector, uint8_t baseCommand, ChipTarget* target)
+bool loTargetForListedCode(uint16_t commandCode, uint8_t baseCommand, ChipTarget* target)
 {
-    if (target == nullptr || (selector & 0x00FFU) != 0x00FFU) {
+    if ((commandCode & 0x00FFU) != 0x00FFU) {
         return false;
     }
-    const uint8_t command = static_cast<uint8_t>((selector >> 8) & 0xFFU);
+    const uint8_t command = static_cast<uint8_t>((commandCode >> 8) & 0xFFU);
     if (command < (baseCommand + 1U) || command > (baseCommand + 3U)) {
         return false;
     }
-    switch (command - baseCommand) {
-        case 1U: *target = ChipTarget::LO1; return true;
-        case 2U: *target = ChipTarget::LO2; return true;
-        case 3U: *target = ChipTarget::LO3; return true;
-        default: break;
+    if ((command - baseCommand) == 1U) {
+        *target = ChipTarget::LO1;
+    } else if ((command - baseCommand) == 2U) {
+        *target = ChipTarget::LO2;
+    } else {
+        *target = ChipTarget::LO3;
     }
-    return false;
+    return true;
 }
 
 bool loStateForTarget(ChipTarget target, MAX2871** targetLo, double** reportedFreq)
 {
-    if (targetLo == nullptr || reportedFreq == nullptr) {
-        return false;
-    }
     switch (target) {
         case ChipTarget::LO1:
             *targetLo = &lo1;
@@ -97,11 +92,12 @@ bool loStateForTarget(ChipTarget target, MAX2871** targetLo, double** reportedFr
 
 void markLoManual(ChipTarget target)
 {
-    switch (target) {
-        case ChipTarget::LO1: state.lo1Manual = true; break;
-        case ChipTarget::LO2: state.lo2Manual = true; break;
-        case ChipTarget::LO3: state.lo3Manual = true; break;
-        default: break;
+    if (target == ChipTarget::LO1) {
+        state.lo1Manual = true;
+    } else if (target == ChipTarget::LO2) {
+        state.lo2Manual = true;
+    } else {  // ChipTarget::LO3
+        state.lo3Manual = true;
     }
 }
 
@@ -126,23 +122,21 @@ void applyLoOutputSelect(ChipTarget target, RFOutPort port)
 {
     MAX2871* targetLo;
     double* reportedFreq;
-    if (loStateForTarget(target, &targetLo, &reportedFreq)) {
-        targetLo->outputSelect(port);
-    }
+    loStateForTarget(target, &targetLo, &reportedFreq);
+    targetLo->outputSelect(port);
 }
 
 void applyLoOutputPower(ChipTarget target, int dBm)
 {
     MAX2871* targetLo;
     double* reportedFreq;
-    if (loStateForTarget(target, &targetLo, &reportedFreq)) {
-        targetLo->outputPower(dBm, RF_B);
-    }
+    loStateForTarget(target, &targetLo, &reportedFreq);
+    targetLo->outputPower(dBm, RF_B);
 }
 
 void handleControlWord(uint32_t word)
 {
-    const uint16_t selector = static_cast<uint16_t>(word & 0xFFFFU);
+    const uint16_t commandCode = static_cast<uint16_t>(word & 0xFFFFU);
     if (serialRxState.payloadMode == SerialPayloadMode::Command) {
         if (word == 0x000106FFUL) {
             setSerialEncoding(SerialEncoding::Ascii);
@@ -153,27 +147,27 @@ void handleControlWord(uint32_t word)
             return;
         }
     }
-    if (selector == 0x0FFFU) {
+    if (commandCode == 0x0FFFU) {
         digitalWrite(LED_BUILTIN, HIGH);
         Serial.print(F("LED on"));
         return;
     }
-    if (selector == 0x07FFU) {
+    if (commandCode == 0x07FFU) {
         digitalWrite(LED_BUILTIN, LOW);
         Serial.print(F("LED off"));
         return;
     }
-    if (selector == 0x17FFU) {
+    if (commandCode == 0x17FFU) {
         Serial.print(F("saTech WN2A ready"));
         return;
     }
     // Unimplemented - Begin/End Macro, Begin/End Sweep, and Squelch Level
-    if (selector == 0x1FFFU || selector == 0x27FFU ||
-        selector == 0x37FFU || selector == 0x3FFFU ||
-        selector == 0x47FFU) {
+    if (commandCode == 0x1FFFU || commandCode == 0x27FFU ||
+        commandCode == 0x37FFU || commandCode == 0x3FFFU ||
+        commandCode == 0x47FFU) {
         return;
     }
-    if (selector == 0x2FFFU) {
+    if (commandCode == 0x2FFFU) {
         initializeLo(lo1);
         initializeLo(lo2);
         initializeLo(lo3);
@@ -181,97 +175,97 @@ void handleControlWord(uint32_t word)
         printFulltestPlanReport();
         return;
     }
-    if (selector == 0x06FFU) {
+    if (commandCode == 0x06FFU) {
         setSerialPayloadMode(SerialPayloadMode::Command);
         return;
     }
-    if (selector == 0x0EFFU) {
+    if (commandCode == 0x0EFFU) {
         setSerialPayloadMode(SerialPayloadMode::FMNData);
         return;
     }
-    if (selector == 0x16FFU) {
+    if (commandCode == 0x16FFU) {
         setSerialPayloadMode(SerialPayloadMode::DirectRegisterData);
         return;
     }
-    if (selector == 0x04FFU) {
+    if (commandCode == 0x04FFU) {
         selectRef(ReferenceTarget::Off);
         return;
     }
-    if (selector == 0x0CFFU) {
+    if (commandCode == 0x0CFFU) {
         selectRef(ReferenceTarget::Ref1);
         return;
     }
-    if (selector == 0x14FFU) {
+    if (commandCode == 0x14FFU) {
         selectRef(ReferenceTarget::Ref2);
         return;
     }
     ChipTarget loTarget;
-    if (loTargetForControlSelector(selector, &loTarget)) {
+    if (loTargetForControlCode(commandCode, &loTarget)) {
         selectSerialChipTarget(loTarget);
         return;
     }
-    if (selector == 0x08FFU) {
+    if (commandCode == 0x08FFU) {
         programAttenuatorRaw(static_cast<uint8_t>((word >> 16) & 0x7FU));
         deassertProgrammingPins();
         return;
     }
-    if (loTargetForListedSelector(selector, 0x08U, &loTarget)) {
+    if (loTargetForListedCode(commandCode, 0x08U, &loTarget)) {
         applyLoOutputSelect(loTarget, RFNONE);
         deassertProgrammingPins();
         return;
     }
-    if (loTargetForListedSelector(selector, 0x10U, &loTarget)) {
+    if (loTargetForListedCode(commandCode, 0x10U, &loTarget)) {
         applyLoOutputPower(loTarget, -4);
         deassertProgrammingPins();
         return;
     }
-    if (loTargetForListedSelector(selector, 0x18U, &loTarget)) {
+    if (loTargetForListedCode(commandCode, 0x18U, &loTarget)) {
         applyLoOutputPower(loTarget, -1);
         deassertProgrammingPins();
         return;
     }
-    if (loTargetForListedSelector(selector, 0x20U, &loTarget)) {
+    if (loTargetForListedCode(commandCode, 0x20U, &loTarget)) {
         applyLoOutputPower(loTarget, 2);
         deassertProgrammingPins();
         return;
     }
-    if (loTargetForListedSelector(selector, 0x28U, &loTarget)) {
+    if (loTargetForListedCode(commandCode, 0x28U, &loTarget)) {
         applyLoOutputPower(loTarget, 5);
         deassertProgrammingPins();
         return;
     }
-    if (loTargetForListedSelector(selector, 0x30U, &loTarget)) {
+    if (loTargetForListedCode(commandCode, 0x30U, &loTarget)) {
         selectSerialChipTarget(loTarget);
         setSerialPayloadMode(SerialPayloadMode::FMNData);
         return;
     }
-    if (loTargetForListedSelector(selector, 0x38U, &loTarget) ||
-        loTargetForListedSelector(selector, 0x40U, &loTarget) ||
-        selector == 0x4AFFU || selector == 0x4BFFU) {
+    if (loTargetForListedCode(commandCode, 0x38U, &loTarget) ||
+        loTargetForListedCode(commandCode, 0x40U, &loTarget) ||
+        commandCode == 0x4AFFU || commandCode == 0x4BFFU) {
         return;
     }
-    if (selector == 0x05FFU) {
+    if (commandCode == 0x05FFU) {
         selectSerialChipTarget(ChipTarget::ADC_1);
         return;
     }
-    if (selector == 0x0DFFU) {
+    if (commandCode == 0x0DFFU) {
         selectSerialChipTarget(ChipTarget::ADC_2);
         return;
     }
-    if (selector == 0x15FFU) {
+    if (commandCode == 0x15FFU) {
         selectSerialChipTarget(ChipTarget::RAM);
         return;
     }
-    if (selector == 0x9FU) {
+    if (commandCode == 0x9FU) {
         Serial.print(F("Flash ID: 0x"));
         Serial.println(flash.getManufID(), HEX);
         Serial.print(F("Device ID: 0x"));
         Serial.println(flash.getDeviceID(), HEX);
         return;
     }
-    if (selector == 0xFU || selector == 0x5U) {
+    if (commandCode == 0xFU || commandCode == 0x5U) {
         selectChip(ChipTarget::Flash);
-        flash.reportStatusReg(selector);
+        flash.reportStatusReg(commandCode);
         selectChip(ChipTarget::Off);
         Serial.print(F("Status register report: "));
         Serial.println(flash.getStatReg(), HEX);
@@ -369,18 +363,12 @@ void processReceivedWord(uint32_t mode)
     // Check if the parsed 32-bit word has 0xFF (command flag) in its least-significant byte?
     const SerialPayloadMode modeType =
         ((mode & 0xFFU) == 0xFFU) ? SerialPayloadMode::Command : serialRxState.payloadMode;
-    switch (modeType) {
-        case SerialPayloadMode::Command:
-            handleControlWord(mode);
-            break;
-        case SerialPayloadMode::FMNData:
-            handleFmnDataWord(mode);
-            break;
-        case SerialPayloadMode::DirectRegisterData:
-            handleDirectRegisterDataWord(mode);
-            break;
-        default:
-            break;
+    if (modeType == SerialPayloadMode::Command) {
+        handleControlWord(mode);
+    } else if (modeType == SerialPayloadMode::FMNData) {
+        handleFmnDataWord(mode);
+    } else {  // SerialPayloadMode::DirectRegisterData
+        handleDirectRegisterDataWord(mode);
     }
 }
 
