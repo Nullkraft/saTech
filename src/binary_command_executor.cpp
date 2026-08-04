@@ -139,7 +139,7 @@ void applyLoOutputPower(ChipTarget target, int dBm)
 
 void handleControlWord(uint32_t word)
 {
-    const uint16_t selector = static_cast<uint16_t>(word & 0xFFFFU);
+    const uint16_t commandCode = static_cast<uint16_t>(word & 0xFFFFU);
     if (serialRxState.payloadMode == SerialPayloadMode::Command) {
         if (word == 0x000106FFUL) {
             setSerialEncoding(SerialEncoding::Ascii);
@@ -150,27 +150,27 @@ void handleControlWord(uint32_t word)
             return;
         }
     }
-    if (selector == 0x0FFFU) {
+    if (commandCode == 0x0FFFU) {
         digitalWrite(LED_BUILTIN, HIGH);
         Serial.print(F("LED on"));
         return;
     }
-    if (selector == 0x07FFU) {
+    if (commandCode == 0x07FFU) {
         digitalWrite(LED_BUILTIN, LOW);
         Serial.print(F("LED off"));
         return;
     }
-    if (selector == 0x17FFU) {
+    if (commandCode == 0x17FFU) {
         Serial.print(F("saTech WN2A ready"));
         return;
     }
     // Unimplemented - Begin/End Macro, Begin/End Sweep, and Squelch Level
-    if (selector == 0x1FFFU || selector == 0x27FFU ||
-        selector == 0x37FFU || selector == 0x3FFFU ||
-        selector == 0x47FFU) {
+    if (commandCode == 0x1FFFU || commandCode == 0x27FFU ||
+        commandCode == 0x37FFU || commandCode == 0x3FFFU ||
+        commandCode == 0x47FFU) {
         return;
     }
-    if (selector == 0x2FFFU) {
+    if (commandCode == 0x2FFFU) {
         initializeLo(lo1);
         initializeLo(lo2);
         initializeLo(lo3);
@@ -178,97 +178,97 @@ void handleControlWord(uint32_t word)
         printFulltestPlanReport();
         return;
     }
-    if (selector == 0x06FFU) {
+    if (commandCode == 0x06FFU) {
         setSerialPayloadMode(SerialPayloadMode::Command);
         return;
     }
-    if (selector == 0x0EFFU) {
+    if (commandCode == 0x0EFFU) {
         setSerialPayloadMode(SerialPayloadMode::FMNData);
         return;
     }
-    if (selector == 0x16FFU) {
+    if (commandCode == 0x16FFU) {
         setSerialPayloadMode(SerialPayloadMode::DirectRegisterData);
         return;
     }
-    if (selector == 0x04FFU) {
+    if (commandCode == 0x04FFU) {
         selectRef(ReferenceTarget::Off);
         return;
     }
-    if (selector == 0x0CFFU) {
+    if (commandCode == 0x0CFFU) {
         selectRef(ReferenceTarget::Ref1);
         return;
     }
-    if (selector == 0x14FFU) {
+    if (commandCode == 0x14FFU) {
         selectRef(ReferenceTarget::Ref2);
         return;
     }
     ChipTarget loTarget;
-    if (loTargetForControlSelector(selector, &loTarget)) {
+    if (loTargetForControlSelector(commandCode, &loTarget)) {
         selectSerialChipTarget(loTarget);
         return;
     }
-    if (selector == 0x08FFU) {
+    if (commandCode == 0x08FFU) {
         programAttenuatorRaw(static_cast<uint8_t>((word >> 16) & 0x7FU));
         deassertProgrammingPins();
         return;
     }
-    if (loTargetForListedSelector(selector, 0x08U, &loTarget)) {
+    if (loTargetForListedSelector(commandCode, 0x08U, &loTarget)) {
         applyLoOutputSelect(loTarget, RFNONE);
         deassertProgrammingPins();
         return;
     }
-    if (loTargetForListedSelector(selector, 0x10U, &loTarget)) {
+    if (loTargetForListedSelector(commandCode, 0x10U, &loTarget)) {
         applyLoOutputPower(loTarget, -4);
         deassertProgrammingPins();
         return;
     }
-    if (loTargetForListedSelector(selector, 0x18U, &loTarget)) {
+    if (loTargetForListedSelector(commandCode, 0x18U, &loTarget)) {
         applyLoOutputPower(loTarget, -1);
         deassertProgrammingPins();
         return;
     }
-    if (loTargetForListedSelector(selector, 0x20U, &loTarget)) {
+    if (loTargetForListedSelector(commandCode, 0x20U, &loTarget)) {
         applyLoOutputPower(loTarget, 2);
         deassertProgrammingPins();
         return;
     }
-    if (loTargetForListedSelector(selector, 0x28U, &loTarget)) {
+    if (loTargetForListedSelector(commandCode, 0x28U, &loTarget)) {
         applyLoOutputPower(loTarget, 5);
         deassertProgrammingPins();
         return;
     }
-    if (loTargetForListedSelector(selector, 0x30U, &loTarget)) {
+    if (loTargetForListedSelector(commandCode, 0x30U, &loTarget)) {
         selectSerialChipTarget(loTarget);
         setSerialPayloadMode(SerialPayloadMode::FMNData);
         return;
     }
-    if (loTargetForListedSelector(selector, 0x38U, &loTarget) ||
-        loTargetForListedSelector(selector, 0x40U, &loTarget) ||
-        selector == 0x4AFFU || selector == 0x4BFFU) {
+    if (loTargetForListedSelector(commandCode, 0x38U, &loTarget) ||
+        loTargetForListedSelector(commandCode, 0x40U, &loTarget) ||
+        commandCode == 0x4AFFU || commandCode == 0x4BFFU) {
         return;
     }
-    if (selector == 0x05FFU) {
+    if (commandCode == 0x05FFU) {
         selectSerialChipTarget(ChipTarget::ADC_1);
         return;
     }
-    if (selector == 0x0DFFU) {
+    if (commandCode == 0x0DFFU) {
         selectSerialChipTarget(ChipTarget::ADC_2);
         return;
     }
-    if (selector == 0x15FFU) {
+    if (commandCode == 0x15FFU) {
         selectSerialChipTarget(ChipTarget::RAM);
         return;
     }
-    if (selector == 0x9FU) {
+    if (commandCode == 0x9FU) {
         Serial.print(F("Flash ID: 0x"));
         Serial.println(flash.getManufID(), HEX);
         Serial.print(F("Device ID: 0x"));
         Serial.println(flash.getDeviceID(), HEX);
         return;
     }
-    if (selector == 0xFU || selector == 0x5U) {
+    if (commandCode == 0xFU || commandCode == 0x5U) {
         selectChip(ChipTarget::Flash);
-        flash.reportStatusReg(selector);
+        flash.reportStatusReg(commandCode);
         selectChip(ChipTarget::Off);
         Serial.print(F("Status register report: "));
         Serial.println(flash.getStatReg(), HEX);
