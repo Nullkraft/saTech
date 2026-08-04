@@ -73,9 +73,6 @@ bool loTargetForListedSelector(uint16_t selector, uint8_t baseCommand, ChipTarge
 
 bool loStateForTarget(ChipTarget target, MAX2871** targetLo, double** reportedFreq)
 {
-    if (targetLo == nullptr || reportedFreq == nullptr) {
-        return false;
-    }
     switch (target) {
         case ChipTarget::LO1:
             *targetLo = &lo1;
@@ -101,7 +98,7 @@ void markLoManual(ChipTarget target)
         state.lo1Manual = true;
     } else if (target == ChipTarget::LO2) {
         state.lo2Manual = true;
-    } else {  // ChipTarget::LO3:
+    } else {  // ChipTarget::LO3
         state.lo3Manual = true;
     }
 }
