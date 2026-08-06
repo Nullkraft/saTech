@@ -246,11 +246,8 @@ void handleControlWord(uint32_t word)
         return;
     }
     if (commandCode == 0xFU || commandCode == 0x5U) {
-        selectChip(ChipTarget::Flash);
-        flash.reportStatusReg(commandCode, 0xA0U);
-        selectChip(ChipTarget::Off);
         Serial.print(F("Protection register report: 0x"));
-        Serial.println(flash.getStatReg(), HEX);
+        Serial.println(flash.getProtReg(), HEX);
         Serial.println();
 
         selectChip(ChipTarget::Flash);
