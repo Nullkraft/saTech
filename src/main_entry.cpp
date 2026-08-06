@@ -53,7 +53,7 @@ void setup()
     // Deassert all CS/LE pins to idle and enable REF1 as the startup reference.
     selectChip(ChipTarget::Off);
     selectChip(ChipTarget::Flash);
-    flash.loadProtectRegister();
+    flash.loadProtectRegister(); // dummy comment
     selectChip(ChipTarget::Off);
     selectRef(ReferenceTarget::Ref1);
 
