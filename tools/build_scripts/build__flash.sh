@@ -5,5 +5,33 @@ if [ $# -eq 0 ]; then
     exit 1
 fi
 
-rm -rf .pio/libdeps/technician/W25N*
+# Extract the env name passed via -e/--environment
+env_name=""
+args=("$@")
+for i in "${!args[@]}"; do
+    case "${args[$i]}" in
+        -e|--environment)
+            env_name="${args[$((i+1))]}"
+            break
+            ;;
+        -e*)
+            env_name="${args[$i]#-e}"
+            break
+            ;;
+        --environment=*)
+            env_name="${args[$i]#--environment=}"
+            break
+            ;;
+    esac
+done
+
+if [ -z "$env_name" ]; then
+    echo "Error: could not determine env name from arguments (expected -e <env>)"
+    exit 1
+fi
+
+echo "-----------------------------------------------------------------------------------------------------------------------------------"
+echo "Removing old library dependency .pio/libdeps/${env_name}/w25N_Flash_library ..."
+echo "-----------------------------------------------------------------------------------------------------------------------------------"
+rm -rf ".pio/libdeps/${env_name}/W25N"*
 pio run -t clean && pio run "$@"
