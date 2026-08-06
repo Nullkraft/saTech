@@ -55,6 +55,15 @@ void setup()
     selectChip(ChipTarget::Flash);
     flash.loadProtectRegister();
     selectChip(ChipTarget::Off);
+
+    selectChip(ChipTarget::Flash);
+    flash.loadConfigRegister();
+    selectChip(ChipTarget::Off);
+
+    selectChip(ChipTarget::Flash);
+    flash.loadStatusReg();
+    selectChip(ChipTarget::Off);
+
     selectRef(ReferenceTarget::Ref1);
 
     initializeLo(lo1);

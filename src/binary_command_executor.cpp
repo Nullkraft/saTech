@@ -250,16 +250,10 @@ void handleControlWord(uint32_t word)
         Serial.println(flash.getProtReg(), HEX);
         Serial.println();
 
-        selectChip(ChipTarget::Flash);
-        flash.reportStatusReg(commandCode, 0xB0U);
-        selectChip(ChipTarget::Off);
         Serial.print(F("Configuration register report: 0x"));
-        Serial.println(flash.getStatReg(), HEX);
+        Serial.println(flash.getConfReg(), HEX);
         Serial.println();
 
-        selectChip(ChipTarget::Flash);
-        flash.reportStatusReg(commandCode, 0xC0U);
-        selectChip(ChipTarget::Off);
         Serial.print(F("Status register report: 0x"));
         Serial.println(flash.getStatReg(), HEX);
         Serial.println();
