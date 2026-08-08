@@ -31,7 +31,8 @@ if [ -z "$env_name" ]; then
 fi
 
 echo "-----------------------------------------------------------------------------------------------------------------------------------"
-echo "Removing old library dependency .pio/libdeps/${env_name}/w25N_Flash_library ..."
+echo "Removing old library dependencies for ${env_name} ..."
 echo "-----------------------------------------------------------------------------------------------------------------------------------"
 rm -rf ".pio/libdeps/${env_name}/W25N"*
+rm -rf ".pio/libdeps/${env_name}/MAX2871"*
 pio run -t clean && pio run "$@"

@@ -15,6 +15,16 @@ constexpr uint8_t RECEIVED_WORD_BYTES = 4U;
 ConsoleState& state = consoleState();
 MAX2871* LO;    // Global object for currently selected LO
 
+constexpr uint16_t instructionWord(uint8_t commandBits, uint8_t chipAddress)
+{
+    return (static_cast<uint16_t>(commandBits) << 12) |
+           (static_cast<uint16_t>(chipAddress) << 8) |
+           InstructionCommandFlag;
+}
+
+constexpr uint32_t SerialAsciiWord = 0x000106FFUL;
+constexpr uint32_t SerialBinaryWord = 0x000206FFUL;
+
 enum class SerialPayloadMode {
     Command,
     FMNData,
@@ -48,15 +58,15 @@ SerialReceiveState serialRxState = {
 
 bool setChipTarget(uint16_t commandCode, ChipTarget* target)
 {
-    if (commandCode == CmdSelectLo1) {
+    if (commandCode == instructionWord(CmdGeneral, AddrLo1)) {
         *target = ChipTarget::LO1;
         return true;
     }
-    if (commandCode == CmdSelectLo2) {
+    if (commandCode == instructionWord(CmdGeneral, AddrLo2)) {
         *target = ChipTarget::LO2;
         return true;
     }
-    if (commandCode == CmdSelectLo3) {
+    if (commandCode == instructionWord(CmdGeneral, AddrLo3)) {
         *target = ChipTarget::LO3;
         return true;
     }
@@ -65,15 +75,15 @@ bool setChipTarget(uint16_t commandCode, ChipTarget* target)
 
 ChipTarget getChipTarget(uint8_t chipAddress)
 {
-    if (chipAddress == 1U) {
+    if (chipAddress == AddrLo1) {
         LO = &lo1;
         return ChipTarget::LO1;
     }
-    if (chipAddress == 2U) {
+    if (chipAddress == AddrLo2) {
         LO = &lo2;
         return ChipTarget::LO2;
     }
-    if (chipAddress == 3U) {
+    if (chipAddress == AddrLo3) {
         LO = &lo3;
         return ChipTarget::LO3;
     }
@@ -82,24 +92,25 @@ ChipTarget getChipTarget(uint8_t chipAddress)
 
 LoCommand getLoCommand(uint8_t commandBits)
 {
-    if (commandBits == 0x01U) return LoCommand::DisableOutput;
-    if (commandBits == 0x02U) return LoCommand::RfBPowerMinus4;
-    if (commandBits == 0x03U) return LoCommand::RfBPowerMinus1;
-    if (commandBits == 0x04U) return LoCommand::RfBPowerPlus2;
-    if (commandBits == 0x05U) return LoCommand::RfBPowerPlus5;
-    if (commandBits == 0x06U) return LoCommand::FmnData;
-    if (commandBits == 0x07U || commandBits == 0x08U) return LoCommand::Ignored;
+    if (commandBits == CmdRfOff) return LoCommand::DisableOutput;
+    if (commandBits == CmdRfPowerMinus4) return LoCommand::RfBPowerMinus4;
+    if (commandBits == CmdRfPowerMinus1) return LoCommand::RfBPowerMinus1;
+    if (commandBits == CmdRfPowerPlus2) return LoCommand::RfBPowerPlus2;
+    if (commandBits == CmdRfPowerPlus5) return LoCommand::RfBPowerPlus5;
+    if (commandBits == CmdSetFrequency) return LoCommand::FmnData;
+    if (commandBits == CmdMuxTriState || commandBits == CmdMuxDigitalLockDetect ||
+        commandBits == CmdDivaMode) return LoCommand::Ignored;
     return LoCommand::None;
 }
 
 bool decodeLoCommand(uint16_t commandCode, LoCommand* loCommand)
 {
-    if ((commandCode & CmdFlagMask) != CmdFlagMask) {
+    if ((commandCode & InstructionCommandFlag) != InstructionCommandFlag) {
         return false;
     }
     const uint8_t commandByte = static_cast<uint8_t>((commandCode >> 8) & 0xFFU);
-    const uint8_t chipAddress = commandByte & 0x07U;
-    const uint8_t commandBits = commandByte >> 3;
+    const uint8_t chipAddress = commandByte & 0x0FU;
+    const uint8_t commandBits = commandByte >> 4;
 
     const ChipTarget target = getChipTarget(chipAddress);
     if (target == ChipTarget::None) {
@@ -152,36 +163,38 @@ void handleControlWord(uint32_t word)
 {
     const uint16_t commandCode = static_cast<uint16_t>(word & 0xFFFFU);
     if (serialRxState.payloadMode == SerialPayloadMode::Command) {
-        if (word == CmdSerialAsciiWord) {
+        if (word == SerialAsciiWord) {
             setSerialEncoding(SerialEncoding::Ascii);
             return;
         }
-        if (word == CmdSerialBinaryWord) {
+        if (word == SerialBinaryWord) {
             setSerialEncoding(SerialEncoding::Binary);
             return;
         }
     }
-    if (commandCode == CmdLedOn) {
+    if (commandCode == instructionWord(CmdLedOn, AddrMessages)) {
         digitalWrite(LED_BUILTIN, HIGH);
         Serial.print(F("LED on"));
         return;
     }
-    if (commandCode == CmdLedOff) {
+    if (commandCode == instructionWord(CmdLedOff, AddrMessages)) {
         digitalWrite(LED_BUILTIN, LOW);
         Serial.print(F("LED off"));
         return;
     }
-    if (commandCode == CmdMessageRequest) {
+    if (commandCode == instructionWord(CmdMessageRequest, AddrMessages)) {
         Serial.print(F("saTech WN2A ready"));
         return;
     }
     // Unimplemented - Begin/End Macro, Begin/End Sweep, and Squelch Level
-    if (commandCode == CmdBeginSweep || commandCode == CmdEndSweep ||
-        commandCode == CmdBeginMacro || commandCode == CmdEndMacro ||
-        commandCode == CmdSquelchLevel) {
+    if (commandCode == instructionWord(CmdBeginSweep, AddrMessages) ||
+        commandCode == instructionWord(CmdEndSweep, AddrMessages) ||
+        commandCode == instructionWord(CmdBeginMacro, AddrMessages) ||
+        commandCode == instructionWord(CmdEndMacro, AddrMessages) ||
+        commandCode == instructionWord(CmdSquelchLevel, AddrMessages)) {
         return;
     }
-    if (commandCode == CmdResetHardwareReportPllStatus) {
+    if (commandCode == instructionWord(CmdResetHardwareReportPllStatus, AddrMessages)) {
         initializeLo(lo1);
         initializeLo(lo2);
         initializeLo(lo3);
@@ -189,27 +202,27 @@ void handleControlWord(uint32_t word)
         printFulltestPlanReport();
         return;
     }
-    if (commandCode == CmdEnterCommand) {
+    if (commandCode == instructionWord(CmdCommandMode, AddrCommsState)) {
         setSerialPayloadMode(SerialPayloadMode::Command);
         return;
     }
-    if (commandCode == CmdEnterFmn) {
+    if (commandCode == instructionWord(CmdFmnMode, AddrCommsState)) {
         setSerialPayloadMode(SerialPayloadMode::FMNData);
         return;
     }
-    if (commandCode == CmdEnterDirect) {
+    if (commandCode == instructionWord(CmdDirectMode, AddrCommsState)) {
         setSerialPayloadMode(SerialPayloadMode::DirectRegisterData);
         return;
     }
-    if (commandCode == CmdRefOff) {
+    if (commandCode == instructionWord(CmdRefOff, AddrRefClocks)) {
         selectRef(ReferenceTarget::Off);
         return;
     }
-    if (commandCode == CmdRef1) {
+    if (commandCode == instructionWord(CmdRef1, AddrRefClocks)) {
         selectRef(ReferenceTarget::Ref1);
         return;
     }
-    if (commandCode == CmdRef2) {
+    if (commandCode == instructionWord(CmdRef2, AddrRefClocks)) {
         selectRef(ReferenceTarget::Ref2);
         return;
     }
@@ -218,7 +231,7 @@ void handleControlWord(uint32_t word)
         selectSerialChipTarget(loTarget);
         return;
     }
-    if (commandCode == CmdAttenuator) {
+    if (commandCode == instructionWord(CmdDigitalAttenuator, AddrAttenuator)) {
         programAttenuatorRaw(static_cast<uint8_t>((word >> 16) & 0x7FU));
         deassertAllChipSelectPins();
         return;
@@ -246,29 +259,34 @@ void handleControlWord(uint32_t word)
         }
         return;
     }
-    if (commandCode == CmdDivaModeLo2 || commandCode == CmdDivaModeLo3) {
+    if (commandCode == instructionWord(CmdDivaMode, AddrLo2) ||
+        commandCode == instructionWord(CmdDivaMode, AddrLo3)) {
         return;
     }
-    if (commandCode == CmdSelectAdc1) {
+    if (commandCode == instructionWord(CmdGeneral, AddrAdc1)) {
         selectSerialChipTarget(ChipTarget::ADC_1);
         return;
     }
-    if (commandCode == CmdSelectAdc2) {
+    if (commandCode == instructionWord(CmdGeneral, AddrAdc2)) {
         selectSerialChipTarget(ChipTarget::ADC_2);
         return;
     }
-    if (commandCode == CmdSelectRam) {
+    if (commandCode == instructionWord(CmdGeneral, AddrRam)) {
         selectSerialChipTarget(ChipTarget::RAM);
         return;
     }
-    if (commandCode == CmdFlashId) {
+    if (commandCode == instructionWord(CmdGeneral, AddrFlash)) {
+        selectSerialChipTarget(ChipTarget::Flash);
+        return;
+    }
+    if (commandCode == instructionWord(CmdFlashId, AddrFlash)) {
         Serial.print(F("Flash ID: 0x"));
         Serial.println(flash.getManufID(), HEX);
         Serial.print(F("Device ID: 0x"));
         Serial.println(flash.getDeviceID(), HEX);
         return;
     }
-    if (commandCode == CmdFlashRegisterReport) {
+    if (commandCode == instructionWord(CmdFlashRegisterReport, AddrFlash)) {
         Serial.print(F("Protection register report: 0x"));
         Serial.println(flash.getProtReg(), HEX);
         Serial.println();
