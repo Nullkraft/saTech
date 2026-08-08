@@ -21,9 +21,20 @@ enum class SerialPayloadMode {
 
 struct SerialReceiveState {
     SerialPayloadMode payloadMode;
-    ChipTarget selectedBinaryTarget;
+    ChipTarget currentlySelectedChip;
     uint8_t wordBytes[RECEIVED_WORD_BYTES];
     uint8_t wordLength;
+};
+
+enum class LoCommand {
+    None,
+    DisableOutput,
+    RfBPowerMinus4,
+    RfBPowerMinus1,
+    RfBPowerPlus2,
+    RfBPowerPlus5,
+    FmnData,
+    Ignored,
 };
 
 SerialReceiveState serialRxState = {
@@ -50,22 +61,53 @@ bool loTargetForControlCode(uint16_t commandCode, ChipTarget* target)
     return false;   // Handles command codes that are not LO control codes
 }
 
-bool loTargetForListedCode(uint16_t commandCode, uint8_t baseCommand, ChipTarget* target)
+ChipTarget getChipTarget(uint8_t chipAddress)
+{
+    if (chipAddress == 1U) {
+        return ChipTarget::LO1;
+    }
+    if (chipAddress == 2U) {
+        return ChipTarget::LO2;
+    }
+    if (chipAddress == 3U) {
+        return ChipTarget::LO3;
+    }
+    return ChipTarget::None;
+}
+
+LoCommand getLoCommand(uint8_t commandBits)
+{
+    if (commandBits == 0x01U) return LoCommand::DisableOutput;
+    if (commandBits == 0x02U) return LoCommand::RfBPowerMinus4;
+    if (commandBits == 0x03U) return LoCommand::RfBPowerMinus1;
+    if (commandBits == 0x04U) return LoCommand::RfBPowerPlus2;
+    if (commandBits == 0x05U) return LoCommand::RfBPowerPlus5;
+    if (commandBits == 0x06U) return LoCommand::FmnData;
+    if (commandBits == 0x07U || commandBits == 0x08U) return LoCommand::Ignored;
+    return LoCommand::None;
+}
+
+bool decodeLoCommand(uint16_t commandCode, LoCommand* loCommand)
 {
     if ((commandCode & 0x00FFU) != 0x00FFU) {
         return false;
     }
-    const uint8_t command = static_cast<uint8_t>((commandCode >> 8) & 0xFFU);
-    if (command < (baseCommand + 1U) || command > (baseCommand + 3U)) {
+    const uint8_t commandByte = static_cast<uint8_t>((commandCode >> 8) & 0xFFU);
+    const uint8_t chipAddress = commandByte & 0x07U;
+    const uint8_t commandBits = commandByte >> 3;
+
+    const ChipTarget target = getChipTarget(chipAddress);
+    if (target == ChipTarget::None) {
         return false;
     }
-    if ((command - baseCommand) == 1U) {
-        *target = ChipTarget::LO1;
-    } else if ((command - baseCommand) == 2U) {
-        *target = ChipTarget::LO2;
-    } else {
-        *target = ChipTarget::LO3;
+
+    const LoCommand command = getLoCommand(commandBits);
+    if (command == LoCommand::None) {
+        return false;
     }
+
+    serialRxState.currentlySelectedChip = target;
+    *loCommand = command;
     return true;
 }
 
@@ -191,39 +233,31 @@ void handleControlWord(uint32_t word)
         deassertProgrammingPins();
         return;
     }
-    if (loTargetForListedCode(commandCode, 0x08U, &loTarget)) {
-        targetLo(loTarget)->outputSelect(RFNONE);
-        deassertProgrammingPins();
+    LoCommand loCommand;
+    if (decodeLoCommand(commandCode, &loCommand)) {
+        MAX2871* lo = targetLo(serialRxState.currentlySelectedChip);
+        if (loCommand == LoCommand::DisableOutput) {
+            lo->outputSelect(RFNONE);
+            deassertProgrammingPins();
+        } else if (loCommand == LoCommand::RfBPowerMinus4) {
+            lo->outputPower(-4, RF_B);
+            deassertProgrammingPins();
+        } else if (loCommand == LoCommand::RfBPowerMinus1) {
+            lo->outputPower(-1, RF_B);
+            deassertProgrammingPins();
+        } else if (loCommand == LoCommand::RfBPowerPlus2) {
+            lo->outputPower(2, RF_B);
+            deassertProgrammingPins();
+        } else if (loCommand == LoCommand::RfBPowerPlus5) {
+            lo->outputPower(5, RF_B);
+            deassertProgrammingPins();
+        } else if (loCommand == LoCommand::FmnData) {
+            selectSerialChipTarget(serialRxState.currentlySelectedChip);
+            setSerialPayloadMode(SerialPayloadMode::FMNData);
+        }
         return;
     }
-    if (loTargetForListedCode(commandCode, 0x10U, &loTarget)) {
-        targetLo(loTarget)->outputPower(-4, RF_B);
-        deassertProgrammingPins();
-        return;
-    }
-    if (loTargetForListedCode(commandCode, 0x18U, &loTarget)) {
-        targetLo(loTarget)->outputPower(-1, RF_B);
-        deassertProgrammingPins();
-        return;
-    }
-    if (loTargetForListedCode(commandCode, 0x20U, &loTarget)) {
-        targetLo(loTarget)->outputPower(2, RF_B);
-        deassertProgrammingPins();
-        return;
-    }
-    if (loTargetForListedCode(commandCode, 0x28U, &loTarget)) {
-        targetLo(loTarget)->outputPower(5, RF_B);
-        deassertProgrammingPins();
-        return;
-    }
-    if (loTargetForListedCode(commandCode, 0x30U, &loTarget)) {
-        selectSerialChipTarget(loTarget);
-        setSerialPayloadMode(SerialPayloadMode::FMNData);
-        return;
-    }
-    if (loTargetForListedCode(commandCode, 0x38U, &loTarget) ||
-        loTargetForListedCode(commandCode, 0x40U, &loTarget) ||
-        commandCode == 0x4AFFU || commandCode == 0x4BFFU) {
+    if (commandCode == 0x4AFFU || commandCode == 0x4BFFU) {
         return;
     }
     if (commandCode == 0x05FFU) {
@@ -270,7 +304,7 @@ void handleControlWord(uint32_t word)
 
 void handleFmnDataWord(uint32_t packedFMN)
 {
-    const ChipTarget target = serialRxState.selectedBinaryTarget;
+    const ChipTarget target = serialRxState.currentlySelectedChip;
     MAX2871* lo = targetLo(target);
     if (lo == nullptr) {
         return;
@@ -294,7 +328,7 @@ void handleFmnDataWord(uint32_t packedFMN)
 void handleDirectRegisterDataWord(uint32_t dataWord)
 {
     bool wroteTarget = true;
-    switch (serialRxState.selectedBinaryTarget) {
+    switch (serialRxState.currentlySelectedChip) {
         case ChipTarget::LO1:
             halLo1.spiWriteRegister(dataWord);
             break;
@@ -350,7 +384,7 @@ void processBinarySerialByte(uint8_t incomingByte)
 
 void selectSerialChipTarget(ChipTarget target)
 {
-    serialRxState.selectedBinaryTarget = target;
+    serialRxState.currentlySelectedChip = target;
     selectChip(target);
 }
 
@@ -371,6 +405,6 @@ void processReceivedWord(uint32_t mode)
 // cppcheck-suppress unusedFunction
 void processDirectRegisterData(uint32_t value)
 {
-    serialRxState.selectedBinaryTarget = state.chipTarget;
+    serialRxState.currentlySelectedChip = state.chipTarget;
     handleDirectRegisterDataWord(value);
 }
