@@ -238,14 +238,14 @@ void handleControlWord(uint32_t word)
         selectSerialChipTarget(ChipTarget::RAM);
         return;
     }
-    if (commandCode == 0x9FU) {
+    if (commandCode == 0x48FFU) {
         Serial.print(F("Flash ID: 0x"));
         Serial.println(flash.getManufID(), HEX);
         Serial.print(F("Device ID: 0x"));
         Serial.println(flash.getDeviceID(), HEX);
         return;
     }
-    if (commandCode == 0xFU || commandCode == 0x5U) {
+    if (commandCode == 0x49FFU) {
         Serial.print(F("Protection register report: 0x"));
         Serial.println(flash.getProtReg(), HEX);
         Serial.println();
