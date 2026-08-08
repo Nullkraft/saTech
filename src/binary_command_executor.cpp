@@ -12,6 +12,7 @@ namespace {
 
 constexpr uint8_t RECEIVED_WORD_BYTES = 4U;
 ConsoleState& state = consoleState();
+MAX2871* LO;    // Global object for currently selected LO
 
 enum class SerialPayloadMode {
     Command,
@@ -44,7 +45,7 @@ SerialReceiveState serialRxState = {
     0U,
 };
 
-bool loTargetForControlCode(uint16_t commandCode, ChipTarget* target)
+bool setChipTarget(uint16_t commandCode, ChipTarget* target)
 {
     if (commandCode == 0x01FFU) {
         *target = ChipTarget::LO1;
@@ -111,20 +112,23 @@ bool decodeLoCommand(uint16_t commandCode, LoCommand* loCommand)
     return true;
 }
 
-MAX2871* targetLo(ChipTarget target)
-{
-    switch (target) {
-        case ChipTarget::LO1:
-            return &lo1;
-        case ChipTarget::LO2:
-            return &lo2;
-        case ChipTarget::LO3:
-            return &lo3;
-        default:
-            break;
-    }
-    return nullptr;
-}
+// MAX2871* targetLo(ChipTarget target)
+// {
+//     switch (target) {
+//         case ChipTarget::LO1:
+//             LO = &lo1;
+//             return LO;
+//         case ChipTarget::LO2:
+//             LO = &lo2;
+//             return LO;
+//         case ChipTarget::LO3:
+//             LO = &lo3;
+//             return LO;
+//         default:
+//             break;
+//     }
+//     return nullptr;
+// }
 
 double* reportedFrequencyForTargetLo(ChipTarget target)
 {
@@ -147,7 +151,7 @@ void setSerialPayloadMode(SerialPayloadMode mode)
     serialRxState.wordLength = 0U;
 }
 
-void deassertProgrammingPins()
+void deassertAllChipSelectPins()
 {
     for (size_t i = 0; i < CHIP_COUNT; ++i) {
         const ChipSelectDefinition& def = CHIP_DEFINITIONS[i];
@@ -224,33 +228,32 @@ void handleControlWord(uint32_t word)
         return;
     }
     ChipTarget loTarget;
-    if (loTargetForControlCode(commandCode, &loTarget)) {
+    if (setChipTarget(commandCode, &loTarget)) {
         selectSerialChipTarget(loTarget);
         return;
     }
     if (commandCode == 0x08FFU) {
         programAttenuatorRaw(static_cast<uint8_t>((word >> 16) & 0x7FU));
-        deassertProgrammingPins();
+        deassertAllChipSelectPins();
         return;
     }
     LoCommand loCommand;
     if (decodeLoCommand(commandCode, &loCommand)) {
-        MAX2871* lo = targetLo(serialRxState.currentlySelectedChip);
         if (loCommand == LoCommand::DisableOutput) {
-            lo->outputSelect(RFNONE);
-            deassertProgrammingPins();
+            LO->outputSelect(RFNONE);
+            deassertAllChipSelectPins();
         } else if (loCommand == LoCommand::RfBPowerMinus4) {
-            lo->outputPower(-4, RF_B);
-            deassertProgrammingPins();
+            LO->outputPower(-4, RF_B);
+            deassertAllChipSelectPins();
         } else if (loCommand == LoCommand::RfBPowerMinus1) {
-            lo->outputPower(-1, RF_B);
-            deassertProgrammingPins();
+            LO->outputPower(-1, RF_B);
+            deassertAllChipSelectPins();
         } else if (loCommand == LoCommand::RfBPowerPlus2) {
-            lo->outputPower(2, RF_B);
-            deassertProgrammingPins();
+            LO->outputPower(2, RF_B);
+            deassertAllChipSelectPins();
         } else if (loCommand == LoCommand::RfBPowerPlus5) {
-            lo->outputPower(5, RF_B);
-            deassertProgrammingPins();
+            LO->outputPower(5, RF_B);
+            deassertAllChipSelectPins();
         } else if (loCommand == LoCommand::FmnData) {
             selectSerialChipTarget(serialRxState.currentlySelectedChip);
             setSerialPayloadMode(SerialPayloadMode::FMNData);
@@ -305,24 +308,16 @@ void handleControlWord(uint32_t word)
 void handleFmnDataWord(uint32_t packedFMN)
 {
     const ChipTarget target = serialRxState.currentlySelectedChip;
-    MAX2871* lo = targetLo(target);
-    if (lo == nullptr) {
+
+    if (LO == nullptr) {
         return;
     }
     double* reportedFreq = reportedFrequencyForTargetLo(target);
 
-    lo->setFrequency(packedFMN, lo->DIVA);
-    *reportedFreq = lo->fmn2freq();               // Okay for testing only
+    LO->setFrequency(packedFMN, LO->DIVA);
+    *reportedFreq = LO->fmn2freq();               // Okay for testing only
 
-    if (target == ChipTarget::LO1) {
-        state.lo1Manual = true;
-    } else if (target == ChipTarget::LO2) {
-        state.lo2Manual = true;
-    } else {  // ChipTarget::LO3
-        state.lo3Manual = true;
-    }
-
-    deassertProgrammingPins();
+    deassertAllChipSelectPins();
 }
 
 void handleDirectRegisterDataWord(uint32_t dataWord)
@@ -360,7 +355,7 @@ void handleDirectRegisterDataWord(uint32_t dataWord)
             break;
     }
     if (wroteTarget) {
-        deassertProgrammingPins();
+        deassertAllChipSelectPins();
     }
 }
 
