@@ -5,6 +5,7 @@
 #include "board_control.h"
 #include "console_state.h"
 #include "technician_console.h"
+#include "command_Codes.h"
 
 #include <SPI.h>
 
@@ -267,7 +268,7 @@ void handleControlWord(uint32_t word)
         Serial.println(flash.getDeviceID(), HEX);
         return;
     }
-    if (commandCode == 0x49FFU) {
+    if (commandCode == registerReports) {
         Serial.print(F("Protection register report: 0x"));
         Serial.println(flash.getProtReg(), HEX);
         Serial.println();
