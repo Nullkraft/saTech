@@ -65,12 +65,15 @@ bool setChipTarget(uint16_t commandCode, ChipTarget* target)
 ChipTarget getChipTarget(uint8_t chipAddress)
 {
     if (chipAddress == 1U) {
+        LO = &lo1;
         return ChipTarget::LO1;
     }
     if (chipAddress == 2U) {
+        LO = &lo2;
         return ChipTarget::LO2;
     }
     if (chipAddress == 3U) {
+        LO = &lo3;
         return ChipTarget::LO3;
     }
     return ChipTarget::None;
@@ -111,24 +114,6 @@ bool decodeLoCommand(uint16_t commandCode, LoCommand* loCommand)
     *loCommand = command;
     return true;
 }
-
-// MAX2871* targetLo(ChipTarget target)
-// {
-//     switch (target) {
-//         case ChipTarget::LO1:
-//             LO = &lo1;
-//             return LO;
-//         case ChipTarget::LO2:
-//             LO = &lo2;
-//             return LO;
-//         case ChipTarget::LO3:
-//             LO = &lo3;
-//             return LO;
-//         default:
-//             break;
-//     }
-//     return nullptr;
-// }
 
 double* reportedFrequencyForTargetLo(ChipTarget target)
 {
