@@ -411,11 +411,11 @@ void handleTechnicianCommand(const char* line, uint16_t bufferSize)
         return;
     }
     if (strcmp_P(tokens[0], PSTR("idflash")) == 0) {
-        processReceivedWord(0x9FU);
+        processReceivedWord(0x000048FFUL);
         return;
     }
     if (strcmp_P(tokens[0], PSTR("readstatreg")) == 0) {
-        processReceivedWord(0x5U);
+        processReceivedWord(0x000049FFUL);
         return;
     }
     printTechnicianBanner();
