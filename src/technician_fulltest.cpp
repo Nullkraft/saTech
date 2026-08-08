@@ -179,6 +179,9 @@ void printLoFrequencyCheck(const __FlashStringHelper* prefix, double expectedMhz
 
 void printLoRegisterValues(const __FlashStringHelper* prefix, const MAX2871& lo)
 {
+    const uint32_t packedFMN = (static_cast<uint32_t>(lo.Frac) << 20) |
+                               (static_cast<uint32_t>(lo.M) << 8) |
+                               lo.N;
     Serial.print(F("{\"type\":\"value\",\"name\":\""));
     Serial.print(prefix);
     Serial.print(F("_m\",\"value\":"));
@@ -193,6 +196,11 @@ void printLoRegisterValues(const __FlashStringHelper* prefix, const MAX2871& lo)
     Serial.print(prefix);
     Serial.print(F("_n\",\"value\":"));
     Serial.print(lo.N);
+    Serial.println(F("}"));
+    Serial.print(F("{\"type\":\"value\",\"name\":\""));
+    Serial.print(prefix);
+    Serial.print(F("_packed_fmn\",\"value\":"));
+    Serial.print(packedFMN);
     Serial.println(F("}"));
     Serial.print(F("{\"type\":\"value\",\"name\":\""));
     Serial.print(prefix);
