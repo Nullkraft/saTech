@@ -1,6 +1,7 @@
 #include "technician_console.h"
 
 #include "board_devices.h"
+#include "command_Codes.h"
 #include "command_interface.h"
 #include "console_state.h"
 #include "technician_fulltest.h"
@@ -19,6 +20,13 @@ constexpr double ANALYZER_RF_INPUT_MIN_MHZ = 0.0;
 constexpr double ANALYZER_RF_INPUT_MAX_MHZ = 3000.0;
 constexpr double LO_FREQUENCY_MIN_MHZ = 23.5;
 constexpr double LO_FREQUENCY_MAX_MHZ = 6000.0;
+
+constexpr uint32_t technicianInstructionWord(uint8_t commandBits, uint8_t chipAddress)
+{
+    return (static_cast<uint32_t>(commandBits) << 12) |
+           (static_cast<uint32_t>(chipAddress) << 8) |
+           InstructionCommandFlag;
+}
 
 const __FlashStringHelper* injectionLabel(LOInjectionMode mode)
 {
@@ -308,11 +316,11 @@ void handleTechnicianCommand(const char* line, uint16_t bufferSize)
         return;
     }
     if (strcmp_P(tokens[0], PSTR("id")) == 0) {
-        processReceivedWord(0x000017FFUL);
+        processReceivedWord(technicianInstructionWord(CmdMessageRequest, AddrMessages));
         return;
     }
     if (strcmp_P(tokens[0], PSTR("relock")) == 0) {
-        processReceivedWord(0x00002FFFUL);
+        processReceivedWord(technicianInstructionWord(CmdResetHardwareReportPllStatus, AddrMessages));
         return;
     }
     if (strcmp_P(tokens[0], PSTR("fulltest")) == 0) {
@@ -411,11 +419,11 @@ void handleTechnicianCommand(const char* line, uint16_t bufferSize)
         return;
     }
     if (strcmp_P(tokens[0], PSTR("idflash")) == 0) {
-        processReceivedWord(0x000048FFUL);
+        processReceivedWord(technicianInstructionWord(CmdFlashId, AddrFlash));
         return;
     }
     if (strcmp_P(tokens[0], PSTR("readstatreg")) == 0) {
-        processReceivedWord(0x000049FFUL);
+        processReceivedWord(technicianInstructionWord(CmdFlashRegisterReport, AddrFlash));
         return;
     }
     printTechnicianBanner();
