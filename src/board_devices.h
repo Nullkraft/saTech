@@ -18,6 +18,10 @@ extern FrequencyCalculator freqCalc;
 
 // Controller board
 extern W25N_Flash flash;
+extern uint8_t flashManufacturerId;
+extern uint16_t flashDeviceId;
+extern uint8_t flashProtection;
+extern uint8_t flashConfiguration;
 
 extern double currentRfInputMhz;
 

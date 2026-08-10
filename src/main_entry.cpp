@@ -44,25 +44,15 @@ void setup()
     pinMode(PIN_ADC_1,    OUTPUT);
     pinMode(PIN_ADC_2,    OUTPUT);
     pinMode(PIN_RAM,     OUTPUT);
-    pinMode(PIN_FLASH,   OUTPUT);
     pinMode(LED_BUILTIN, OUTPUT);
     // pinMode(PIN_LE_LO2,  OUTPUT);
 
-    selectChip(ChipTarget::Flash);
     flash.begin();
     // Deassert all CS/LE pins to idle and enable REF1 as the startup reference.
     selectChip(ChipTarget::Off);
-    selectChip(ChipTarget::Flash);
-    flash.loadProtectRegister(readRegisters);
-    selectChip(ChipTarget::Off);
-
-    selectChip(ChipTarget::Flash);
-    flash.loadConfigRegister(readRegisters);
-    selectChip(ChipTarget::Off);
-
-    selectChip(ChipTarget::Flash);
-    flash.loadStatusReg(readRegisters);
-    selectChip(ChipTarget::Off);
+    flash.readJedecId(flashManufacturerId, flashDeviceId);
+    flash.readStatus(RegAddrProtect, flashProtection);
+    flash.readStatus(RegAddrConfigure, flashConfiguration);
 
     selectRef(ReferenceTarget::Ref1);
 
