@@ -19,7 +19,11 @@ MAX2871 lo3(REF_MHZ, halLo3, halLo3);
 
 FrequencyCalculator freqCalc(lo1, lo2, lo3);
 
-W25N_Flash flash;
+W25N_Flash flash(PIN_FLASH);
+uint8_t flashManufacturerId;
+uint16_t flashDeviceId;
+uint8_t flashProtection;
+uint8_t flashConfiguration;
 
 double currentRfInputMhz = STARTUP_RF_MHZ;
 

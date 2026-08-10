@@ -1,18 +1,6 @@
 #!/bin/bash
 
 command="ls -go --full-time"
-env="technician"
-# W25N flash library project
-W25n_pio_deps=~/projects/embedded-applications/saTech/.pio/libdeps/$env/W25N_Flash_library/src
-W25n_library=~/projects/embedded-device-drivers/W25N_Flash_library/src
-# MAX2871 PLL Synthesizer library project
-MAX_pio_deps=~/projects/embedded-applications/saTech/.pio/libdeps/$env/MAX2871_PLL/src
-MAX_library=~/projects/embedded-device-drivers/MAX2871_library_dev/src
-# File changed status constants
-W25n_files_changed=1
-W25n_files_same=0
-MAX_files_changed=1
-MAX_files_same=0
 
 # Verify command line parameters
 if [ $# -eq 0 ]; then
@@ -46,6 +34,18 @@ if [ -z "$env_name" ]; then
     exit 1
 fi
 
+# W25N flash library project
+W25n_pio_deps=~/projects/embedded-applications/saTech/.pio/libdeps/$env_name/W25N_Flash_library/src
+W25n_library=~/projects/embedded-device-drivers/W25N_Flash_library/src
+# MAX2871 PLL Synthesizer library project
+MAX_pio_deps=~/projects/embedded-applications/saTech/.pio/libdeps/$env_name/MAX2871_PLL/src
+MAX_library=~/projects/embedded-device-drivers/MAX2871_library_dev/src
+# File changed status constants
+W25n_files_changed=1
+W25n_files_same=0
+MAX_files_changed=1
+MAX_files_same=0
+
 # Grab a hash of the W25N Flash library source files
 pio_w25n_hash=$($command "$W25n_pio_deps" | md5sum | cut -d " " -f 1)
 lib_w25n_hash=$($command "$W25n_library" | md5sum | cut -d " " -f 1)
@@ -71,7 +71,7 @@ then
     echo "Removing old W25N Flash library dependencies for ${env_name} ..."
     rm -rf ".pio/libdeps/${env_name}/W25N"*
 else
-    echo "W25N Flash library is unchanged in the '$env' environment"
+    echo "W25N Flash library is unchanged in the '$env_name' environment"
 fi
 
 
@@ -89,10 +89,12 @@ then
     echo "Removing old MAX2871 library dependencies for ${env_name} ..."
     rm -rf ".pio/libdeps/${env_name}/MAX2871"*
 else
-    echo "MAX2871 library is unchanged in the '$env' environment"
+    echo "MAX2871 library is unchanged in the '$env_name' environment"
 fi
 
 echo "--------------------------------------------------------------------------------------------"
 
-pio run -t clean && pio run "$@"
+# pio run -e "$env_name" -t clean &&
+
+pio run "$@"
 

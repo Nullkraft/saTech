@@ -254,7 +254,6 @@ void handleControlWord(uint32_t word)
             LO->outputPower(5, RF_B);
             deassertAllChipSelectPins();
         } else if (loCommand == LoCommand::FmnData) {
-            selectSerialChipTarget(serialRxState.currentlySelectedChip);
             setSerialPayloadMode(SerialPayloadMode::FMNData);
         }
         return;
@@ -281,22 +280,24 @@ void handleControlWord(uint32_t word)
     }
     if (commandCode == instructionWord(CmdFlashId, AddrFlash)) {
         Serial.print(F("Flash ID: 0x"));
-        Serial.println(flash.getManufID(), HEX);
+        Serial.println(flashManufacturerId, HEX);
         Serial.print(F("Device ID: 0x"));
-        Serial.println(flash.getDeviceID(), HEX);
+        Serial.println(flashDeviceId, HEX);
         return;
     }
     if (commandCode == instructionWord(CmdFlashRegisterReport, AddrFlash)) {
         Serial.print(F("Protection register report: 0x"));
-        Serial.println(flash.getProtReg(), HEX);
+        Serial.println(flashProtection, HEX);
         Serial.println();
 
         Serial.print(F("Configuration register report: 0x"));
-        Serial.println(flash.getConfReg(), HEX);
+        Serial.println(flashConfiguration, HEX);
         Serial.println();
 
+        uint8_t status;
+        flash.readStatus(RegAddrStatus, status);
         Serial.print(F("Status register report: 0x"));
-        Serial.println(flash.getStatReg(), HEX);
+        Serial.println(status, HEX);
         Serial.println();
         return;
     }
@@ -320,8 +321,6 @@ void handleFmnDataWord(uint32_t packedFMN)
 
     LO->setFrequency(packedFMN, LO->DIVA);
     *reportedFreq = LO->fmn2freq();               // Okay for testing only
-
-    deassertAllChipSelectPins();
 }
 
 void handleDirectRegisterDataWord(uint32_t dataWord)
