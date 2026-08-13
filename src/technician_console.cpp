@@ -23,9 +23,8 @@ constexpr double LO_FREQUENCY_MAX_MHZ = 6000.0;
 
 constexpr uint32_t technicianInstructionWord(uint8_t commandBits, uint8_t chipAddress)
 {
-    return (static_cast<uint32_t>(commandBits) << 12) |
-           (static_cast<uint32_t>(chipAddress) << 8) |
-           InstructionCommandFlag;
+    return (static_cast<uint32_t>(commandBits) << 12) | (static_cast<uint32_t>(chipAddress) << 8) | InstructionCommandFlag;
+    // One packed 32 bit value : cmd[15:12]+addr[11:8]+flag[7:0]
 }
 
 const __FlashStringHelper* injectionLabel(LOInjectionMode mode)
