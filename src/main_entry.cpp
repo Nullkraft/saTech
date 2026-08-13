@@ -45,8 +45,8 @@ void setup()
     // Deassert all CS/LE pins to idle and enable REF1 as the startup reference.
     selectChip(ChipTarget::Off);
     flash.readJedecId(flashManufacturerId, flashDeviceId);
-    flash.readStatus(RegAddrProtect, flashProtection);
-    flash.readStatus(RegAddrConfigure, flashConfiguration);
+    flash.readStatus(RegAddrProtect, &flashProtection);
+    flash.readStatus(RegAddrConfigure, &flashConfiguration);
 
     selectRef(ReferenceTarget::Ref1);
 

@@ -25,10 +25,11 @@ constexpr uint16_t instructionWord(uint8_t commandBits, uint8_t chipAddress)
 constexpr uint32_t SerialAsciiWord = 0x000106FFUL;
 constexpr uint32_t SerialBinaryWord = 0x000206FFUL;
 
+// Only Command mode supports 0xFF, FMNData and DirectRegisterData are guaranteed to never have 0xFF in their LSB's
 enum class SerialPayloadMode {
-    Command,
-    FMNData,
-    DirectRegisterData,
+    Command,                // A command is recognized when the 8 LSB's are 0xFF
+    FMNData,                // F, M, and N divider values for programming MAX2871 LO's
+    DirectRegisterData,     // Directly program MAX2871 registers when this mode is set
 };
 
 struct SerialReceiveState {
@@ -295,7 +296,7 @@ void handleControlWord(uint32_t word)
         Serial.println();
 
         uint8_t status;
-        flash.readStatus(RegAddrStatus, status);
+        flash.readStatus(RegAddrStatus, &status);
         Serial.print(F("Status register report: 0x"));
         Serial.println(status, HEX);
         Serial.println();

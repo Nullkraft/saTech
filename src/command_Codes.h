@@ -38,5 +38,6 @@ const static uint8_t CmdSquelchLevel = 0x08U;
 
 const static uint8_t CmdFlashId = 0x01U;
 const static uint8_t CmdFlashRegisterReport = 0x02U;
+const static uint8_t CmdFlashRegisterWrite = 0x03U;
 
 const static uint16_t InstructionCommandFlag = 0x00FFU;
