@@ -66,6 +66,7 @@ void setup()
 void loop()
 {
 #if SATECH_TECHNICIAN_CONSOLE
+    // This path is used when operating with the technician console
     pollTechnicianConsole();
 #else
     // See setup() where you can choose "ascii"  or "binary" communication
