@@ -34,7 +34,6 @@ enum class SerialPayloadMode {
 
 struct SerialReceiveState {
     SerialPayloadMode payloadMode;
-    ChipTarget currentlySelectedChip;
     uint8_t wordBytes[RECEIVED_WORD_BYTES];
     uint8_t wordLength;
 };
@@ -52,7 +51,6 @@ enum class LoCommand {
 
 SerialReceiveState serialRxState = {
     SerialPayloadMode::Command,
-    ChipTarget::None,
     {0U, 0U, 0U, 0U},
     0U,
 };
@@ -123,24 +121,9 @@ bool decodeLoCommand(uint16_t commandCode, LoCommand* loCommand)
         return false;
     }
 
-    serialRxState.currentlySelectedChip = target;
+    selectChip(target);
     *loCommand = command;
     return true;
-}
-
-double* reportedFrequencyForTargetLo(ChipTarget target)
-{
-    switch (target) {
-        case ChipTarget::LO1:
-            return &freqCalc.FreqLO1;
-        case ChipTarget::LO2:
-            return &freqCalc.FreqLO2;
-        case ChipTarget::LO3:
-            return &freqCalc.FreqLO3;
-        default:
-            break;
-    }
-    return nullptr;
 }
 
 void setSerialPayloadMode(SerialPayloadMode mode)
@@ -229,7 +212,7 @@ void handleControlWord(uint32_t word)
     }
     ChipTarget loTarget;
     if (setChipTarget(commandCode, &loTarget)) {
-        selectSerialChipTarget(loTarget);
+        selectChip(loTarget);
         return;
     }
     if (commandCode == instructionWord(CmdDigitalAttenuator, AddrAttenuator)) {
@@ -264,19 +247,19 @@ void handleControlWord(uint32_t word)
         return;
     }
     if (commandCode == instructionWord(CmdGeneral, AddrAdc1)) {
-        selectSerialChipTarget(ChipTarget::ADC_1);
+        selectChip(ChipTarget::ADC_1);
         return;
     }
     if (commandCode == instructionWord(CmdGeneral, AddrAdc2)) {
-        selectSerialChipTarget(ChipTarget::ADC_2);
+        selectChip(ChipTarget::ADC_2);
         return;
     }
     if (commandCode == instructionWord(CmdGeneral, AddrRam)) {
-        selectSerialChipTarget(ChipTarget::RAM);
+        selectChip(ChipTarget::RAM);
         return;
     }
     if (commandCode == instructionWord(CmdGeneral, AddrFlash)) {
-        selectSerialChipTarget(ChipTarget::Flash);
+        selectChip(ChipTarget::Flash);
         return;
     }
     if (commandCode == instructionWord(CmdFlashId, AddrFlash)) {
@@ -287,16 +270,26 @@ void handleControlWord(uint32_t word)
         return;
     }
     if (commandCode == instructionWord(CmdFlashRegisterReport, AddrFlash)) {
+        uint8_t protection;
+        uint8_t configuration;
+        uint8_t status;
+
+        SPI.beginTransaction(SPISettings(W25N_SPI_CLOCK_HZ, MSBFIRST, SPI_MODE0));
+        selectChip(ChipTarget::Flash);
+        flash.readStatus(RegAddrProtect, &protection);
+        flash.readStatus(RegAddrConfigure, &configuration);
+        flash.readStatus(RegAddrStatus, &status);
+        selectChip(ChipTarget::Off);
+        SPI.endTransaction();
+
         Serial.print(F("Protection register report: 0x"));
-        Serial.println(flashProtection, HEX);
+        Serial.println(protection, HEX);
         Serial.println();
 
         Serial.print(F("Configuration register report: 0x"));
-        Serial.println(flashConfiguration, HEX);
+        Serial.println(configuration, HEX);
         Serial.println();
 
-        uint8_t status;
-        flash.readStatus(RegAddrStatus, &status);
         Serial.print(F("Status register report: 0x"));
         Serial.println(status, HEX);
         Serial.println();
@@ -313,12 +306,23 @@ void handleControlWord(uint32_t word)
 
 void handleFmnDataWord(uint32_t packedFMN)
 {
-    const ChipTarget target = serialRxState.currentlySelectedChip;
+    double* reportedFreq;
+    const ChipTarget target = state.chipTarget;
 
     if (LO == nullptr) {
         return;
     }
-    double* reportedFreq = reportedFrequencyForTargetLo(target);
+
+    switch (target) {
+        case ChipTarget::LO1:
+            reportedFreq = &freqCalc.FreqLO1;
+        case ChipTarget::LO2:
+            reportedFreq = &freqCalc.FreqLO2;
+        case ChipTarget::LO3:
+            reportedFreq = &freqCalc.FreqLO3;
+        default:
+            break;
+    }
 
     LO->setFrequency(packedFMN, LO->DIVA);
     *reportedFreq = LO->fmn2freq();               // Okay for testing only
@@ -327,7 +331,7 @@ void handleFmnDataWord(uint32_t packedFMN)
 void handleDirectRegisterDataWord(uint32_t dataWord)
 {
     bool wroteTarget = true;
-    switch (serialRxState.currentlySelectedChip) {
+    switch (state.chipTarget) {
         case ChipTarget::LO1:
             halLo1.spiWriteRegister(dataWord);
             break;
@@ -381,12 +385,6 @@ void processBinarySerialByte(uint8_t incomingByte)
     processReceivedWord(word);
 }
 
-void selectSerialChipTarget(ChipTarget target)
-{
-    serialRxState.currentlySelectedChip = target;
-    selectChip(target);
-}
-
 void processReceivedWord(uint32_t mode)
 {
     // Check if the parsed 32-bit word has 0xFF (command flag) in its least-significant byte?
@@ -404,6 +402,5 @@ void processReceivedWord(uint32_t mode)
 // cppcheck-suppress unusedFunction
 void processDirectRegisterData(uint32_t value)
 {
-    serialRxState.currentlySelectedChip = state.chipTarget;
     handleDirectRegisterDataWord(value);
 }
