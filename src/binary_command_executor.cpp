@@ -126,21 +126,6 @@ bool decodeLoCommand(uint16_t commandCode, LoCommand* loCommand)
     return true;
 }
 
-double* reportedFrequencyForTargetLo(ChipTarget target)
-{
-    switch (target) {
-        case ChipTarget::LO1:
-            return &freqCalc.FreqLO1;
-        case ChipTarget::LO2:
-            return &freqCalc.FreqLO2;
-        case ChipTarget::LO3:
-            return &freqCalc.FreqLO3;
-        default:
-            break;
-    }
-    return nullptr;
-}
-
 void setSerialPayloadMode(SerialPayloadMode mode)
 {
     serialRxState.payloadMode = mode;
@@ -311,12 +296,23 @@ void handleControlWord(uint32_t word)
 
 void handleFmnDataWord(uint32_t packedFMN)
 {
+    double* reportedFreq;
     const ChipTarget target = state.chipTarget;
 
     if (LO == nullptr) {
         return;
     }
-    double* reportedFreq = reportedFrequencyForTargetLo(target);
+
+    switch (target) {
+        case ChipTarget::LO1:
+            reportedFreq = &freqCalc.FreqLO1;
+        case ChipTarget::LO2:
+            reportedFreq = &freqCalc.FreqLO2;
+        case ChipTarget::LO3:
+            reportedFreq = &freqCalc.FreqLO3;
+        default:
+            break;
+    }
 
     LO->setFrequency(packedFMN, LO->DIVA);
     *reportedFreq = LO->fmn2freq();               // Okay for testing only
