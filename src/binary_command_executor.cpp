@@ -352,16 +352,16 @@ void handleDirectRegisterDataWord(uint32_t dataWord)
             programAttenuatorRaw(static_cast<uint8_t>(dataWord & 0x7FU));
             break;
         case ChipTarget::ADC_1:
-            spiWrite32(PIN_ADC_1, true, dataWord);
+            spiWrite32(ChipTarget::ADC_1, dataWord);
             break;
         case ChipTarget::ADC_2:
-            spiWrite32(PIN_ADC_2, true, dataWord);
+            spiWrite32(ChipTarget::ADC_2, dataWord);
             break;
         case ChipTarget::RAM:
-            spiWrite32(PIN_RAM, true, dataWord);
+            spiWrite32(ChipTarget::RAM, dataWord);
             break;
         case ChipTarget::Flash:
-            spiWrite32(PIN_FLASH, true, dataWord);
+            spiWrite32(ChipTarget::Flash, dataWord);
             break;
         case ChipTarget::Off:
         case ChipTarget::None:

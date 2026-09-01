@@ -29,14 +29,11 @@ uint8_t attenCodeFromDb(double db)
 
 void programAttenuatorRaw(uint8_t code)
 {
-    // Ensure the attenuator CS is idle before starting the SPI transaction.
-    // programAttenuatorRaw() manages its own complete CS cycle independently
-    // of selectChip(); the two mechanisms do not interfere with each other.
     SPI.beginTransaction(SPISettings(ATTEN_SPI_HZ, MSBFIRST, SPI_MODE0));
     selectChip(ChipTarget::Attenuator);
     SPI.transfer(code);
-    SPI.endTransaction();
     selectChip(ChipTarget::Off);
+    SPI.endTransaction();
     const double mappedDb = ATTEN_MIN_DB + (static_cast<double>(code) * ATTEN_STEP_DB);
     if (mappedDb >= ATTEN_MIN_DB && mappedDb <= (ATTEN_MAX_DB + 0.25)) {
         state.attenuatorDb = mappedDb;
@@ -44,20 +41,16 @@ void programAttenuatorRaw(uint8_t code)
 }
 
 // Generic 32-bit SPI write for targets without a dedicated HAL object.
-// assertLow: true if the CS pin asserts LOW (ADC, RAM, Flash);
-//            false if it asserts HIGH.
 // cppcheck-suppress unusedFunction
-void spiWrite32(uint8_t csPin, bool assertLow, uint32_t value)
+void spiWrite32(ChipTarget target, uint32_t value)
 {
-    const uint8_t assertLevel   = assertLow ? LOW  : HIGH;
-    const uint8_t deassertLevel = assertLow ? HIGH : LOW;
     SPI.beginTransaction(SPISettings(SPI_DEFAULT_HZ, MSBFIRST, SPI_MODE0));
-    digitalWrite(csPin, assertLevel);
+    selectChip(target);
     SPI.transfer(static_cast<uint8_t>((value >> 24) & 0xFFU));
     SPI.transfer(static_cast<uint8_t>((value >> 16) & 0xFFU));
     SPI.transfer(static_cast<uint8_t>((value >>  8) & 0xFFU));
     SPI.transfer(static_cast<uint8_t>( value        & 0xFFU));
-    digitalWrite(csPin, deassertLevel);
+    selectChip(ChipTarget::Off);
     SPI.endTransaction();
 }
 
