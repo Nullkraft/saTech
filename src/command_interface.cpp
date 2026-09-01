@@ -32,11 +32,9 @@ void programAttenuatorRaw(uint8_t code)
     // Ensure the attenuator CS is idle before starting the SPI transaction.
     // programAttenuatorRaw() manages its own complete CS cycle independently
     // of selectChip(); the two mechanisms do not interfere with each other.
-    digitalWrite(PIN_ATTEN, LOW);
     SPI.beginTransaction(SPISettings(ATTEN_SPI_HZ, MSBFIRST, SPI_MODE0));
-    digitalWrite(PIN_ATTEN, HIGH);
+    selectChip(ChipTarget::Attenuator);
     SPI.transfer(code);
-    digitalWrite(PIN_ATTEN, LOW);
     SPI.endTransaction();
     const double mappedDb = ATTEN_MIN_DB + (static_cast<double>(code) * ATTEN_STEP_DB);
     if (mappedDb >= ATTEN_MIN_DB && mappedDb <= (ATTEN_MAX_DB + 0.25)) {
