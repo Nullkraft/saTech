@@ -24,6 +24,7 @@ constexpr uint16_t instructionWord(uint8_t commandBits, uint8_t chipAddress)
 
 constexpr uint32_t SerialAsciiWord = 0x000106FFUL;
 constexpr uint32_t SerialBinaryWord = 0x000206FFUL;
+constexpr uint8_t FlashReadStatusRegisterCommand = 0x0FU;
 
 // Only Command mode supports 0xFF, FMNData and DirectRegisterData are guaranteed to never have 0xFF in their LSB's
 enum class SerialPayloadMode {
@@ -130,6 +131,18 @@ void setSerialPayloadMode(SerialPayloadMode mode)
 {
     serialRxState.payloadMode = mode;
     serialRxState.wordLength = 0U;
+}
+
+uint8_t readFlashStatusRegister(uint8_t registerAddress)
+{
+    SPI.beginTransaction(SPISettings(W25N_SPI_CLOCK_HZ, MSBFIRST, SPI_MODE0));
+    selectChip(ChipTarget::Flash);
+    SPI.transfer(FlashReadStatusRegisterCommand);
+    SPI.transfer(registerAddress);
+    const uint8_t value = SPI.transfer(0U);
+    selectChip(ChipTarget::Off);
+    SPI.endTransaction();
+    return value;
 }
 
 void deassertAllChipSelectPins()
@@ -270,17 +283,9 @@ void handleControlWord(uint32_t word)
         return;
     }
     if (commandCode == instructionWord(CmdFlashRegisterReport, AddrFlash)) {
-        uint8_t protection;
-        uint8_t configuration;
-        uint8_t status;
-
-        SPI.beginTransaction(SPISettings(W25N_SPI_CLOCK_HZ, MSBFIRST, SPI_MODE0));
-        selectChip(ChipTarget::Flash);
-        flash.readStatus(RegAddrProtect, &protection);
-        flash.readStatus(RegAddrConfigure, &configuration);
-        flash.readStatus(RegAddrStatus, &status);
-        selectChip(ChipTarget::Off);
-        SPI.endTransaction();
+        const uint8_t protection = readFlashStatusRegister(RegAddrProtect);
+        const uint8_t configuration = readFlashStatusRegister(RegAddrConfigure);
+        const uint8_t status = readFlashStatusRegister(RegAddrStatus);
 
         Serial.print(F("Protection register report: 0x"));
         Serial.println(protection, HEX);
