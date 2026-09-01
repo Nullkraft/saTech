@@ -64,9 +64,9 @@ void spiWrite32(uint8_t csPin, bool assertLow, uint32_t value)
 // Shared chip-select metadata: target, assigned pin, and asserted raw level.
 const ChipSelectDefinition CHIP_DEFINITIONS[] = {
     {ChipTarget::Attenuator, PIN_ATTEN, HIGH},
-    {ChipTarget::LO1,        PIN_LE_LO1, HIGH},
-    {ChipTarget::LO2,        PIN_LE_LO2, HIGH},
-    {ChipTarget::LO3,        PIN_LE_LO3, HIGH},
+    {ChipTarget::LO1,        PIN_LE_LO1, LOW},
+    {ChipTarget::LO2,        PIN_LE_LO2, LOW},
+    {ChipTarget::LO3,        PIN_LE_LO3, LOW},
     {ChipTarget::RAM,        PIN_RAM,    LOW},
     {ChipTarget::Flash,      PIN_FLASH,  LOW},
     {ChipTarget::ADC_1,       PIN_ADC_1,   LOW},
@@ -114,12 +114,6 @@ void selectChip(ChipTarget target)
     s.manualSpiArmed        = false;
     s.pendingSpiConfirmation = false;
 
-    if (target == ChipTarget::Off) {
-        Serial.println(F("All chip selects deasserted."));
-    } else {
-        Serial.print(F("Chip select set to "));
-        Serial.println(chipTargetName(target));
-    }
 }
 
 // ---------------------------------------------------------------------------

@@ -3,7 +3,7 @@
 #include <Arduino.h>
 #include <stdint.h>
 
-// LE / chip-select pins — LO1, LO2, LO3, and attenuator assert HIGH
+// LE / chip-select pins — LO1, LO2, LO3 assert LOW while shifting; attenuator asserts HIGH.
 constexpr uint8_t PIN_ATTEN   = A5;
 constexpr uint8_t PIN_LE_LO1  = A3;
 constexpr uint8_t PIN_LE_LO2  = 4;
@@ -55,11 +55,8 @@ constexpr uint8_t INPUT_BUFFER_SIZE = 40;
 // selectChip() and selectRef() are intentionally side-effect-free beyond pin
 // state and the two state flags they own (chipTarget, ref1/ref2Enabled).
 //
-// NOTE: state.chipTarget and the HAL LE pin toggling are intentionally
-// independent mechanisms. selectChip() is for manual technician pin control.
-// halLo1/halLo2/halLo3 manage their own LE lines autonomously during
-// programmatic SPI writes (e.g. tuneTo(), recomputePlan()). The two paths
-// do not interfere with each other.
+// NOTE: saTech MAX2871 transports use selectChip() for LE timing around
+// programmatic SPI writes.
 // ---------------------------------------------------------------------------
 
 // Deasserts all CS/LE pins, then asserts the requested target's pin.
