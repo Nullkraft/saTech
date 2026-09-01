@@ -270,16 +270,26 @@ void handleControlWord(uint32_t word)
         return;
     }
     if (commandCode == instructionWord(CmdFlashRegisterReport, AddrFlash)) {
+        uint8_t protection;
+        uint8_t configuration;
+        uint8_t status;
+
+        SPI.beginTransaction(SPISettings(W25N_SPI_CLOCK_HZ, MSBFIRST, SPI_MODE0));
+        selectChip(ChipTarget::Flash);
+        flash.readStatus(RegAddrProtect, &protection);
+        flash.readStatus(RegAddrConfigure, &configuration);
+        flash.readStatus(RegAddrStatus, &status);
+        selectChip(ChipTarget::Off);
+        SPI.endTransaction();
+
         Serial.print(F("Protection register report: 0x"));
-        Serial.println(flashProtection, HEX);
+        Serial.println(protection, HEX);
         Serial.println();
 
         Serial.print(F("Configuration register report: 0x"));
-        Serial.println(flashConfiguration, HEX);
+        Serial.println(configuration, HEX);
         Serial.println();
 
-        uint8_t status;
-        flash.readStatus(RegAddrStatus, &status);
         Serial.print(F("Status register report: 0x"));
         Serial.println(status, HEX);
         Serial.println();
