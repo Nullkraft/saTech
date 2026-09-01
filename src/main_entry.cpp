@@ -45,7 +45,13 @@ void setup()
     flash.begin();
     // Deassert all CS/LE pins to idle and enable REF1 as the startup reference.
     selectChip(ChipTarget::Off);
+
+    SPI.beginTransaction(SPISettings(W25N_SPI_CLOCK_HZ, MSBFIRST, SPI_MODE0));
+    selectChip(ChipTarget::Flash);
     flash.readJedecId(flashManufacturerId, flashDeviceId);
+    selectChip(ChipTarget::Off);
+    SPI.endTransaction();
+    
     flash.readStatus(RegAddrProtect, &flashProtection);
     flash.readStatus(RegAddrConfigure, &flashConfiguration);
 

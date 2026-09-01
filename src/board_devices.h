@@ -5,6 +5,13 @@
 #include <max2871.h>
 #include <w25n_Flash.h>
 
+namespace {
+
+constexpr double STARTUP_RF_MHZ = 1735.113;
+constexpr uint32_t W25N_SPI_CLOCK_HZ = 16000000UL;
+
+} // namespace
+
 constexpr double REF_MHZ = 66.0;
 
 // RF board

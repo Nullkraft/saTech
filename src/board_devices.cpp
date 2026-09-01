@@ -3,12 +3,6 @@
 #include "command_interface.h"
 #include "console_state.h"
 
-namespace {
-
-constexpr double STARTUP_RF_MHZ = 1735.113;
-
-} // namespace
-
 ArduinoHAL halLo1(PIN_LE_LO1);
 ArduinoHAL halLo2(PIN_LE_LO2);
 ArduinoHAL halLo3(PIN_LE_LO3);
@@ -19,7 +13,7 @@ MAX2871 lo3(REF_MHZ, halLo3, halLo3);
 
 FrequencyCalculator freqCalc(lo1, lo2, lo3);
 
-W25N_Flash flash(PIN_FLASH);
+W25N_Flash flash;
 uint8_t flashManufacturerId;
 uint16_t flashDeviceId;
 uint8_t flashProtection;
