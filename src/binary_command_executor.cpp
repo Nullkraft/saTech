@@ -25,6 +25,7 @@ constexpr uint16_t instructionWord(uint8_t commandBits, uint8_t chipAddress)
 constexpr uint32_t SerialAsciiWord = 0x000106FFUL;
 constexpr uint32_t SerialBinaryWord = 0x000206FFUL;
 constexpr uint8_t FlashReadStatusRegisterCommand = 0x0FU;
+constexpr uint32_t Max2871SpiHz = 8000000UL;
 
 // Only Command mode supports 0xFF, FMNData and DirectRegisterData are guaranteed to never have 0xFF in their LSB's
 enum class SerialPayloadMode {
@@ -143,6 +144,15 @@ uint8_t readFlashStatusRegister(uint8_t registerAddress)
     selectChip(ChipTarget::Off);
     SPI.endTransaction();
     return value;
+}
+
+void writeLoRegister(ArduinoHAL& hal, ChipTarget target, uint32_t dataWord)
+{
+    SPI.beginTransaction(SPISettings(Max2871SpiHz, MSBFIRST, SPI_MODE0));
+    selectChip(target);
+    hal.spiWriteRegister(dataWord);
+    selectChip(ChipTarget::Off);
+    SPI.endTransaction();
 }
 
 void handleControlWord(uint32_t word)
@@ -327,13 +337,16 @@ void handleDirectRegisterDataWord(uint32_t dataWord)
     bool wroteTarget = true;
     switch (state.chipTarget) {
         case ChipTarget::LO1:
-            halLo1.spiWriteRegister(dataWord);
+            writeLoRegister(halLo1, ChipTarget::LO1, dataWord);
+            wroteTarget = false;
             break;
         case ChipTarget::LO2:
-            halLo2.spiWriteRegister(dataWord);
+            writeLoRegister(halLo2, ChipTarget::LO2, dataWord);
+            wroteTarget = false;
             break;
         case ChipTarget::LO3:
-            halLo3.spiWriteRegister(dataWord);
+            writeLoRegister(halLo3, ChipTarget::LO3, dataWord);
+            wroteTarget = false;
             break;
         case ChipTarget::Attenuator:
             programAttenuatorRaw(static_cast<uint8_t>(dataWord & 0x7FU));

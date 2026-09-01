@@ -3,13 +3,49 @@
 #include "command_interface.h"
 #include "console_state.h"
 
+#include <SPI.h>
+
+namespace {
+
+constexpr uint32_t Max2871SpiHz = 8000000UL;
+
+class SaTechLoTransport : public I_MAX2871Transport {
+public:
+    SaTechLoTransport(ArduinoHAL& hal, ChipTarget target)
+        : _hal(hal), _target(target) {}
+
+    void spiWriteRegister(uint32_t value) override
+    {
+        SPI.beginTransaction(SPISettings(Max2871SpiHz, MSBFIRST, SPI_MODE0));
+        selectChip(_target);
+        _hal.spiWriteRegister(value);
+        selectChip(ChipTarget::Off);
+        SPI.endTransaction();
+    }
+
+    bool readMuxout() override
+    {
+        return _hal.readMuxout();
+    }
+
+private:
+    ArduinoHAL& _hal;
+    ChipTarget _target;
+};
+
+} // namespace
+
 ArduinoHAL halLo1(PIN_LE_LO1);
 ArduinoHAL halLo2(PIN_LE_LO2);
 ArduinoHAL halLo3(PIN_LE_LO3);
 
-MAX2871 lo1(REF_MHZ, halLo1, halLo1);
-MAX2871 lo2(REF_MHZ, halLo2, halLo2);
-MAX2871 lo3(REF_MHZ, halLo3, halLo3);
+SaTechLoTransport loTransport1(halLo1, ChipTarget::LO1);
+SaTechLoTransport loTransport2(halLo2, ChipTarget::LO2);
+SaTechLoTransport loTransport3(halLo3, ChipTarget::LO3);
+
+MAX2871 lo1(REF_MHZ, loTransport1, halLo1);
+MAX2871 lo2(REF_MHZ, loTransport2, halLo2);
+MAX2871 lo3(REF_MHZ, loTransport3, halLo3);
 
 FrequencyCalculator freqCalc(lo1, lo2, lo3);
 
