@@ -145,17 +145,6 @@ uint8_t readFlashStatusRegister(uint8_t registerAddress)
     return value;
 }
 
-void deassertAllChipSelectPins()
-{
-    for (size_t i = 0; i < CHIP_COUNT; ++i) {
-        const ChipSelectDefinition& def = CHIP_DEFINITIONS[i];
-        digitalWrite(def.pin, (def.assertedLevel == HIGH) ? LOW : HIGH);
-    }
-    state.chipTarget = ChipTarget::Off;
-    state.manualSpiArmed = false;
-    state.pendingSpiConfirmation = false;
-}
-
 void handleControlWord(uint32_t word)
 {
     const uint16_t commandCode = static_cast<uint16_t>(word & 0xFFFFU);
@@ -230,26 +219,26 @@ void handleControlWord(uint32_t word)
     }
     if (commandCode == instructionWord(CmdDigitalAttenuator, AddrAttenuator)) {
         programAttenuatorRaw(static_cast<uint8_t>((word >> 16) & 0x7FU));
-        deassertAllChipSelectPins();
+        selectChip(ChipTarget::Off);
         return;
     }
     LoCommand loCommand;
     if (decodeLoCommand(commandCode, &loCommand)) {
         if (loCommand == LoCommand::DisableOutput) {
             LO->outputSelect(RFNONE);
-            deassertAllChipSelectPins();
+            selectChip(ChipTarget::Off);
         } else if (loCommand == LoCommand::RfBPowerMinus4) {
             LO->outputPower(-4, RF_B);
-            deassertAllChipSelectPins();
+            selectChip(ChipTarget::Off);
         } else if (loCommand == LoCommand::RfBPowerMinus1) {
             LO->outputPower(-1, RF_B);
-            deassertAllChipSelectPins();
+            selectChip(ChipTarget::Off);
         } else if (loCommand == LoCommand::RfBPowerPlus2) {
             LO->outputPower(2, RF_B);
-            deassertAllChipSelectPins();
+            selectChip(ChipTarget::Off);
         } else if (loCommand == LoCommand::RfBPowerPlus5) {
             LO->outputPower(5, RF_B);
-            deassertAllChipSelectPins();
+            selectChip(ChipTarget::Off);
         } else if (loCommand == LoCommand::FmnData) {
             setSerialPayloadMode(SerialPayloadMode::FMNData);
         }
@@ -368,7 +357,7 @@ void handleDirectRegisterDataWord(uint32_t dataWord)
             break;
     }
     if (wroteTarget) {
-        deassertAllChipSelectPins();
+        selectChip(ChipTarget::Off);
     }
 }
 

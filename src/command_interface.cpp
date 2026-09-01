@@ -36,6 +36,7 @@ void programAttenuatorRaw(uint8_t code)
     selectChip(ChipTarget::Attenuator);
     SPI.transfer(code);
     SPI.endTransaction();
+    selectChip(ChipTarget::Off);
     const double mappedDb = ATTEN_MIN_DB + (static_cast<double>(code) * ATTEN_STEP_DB);
     if (mappedDb >= ATTEN_MIN_DB && mappedDb <= (ATTEN_MAX_DB + 0.25)) {
         state.attenuatorDb = mappedDb;
