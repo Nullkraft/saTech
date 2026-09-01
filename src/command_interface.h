@@ -66,7 +66,6 @@ constexpr uint8_t INPUT_BUFFER_SIZE = 40;
 // ChipTarget::Off deasserts everything and leaves it that way.
 // Resets the SPI arming state on every call.
 void selectChip(ChipTarget target);
-void selectSerialChipTarget(ChipTarget target);
 
 // Deasserts both REF_EN pins, then asserts the requested reference clock.
 // ReferenceTarget::Ref1 or Ref2 selects that clock; ReferenceTarget::Off

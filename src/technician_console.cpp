@@ -379,7 +379,7 @@ void handleTechnicianCommand(const char* line, uint16_t bufferSize)
             printTechnicianBanner();
             return;
         }
-        selectSerialChipTarget(target);
+        selectChip(target);
         return;
     }
     if (strcmp_P(tokens[0], PSTR("set")) == 0) {
