@@ -39,7 +39,6 @@ void setup()
     pinMode(PIN_ADC_2,    OUTPUT);
     pinMode(PIN_RAM,     OUTPUT);
     pinMode(PIN_FLASH,   OUTPUT);
-    pinMode(LED_BUILTIN, OUTPUT);
     // pinMode(PIN_LE_LO2,  OUTPUT);
 
     flash.begin();

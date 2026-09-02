@@ -168,16 +168,6 @@ void handleControlWord(uint32_t word)
             return;
         }
     }
-    if (commandCode == instructionWord(CmdLedOn, AddrMessages)) {
-        digitalWrite(LED_BUILTIN, HIGH);
-        Serial.print(F("LED on"));
-        return;
-    }
-    if (commandCode == instructionWord(CmdLedOff, AddrMessages)) {
-        digitalWrite(LED_BUILTIN, LOW);
-        Serial.print(F("LED off"));
-        return;
-    }
     if (commandCode == instructionWord(CmdMessageRequest, AddrMessages)) {
         Serial.print(F("saTech WN2A ready"));
         return;

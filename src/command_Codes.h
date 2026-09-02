@@ -26,8 +26,6 @@ const static uint8_t CmdCommandMode = 0x00U;
 const static uint8_t CmdFmnMode = 0x01U;
 const static uint8_t CmdDirectMode = 0x02U;
 
-const static uint8_t CmdLedOff = 0x00U;
-const static uint8_t CmdLedOn = 0x01U;
 const static uint8_t CmdMessageRequest = 0x02U;
 const static uint8_t CmdBeginSweep = 0x03U;
 const static uint8_t CmdEndSweep = 0x04U;
