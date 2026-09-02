@@ -7,6 +7,7 @@
 #include "command_interface.h"
 #include "console_state.h"
 #include "technician_console.h"
+#include "is66_Ram.h"
 
 #ifndef SATECH_TECHNICIAN_CONSOLE
 #define SATECH_TECHNICIAN_CONSOLE 0
@@ -21,6 +22,7 @@ void setup()
     }
 
     SPI.begin();
+    IS66_Ram ram(PIN_RAM);
     resetConsoleState();
     saTech.begin(SerialEncoding::Ascii);
 
@@ -41,6 +43,7 @@ void setup()
     pinMode(PIN_FLASH,   OUTPUT);
     // pinMode(PIN_LE_LO2,  OUTPUT);
 
+    ram.begin();
     flash.begin();
     // Deassert all CS/LE pins to idle and enable REF1 as the startup reference.
     selectChip(ChipTarget::Off);
@@ -53,6 +56,14 @@ void setup()
     
     flash.readStatus(RegAddrProtect, &flashProtection);
     flash.readStatus(RegAddrConfigure, &flashConfiguration);
+
+    uint8_t ramManufacturerId;
+    uint16_t ramKgdId;
+    SPI.beginTransaction(SPISettings(SPI_DEFAULT_HZ, MSBFIRST, SPI_MODE0));
+    selectChip(ChipTarget::RAM);
+    ram.readRamId(ramManufacturerId, ramKgdId);
+    selectChip(ChipTarget::Off);
+    SPI.endTransaction();
 
     selectRef(ReferenceTarget::Ref1);
 
