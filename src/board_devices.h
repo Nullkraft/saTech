@@ -2,6 +2,7 @@
 
 #include <arduino_hal.h>
 #include <frequency_calculator.h>
+#include <is66_Ram.h>
 #include <max2871.h>
 #include <w25n_Flash.h>
 
@@ -24,6 +25,7 @@ extern MAX2871 lo3;
 extern FrequencyCalculator freqCalc;
 
 // Controller board
+extern IS66_Ram ram;
 extern W25N_Flash flash;
 extern uint8_t flashManufacturerId;
 extern uint16_t flashDeviceId;
