@@ -49,6 +49,7 @@ MAX2871 lo3(REF_MHZ, loTransport3, halLo3);
 
 FrequencyCalculator freqCalc(lo1, lo2, lo3);
 
+IS66_Ram ram(PIN_RAM);
 W25N_Flash flash;
 uint8_t flashManufacturerId;
 uint16_t flashDeviceId;

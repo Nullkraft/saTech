@@ -7,7 +7,6 @@
 #include "command_interface.h"
 #include "console_state.h"
 #include "technician_console.h"
-#include "is66_Ram.h"
 
 #ifndef SATECH_TECHNICIAN_CONSOLE
 #define SATECH_TECHNICIAN_CONSOLE 0
@@ -22,7 +21,6 @@ void setup()
     }
 
     SPI.begin();
-    IS66_Ram ram(PIN_RAM);
     resetConsoleState();
     saTech.begin(SerialEncoding::Ascii);
 
