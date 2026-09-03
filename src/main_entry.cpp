@@ -26,12 +26,12 @@ void setup()
 
     freqCalc.RefClock1 = REF_MHZ;
 
-    // HAL begin() sets the LE pins as OUTPUT.
+    // Initialize each LO HAL's SPI support.
     halLo1.begin();
     halLo2.begin();
     halLo3.begin();
 
-    // Set remaining CS/LE and REF_EN pins as OUTPUT before driving them.
+    // Set CS/LE and REF_EN pins as OUTPUT before driving them.
     pinMode(PIN_LE_LO1,  OUTPUT);
     pinMode(PIN_LE_LO2,  OUTPUT);
     pinMode(PIN_LE_LO3,  OUTPUT);
@@ -42,7 +42,6 @@ void setup()
     pinMode(PIN_ADC_2,    OUTPUT);
     pinMode(PIN_RAM,     OUTPUT);
     pinMode(PIN_FLASH,   OUTPUT);
-    // pinMode(PIN_LE_LO2,  OUTPUT);
 
     ram.begin();
     flash.begin();
