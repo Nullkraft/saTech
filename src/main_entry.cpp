@@ -32,6 +32,9 @@ void setup()
     halLo3.begin();
 
     // Set remaining CS/LE and REF_EN pins as OUTPUT before driving them.
+    pinMode(PIN_LE_LO1,  OUTPUT);
+    pinMode(PIN_LE_LO2,  OUTPUT);
+    pinMode(PIN_LE_LO3,  OUTPUT);
     pinMode(PIN_ATTEN,   OUTPUT);
     pinMode(PIN_REF_EN1, OUTPUT);
     pinMode(PIN_REF_EN2, OUTPUT);
