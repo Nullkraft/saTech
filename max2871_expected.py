@@ -9,11 +9,12 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parent
-MAX2871_SRC = REPO_ROOT / ".pio/libdeps/native/MAX2871_PLL/src"
+MAX2871_SRC = REPO_ROOT.parents[1] / "embedded-device-drivers/MAX2871_library_dev/src"
 
 
 HARNESS = r'''
 #include <stdint.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <vector>
@@ -38,7 +39,7 @@ static void print_writes(const char* label, const std::vector<uint32_t>& writes)
 
 int main(int argc, char** argv) {
     CaptureHAL hal;
-    MAX2871 lo(66.0, hal, hal);
+    MAX2871 lo(66000, hal, hal);
     lo.begin();
     lo.outputSelect(RF_B);
     lo.outputPower(5, RF_B);
@@ -46,12 +47,12 @@ int main(int argc, char** argv) {
 
     for (int i = 1; i < argc; ++i) {
         const double mhz = atof(argv[i]);
-        lo.setFrequency(mhz);
+        lo.setFrequency((uint32_t)llround(mhz * 1000.0));
 
         printf("frequency=%.9f\n", mhz);
         print_writes("writes", hal.writes);
         printf("M=%u Frac=%lu N=%u DIVA=%u actual=%.9f\n",
-               lo.M, (unsigned long)lo.Frac, lo.N, lo.DIVA, lo.fmn2freq());
+               lo.M, (unsigned long)lo.Frac, lo.N, lo.DIVA, lo.fmn2freq() / 1000.0);
         printf("R5=0x%08lX R4=0x%08lX R3=0x%08lX R2=0x%08lX R1=0x%08lX R0=0x%08lX\n",
                (unsigned long)lo.Curr.Reg[5],
                (unsigned long)lo.Curr.Reg[4],

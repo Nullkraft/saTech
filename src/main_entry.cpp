@@ -24,7 +24,7 @@ void setup()
     resetConsoleState();
     saTech.begin(SerialEncoding::Ascii);
 
-    freqCalc.RefClock1 = REF_MHZ;
+    freqCalc.RefClock1 = REF_KHZ;
 
     // Initialize each LO HAL's SPI support.
     halLo1.begin();
@@ -73,7 +73,7 @@ void setup()
 
     Serial.println(F("Note: Tech Tool for board bring up. 3/26/26"));
 
-    tuneTo(currentRfInputMhz);
+    tuneTo(currentRfInputKHz);
 #if SATECH_TECHNICIAN_CONSOLE
     printTechnicianBanner();
 #endif

@@ -8,12 +8,13 @@
 
 namespace {
 
-constexpr double STARTUP_RF_MHZ = 1735.113;
+constexpr uint32_t STARTUP_RF_KHZ = 1735113;
 constexpr uint32_t W25N_SPI_CLOCK_HZ = 16000000UL;
 
 } // namespace
 
 constexpr double REF_MHZ = 66.0;
+constexpr uint32_t REF_KHZ = 66000;
 
 // RF board
 extern ArduinoHAL halLo1;
@@ -32,8 +33,8 @@ extern uint16_t flashDeviceId;
 extern uint8_t flashProtection;
 extern uint8_t flashConfiguration;
 
-extern double currentRfInputMhz;
+extern uint32_t currentRfInputKHz;
 
 void initializeLo(MAX2871& lo);
 void recomputePlan();
-void tuneTo(double mhz);
+void tuneTo(uint32_t khz);
