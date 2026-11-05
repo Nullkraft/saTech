@@ -77,7 +77,6 @@ void setup()
 #if SATECH_TECHNICIAN_CONSOLE
     printTechnicianBanner();
 #endif
-    printFulltestPlanReport();
 }
 
 void loop()
