@@ -49,7 +49,7 @@ void printSelectedLoSnapshot(ChipTarget target)
 {
     const MAX2871* targetLo;
     const __FlashStringHelper* label;
-    double freq;
+    uint32_t freq;
     switch (target) {
         case ChipTarget::LO1:
             targetLo = &lo1;
@@ -72,7 +72,7 @@ void printSelectedLoSnapshot(ChipTarget target)
     Serial.println();
     Serial.print(label);
     Serial.print(F("  : "));
-    Serial.print(freq, 3);
+    Serial.print(freq / 1000.0, 3);
     Serial.println(F(" MHz"));
     Serial.print(label);
     Serial.print(F(" M="));
@@ -145,19 +145,19 @@ void handleLofreqCommand(const char* valueToken)
         Serial.println(F("LO frequency out of range (23.5 to 6000 MHz)."));
         return;
     }
-    double actual;
+    uint32_t actual;
     if (chipTarget == ChipTarget::LO1) {
-        lo1.setFrequency(requestedMhz);
+        lo1.setFrequency(static_cast<uint32_t>(round(requestedMhz * 1000.0)));
         actual = lo1.fmn2freq();
         freqCalc.FreqLO1 = actual;
         consoleState().lo1Manual = true;
     } else if (chipTarget == ChipTarget::LO2) {
-        lo2.setFrequency(requestedMhz);
+        lo2.setFrequency(static_cast<uint32_t>(round(requestedMhz * 1000.0)));
         actual = lo2.fmn2freq();
         freqCalc.FreqLO2 = actual;
         consoleState().lo2Manual = true;
     } else {
-        lo3.setFrequency(requestedMhz);
+        lo3.setFrequency(static_cast<uint32_t>(round(requestedMhz * 1000.0)));
         actual = lo3.fmn2freq();
         freqCalc.FreqLO3 = actual;
         consoleState().lo3Manual = true;
@@ -166,7 +166,7 @@ void handleLofreqCommand(const char* valueToken)
     Serial.print(F("LO frequency set for "));
     Serial.print(chipTargetName(chipTarget));
     Serial.print(F(" -> "));
-    Serial.print(actual, 3);
+    Serial.print(actual / 1000.0, 3);
     Serial.println(F(" MHz"));
     printSelectedLoSnapshot(chipTarget);
     printInjectionSummary();
@@ -303,7 +303,7 @@ void handleTechnicianCommand(const char* line, uint16_t bufferSize)
             Serial.println(F("RFin out of range (0 to 3000 MHz)."));
             return;
         }
-        tuneTo(rfinMhz);
+        tuneTo(static_cast<uint32_t>(round(rfinMhz * 1000.0)));
         return;
     }
     if (rfinCommand) {

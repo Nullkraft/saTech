@@ -184,7 +184,7 @@ void handleControlWord(uint32_t word)
         initializeLo(lo1);
         initializeLo(lo2);
         initializeLo(lo3);
-        tuneTo(currentRfInputMhz);
+        tuneTo(currentRfInputKHz);
         return;
     }
     if (commandCode == instructionWord(CmdCommandMode, AddrCommsState)) {
@@ -299,7 +299,7 @@ void handleControlWord(uint32_t word)
 
 void handleFmnDataWord(uint32_t packedFMN)
 {
-    double* reportedFreq;
+    uint32_t* reportedFreq;
     const ChipTarget target = state.chipTarget;
 
     if (LO == nullptr) {

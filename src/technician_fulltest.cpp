@@ -58,6 +58,15 @@ void printJsonValue(const __FlashStringHelper* name, double value, uint8_t digit
     Serial.println(F("}"));
 }
 
+void printJsonKHz(const __FlashStringHelper* name, uint32_t value)
+{
+    Serial.print(F("{\"type\":\"value\",\"name\":\""));
+    Serial.print(name);
+    Serial.print(F("\",\"value\":"));
+    Serial.print(value / 1000.0, 3);
+    Serial.println(F("}"));
+}
+
 void printJsonTextValue(const __FlashStringHelper* name, const __FlashStringHelper* value)
 {
     Serial.print(F("{\"type\":\"value\",\"name\":\""));
@@ -150,30 +159,21 @@ void printPincheckFailures(const bool results[])
     }
 }
 
-long roundMilliMhz(double value)
+void printLoFrequencyCheck(const __FlashStringHelper* prefix, uint32_t expectedKHz, uint32_t actualKHz)
 {
-    return static_cast<long>(round(value * 1000.0));
-}
-
-void printLoFrequencyCheck(const __FlashStringHelper* prefix, double expectedMhz, double actualMhz)
-{
-    const long expectedMilliMhz = roundMilliMhz(expectedMhz);
-    const long actualMilliMhz = roundMilliMhz(actualMhz);
-    const double expectedRoundedMhz = static_cast<double>(expectedMilliMhz) / 1000.0;
-    const double actualRoundedMhz = static_cast<double>(actualMilliMhz) / 1000.0;
     Serial.print(F("{\"type\":\"value\",\"name\":\""));
     Serial.print(prefix);
     Serial.print(F("_frequency_mhz\",\"value\":"));
-    Serial.print(actualRoundedMhz, 3);
+    Serial.print(actualKHz / 1000.0, 3);
     Serial.println(F("}"));
     Serial.print(F("{\"type\":\"check\",\"name\":\""));
     Serial.print(prefix);
     Serial.print(F("_frequency_mhz\",\"expected\":"));
-    Serial.print(expectedRoundedMhz, 3);
+    Serial.print(expectedKHz / 1000.0, 3);
     Serial.print(F(",\"actual\":"));
-    Serial.print(actualRoundedMhz, 3);
+    Serial.print(actualKHz / 1000.0, 3);
     Serial.print(F(",\"result\":\""));
-    Serial.print(actualMilliMhz == expectedMilliMhz ? F("PASS") : F("FAIL"));
+    Serial.print(actualKHz == expectedKHz ? F("PASS") : F("FAIL"));
     Serial.println(F("\"}"));
 }
 
@@ -222,14 +222,14 @@ void printJsonError(const __FlashStringHelper* command,
     Serial.println(F("\"}"));
 }
 
-void stageFulltestPlan(double rfinMhz)
+void stageFulltestPlan(uint32_t rfinKHz)
 {
     ConsoleState& state = consoleState();
-    currentRfInputMhz = rfinMhz;
+    currentRfInputKHz = rfinKHz;
     state.lo1Manual = false;        // set to automatic frequency control for LO1
     state.lo2Manual = false;        // set to automatic frequency control for LO2
     state.lo3Manual = false;        // set to automatic frequency control for LO3
-    freqCalc.compute_LO_frequencies(currentRfInputMhz, freqCalc.RefClock1, 1,
+    freqCalc.compute_LO_frequencies(currentRfInputKHz, freqCalc.RefClock1, 1,
                                     state.desiredLo2Injection,
                                     state.desiredLo3Injection);
     lo1.freq2FMN(freqCalc.FreqLO1);
@@ -254,7 +254,7 @@ void handleFulltestPlan(const char* valueToken)
         return;
     }
 
-    stageFulltestPlan(rfinMhz);
+    stageFulltestPlan(static_cast<uint32_t>(round(rfinMhz * 1000.0)));
     printFulltestPlanReport();
 }
 
@@ -296,8 +296,8 @@ void handleFulltestProgram(const char* loToken)
     MAX2871* targetLo;
     const __FlashStringHelper* prefix;
     const __FlashStringHelper* report;
-    double* reportedFreq;
-    double plannedFrequency;
+    uint32_t* reportedFreq;
+    uint32_t plannedFrequency;
     if (strcmp(loToken, "lo1") == 0) {
         targetLo = &lo1;
         prefix = F("lo1");
@@ -315,7 +315,7 @@ void handleFulltestProgram(const char* loToken)
         return;
     }
 
-    if (freqCalc.FreqRFin == 0.0 || plannedFrequency == 0.0) {
+    if (freqCalc.FreqRFin == 0 || plannedFrequency == 0) {
         printJsonError(F("fulltest program"), F("no_frequency_plan"), F("Run fulltest plan before programming LO"));
         return;
     }
@@ -405,9 +405,9 @@ void printFulltestPlanReport()
 {
     const ConsoleState& state = consoleState();
     printJsonReportEvent(F("report_begin"), F("plan"));
-    printJsonValue(F("rfin_mhz"), freqCalc.FreqRFin, 3);
-    printJsonValue(F("if1_mhz"), freqCalc.IF1, 3);
-    printJsonValue(F("if2_mhz"), freqCalc.IF2, 3);
+    printJsonKHz(F("rfin_mhz"), freqCalc.FreqRFin);
+    printJsonKHz(F("if1_mhz"), freqCalc.IF1);
+    printJsonKHz(F("if2_mhz"), freqCalc.IF2);
     printLoFrequencyCheck(F("lo1"), freqCalc.FreqLO1, freqCalc.FreqLO1);
     printLoRegisterValues(F("lo1"), lo1);
     printLoFrequencyCheck(F("lo2"), freqCalc.FreqLO2, freqCalc.FreqLO2);

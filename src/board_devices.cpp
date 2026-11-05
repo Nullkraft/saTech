@@ -43,9 +43,9 @@ SaTechLoTransport loTransport1(halLo1, ChipTarget::LO1);
 SaTechLoTransport loTransport2(halLo2, ChipTarget::LO2);
 SaTechLoTransport loTransport3(halLo3, ChipTarget::LO3);
 
-MAX2871 lo1(REF_MHZ, loTransport1, halLo1);
-MAX2871 lo2(REF_MHZ, loTransport2, halLo2);
-MAX2871 lo3(REF_MHZ, loTransport3, halLo3);
+MAX2871 lo1(REF_KHZ, loTransport1, halLo1);
+MAX2871 lo2(REF_KHZ, loTransport2, halLo2);
+MAX2871 lo3(REF_KHZ, loTransport3, halLo3);
 
 FrequencyCalculator freqCalc(lo1, lo2, lo3);
 
@@ -56,7 +56,7 @@ uint16_t flashDeviceId;
 uint8_t flashProtection;
 uint8_t flashConfiguration;
 
-double currentRfInputMhz = STARTUP_RF_MHZ;
+uint32_t currentRfInputKHz = STARTUP_RF_KHZ;
 
 void initializeLo(MAX2871& lo)
 {
@@ -70,13 +70,13 @@ void recomputePlan()
     ConsoleState& s = consoleState();
 
     // Save manually-held LO frequencies before the auto-calculation overwrites them.
-    const double savedLo1 = freqCalc.FreqLO1;
-    const double savedLo2 = freqCalc.FreqLO2;
-    const double savedLo3 = freqCalc.FreqLO3;
+    const uint32_t savedLo1 = freqCalc.FreqLO1;
+    const uint32_t savedLo2 = freqCalc.FreqLO2;
+    const uint32_t savedLo3 = freqCalc.FreqLO3;
 
     // Overload B: pass the technician's desired injection modes so that
     // freqCalc.LO2InjectionMode / LO3InjectionMode are set correctly for display.
-    freqCalc.set_LO_frequencies(currentRfInputMhz, freqCalc.RefClock1, 1,
+    freqCalc.set_LO_frequencies(currentRfInputKHz, freqCalc.RefClock1, 1,
                                  s.desiredLo2Injection,
                                  s.desiredLo3Injection);
 
@@ -100,9 +100,9 @@ void recomputePlan()
     }
 }
 
-void tuneTo(double mhz)
+void tuneTo(uint32_t khz)
 {
-    currentRfInputMhz = mhz;
+    currentRfInputKHz = khz;
     // A fresh tune restores all LOs to automatic frequency control.
     ConsoleState& s = consoleState();
     s.lo1Manual = false;
