@@ -185,7 +185,6 @@ void handleControlWord(uint32_t word)
         initializeLo(lo2);
         initializeLo(lo3);
         tuneTo(currentRfInputMhz);
-        printFulltestPlanReport();
         return;
     }
     if (commandCode == instructionWord(CmdCommandMode, AddrCommsState)) {

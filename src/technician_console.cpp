@@ -229,6 +229,7 @@ void printTechnicianBanner()
     Serial.println(F(" RFin <MHz>            0 to 3000 MHz"));
     Serial.println(F(" help                  This list"));
     Serial.println(F(" id                    Print identifier"));
+    Serial.println(F(" report                Print frequency plan"));
     Serial.println(F(" relock                Reinitialize LO's"));
     Serial.println(F(" fulltest refcheck     Report refclock pin checks"));
     Serial.println(F(" fulltest pincheck     Report chip pin checks"));
@@ -303,7 +304,6 @@ void handleTechnicianCommand(const char* line, uint16_t bufferSize)
             return;
         }
         tuneTo(rfinMhz);
-        printFulltestPlanReport();
         return;
     }
     if (rfinCommand) {
@@ -316,6 +316,10 @@ void handleTechnicianCommand(const char* line, uint16_t bufferSize)
     }
     if (strcmp_P(tokens[0], PSTR("id")) == 0) {
         processReceivedWord(technicianInstructionWord(CmdMessageRequest, AddrMessages));
+        return;
+    }
+    if (strcmp_P(tokens[0], PSTR("report")) == 0) {
+        printFulltestPlanReport();
         return;
     }
     if (strcmp_P(tokens[0], PSTR("relock")) == 0) {
