@@ -179,9 +179,6 @@ void printLoFrequencyCheck(const __FlashStringHelper* prefix, uint32_t expectedK
 
 void printLoRegisterValues(const __FlashStringHelper* prefix, const MAX2871& lo)
 {
-    const uint32_t packedFMN = (static_cast<uint32_t>(lo.Frac) << 20) |
-                               (static_cast<uint32_t>(lo.M) << 8) |
-                               lo.N;
     Serial.print(F("{\"type\":\"value\",\"name\":\""));
     Serial.print(prefix);
     Serial.print(F("_m\",\"value\":"));
@@ -200,7 +197,14 @@ void printLoRegisterValues(const __FlashStringHelper* prefix, const MAX2871& lo)
     Serial.print(F("{\"type\":\"value\",\"name\":\""));
     Serial.print(prefix);
     Serial.print(F("_packed_fmn\",\"value\":"));
-    Serial.print(packedFMN);
+    if (lo.N <= 0xFF) {
+        const uint32_t packedFMN = (static_cast<uint32_t>(lo.Frac) << 20) |
+                                   (static_cast<uint32_t>(lo.M) << 8) |
+                                   lo.N;
+        Serial.print(packedFMN);
+    } else {
+        Serial.print(F("null"));
+    }
     Serial.println(F("}"));
     Serial.print(F("{\"type\":\"value\",\"name\":\""));
     Serial.print(prefix);
@@ -222,7 +226,7 @@ void printJsonError(const __FlashStringHelper* command,
     Serial.println(F("\"}"));
 }
 
-void stageFulltestPlan(uint32_t rfinKHz)
+bool stageFulltestPlan(uint32_t rfinKHz)
 {
     ConsoleState& state = consoleState();
     currentRfInputKHz = rfinKHz;
@@ -232,9 +236,9 @@ void stageFulltestPlan(uint32_t rfinKHz)
     freqCalc.compute_LO_frequencies(currentRfInputKHz, freqCalc.RefClock1, 1,
                                     state.desiredLo2Injection,
                                     state.desiredLo3Injection);
-    lo1.freq2FMN(freqCalc.FreqLO1);
-    lo2.freq2FMN(freqCalc.FreqLO2);
-    lo3.freq2FMN(freqCalc.FreqLO3);
+    return lo1.freq2FMN(freqCalc.FreqLO1) &&
+           lo2.freq2FMN(freqCalc.FreqLO2) &&
+           lo3.freq2FMN(freqCalc.FreqLO3);
 }
 
 void handleFulltestPlan(const char* valueToken)
@@ -254,7 +258,10 @@ void handleFulltestPlan(const char* valueToken)
         return;
     }
 
-    stageFulltestPlan(static_cast<uint32_t>(round(rfinMhz * 1000.0)));
+    if (!stageFulltestPlan(static_cast<uint32_t>(round(rfinMhz * 1000.0)))) {
+        printJsonError(F("fulltest plan"), F("invalid_lo_frequency"), F("Calculated LO frequency out of range"));
+        return;
+    }
     printFulltestPlanReport();
 }
 

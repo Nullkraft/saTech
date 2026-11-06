@@ -317,7 +317,12 @@ void handleFmnDataWord(uint32_t packedFMN)
             break;
     }
 
-    LO->setFrequency(packedFMN, LO->DIVA);
+    const uint16_t frac = (packedFMN >> 20) & 0x0FFFU;
+    const uint16_t modulus = (packedFMN >> 8) & 0x0FFFU;
+    const uint16_t n = packedFMN & 0x00FFU;
+    if (!LO->setFrequency(frac, modulus, n, LO->DIVA)) {
+        return;
+    }
     *reportedFreq = LO->fmn2freq();               // Okay for testing only
 }
 
