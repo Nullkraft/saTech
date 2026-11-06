@@ -9,6 +9,30 @@ namespace {
 
 constexpr uint32_t Max2871SpiHz = 8000000UL;
 
+constexpr MAX2871::max2871Registers lo1StartupRegisters()
+{
+    return {{
+        0x801D0000,  // R0: integer-N, F = 0
+        0x00017FE1,  // R1: integer-N CP linearity
+        0x80005F42,  // R2: integer-N lock detect
+        0x00001F23,
+        0x63EE81FC,
+        0x01400005   // R5: F = 0 selects integer-N
+    }};
+}
+
+constexpr MAX2871::max2871Registers fractionalLoStartupRegisters()
+{
+    return {{
+        0x001D1740,  // R0: fractional-N
+        0x40017FE1,
+        0x80005E42,  // R2: fractional-N lock detect
+        0x00001F23,
+        0x63EE81FC,
+        0x00400005
+    }};
+}
+
 class SaTechLoTransport : public I_MAX2871Transport {
 public:
     SaTechLoTransport(ArduinoHAL& hal, ChipTarget target)
@@ -43,9 +67,9 @@ SaTechLoTransport loTransport1(halLo1, ChipTarget::LO1);
 SaTechLoTransport loTransport2(halLo2, ChipTarget::LO2);
 SaTechLoTransport loTransport3(halLo3, ChipTarget::LO3);
 
-MAX2871 lo1(REF_KHZ, loTransport1, halLo1);
-MAX2871 lo2(REF_KHZ, loTransport2, halLo2);
-MAX2871 lo3(REF_KHZ, loTransport3, halLo3);
+MAX2871 lo1(REF_KHZ, loTransport1, halLo1, lo1StartupRegisters());
+MAX2871 lo2(REF_KHZ, loTransport2, halLo2, fractionalLoStartupRegisters());
+MAX2871 lo3(REF_KHZ, loTransport3, halLo3, fractionalLoStartupRegisters());
 
 FrequencyCalculator freqCalc(lo1, lo2, lo3);
 
