@@ -31,6 +31,8 @@ constexpr uint8_t PllMuxPin = A2;
 constexpr uint32_t PllLockTimeoutUs = 500UL;
 constexpr uint32_t MuxoutTriStateMask = 0xE3FFFFFFUL;
 constexpr uint32_t MuxoutDigitalLockDetect = 0x18000000UL;
+// shortcut: fixed 10 MHz smoke test, replace when the measurement command accepts a frequency.
+constexpr uint32_t CoarseTestRfKHz = 10000UL;
 
 // Only Command mode supports 0xFF, FMNData and DirectRegisterData are guaranteed to never have 0xFF in their LSB's
 enum class SerialPayloadMode {
@@ -190,6 +192,13 @@ uint16_t readAdc1Raw()
 
 void reportCoarseMeasurement()
 {
+    currentRfInputKHz = CoarseTestRfKHz;
+    freqCalc.compute_LO_frequencies(currentRfInputKHz, REF_KHZ, 1,
+                                    LOInjectionMode::High, LOInjectionMode::High);
+    lo1.setFrequency(freqCalc.FreqLO1);
+    lo2.setFrequency(freqCalc.FreqLO2);
+    programAttenuatorDb(getCurrentAttenuatorDb());
+
     pinMode(PllMuxPin, INPUT);
     selectLockDetect(lo1, halLo1, ChipTarget::LO1, lo2, halLo2, ChipTarget::LO2);
     const bool lo1Locked = waitForPllLock();
@@ -197,7 +206,9 @@ void reportCoarseMeasurement()
     const bool lo2Locked = waitForPllLock();
     const uint16_t raw = readAdc1Raw();
 
-    Serial.print(F("ADC1 lo1_lock="));
+    Serial.print(F("COARSE rfin_khz="));
+    Serial.print(currentRfInputKHz);
+    Serial.print(F(" lo1_lock="));
     Serial.print(lo1Locked);
     Serial.print(F(" lo2_lock="));
     Serial.print(lo2Locked);
