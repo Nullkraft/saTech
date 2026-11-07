@@ -225,25 +225,21 @@ void printInjectionSummary()
 void printTechnicianBanner()
 {
     Serial.println();
-    Serial.println(F("=== Technician Console Commands ==="));
-    Serial.println(F(" RFin <MHz>            0 to 3000 MHz"));
-    Serial.println(F(" help                  This list"));
+    Serial.println(F(" RFin <MHz>            0-3000 MHz"));
+    Serial.println(F(" help"));
     Serial.println(F(" id                    Print identifier"));
     Serial.println(F(" report                Print frequency plan"));
     Serial.println(F(" relock                Reinitialize LO's"));
-    Serial.println(F(" fulltest refcheck     Report refclock pin checks"));
-    Serial.println(F(" fulltest pincheck     Report chip pin checks"));
-    Serial.println(F(" fulltest atten <dB>   Program and report set point"));
-    Serial.println(F(" fulltest plan <MHz>   Frequency plan (Report only)"));
-    Serial.println(F(" fulltest program <lo1|lo2> Program one planned LO"));
-    Serial.println(F(" ifmode <high|low>     Set injection for the selected LO"));
-    Serial.println(F(" lofreq <MHz>          Set selected LO frequency"));
-    Serial.println(F(" chip <target|off>     Assert target pin or set all off"));
+    Serial.println(F(" fulltest: refcheck pincheck atten <dB>"));
+    Serial.println(F("           plan <MHz> program <lo1|lo2>"));
+    Serial.println(F(" ifmode <high|low>     Set LO injection mode"));
+    Serial.println(F(" lofreq <MHz>          Set target LO frequency"));
+    Serial.println(F(" chip <target|off>     Assert chip pin or all off"));
     Serial.println(F("   targets: lo1 lo2 lo3 atten adc1 adc2 ram flash"));
-    Serial.println(F(" set <ref1|ref2|off>   Enable one or disable both"));
+    Serial.println(F(" set <ref1|ref2|off>   Enable one or both off"));
     Serial.println(F(" spi <hex32>           Send raw 32-bit word to selected LO"));
-    Serial.println(F(" <idflash|9F>          Type string or hex command value to print flash ID"));
-    Serial.println(F(" <readStatReg|F|5>     Print status register configuration"));
+    Serial.println(F(" idflash               Print the flash ID code"));
+    Serial.println(F(" readStatReg           Print status register config"));
     Serial.println();
 }
 
