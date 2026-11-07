@@ -34,15 +34,10 @@ const __FlashStringHelper* injectionLabel(LOInjectionMode mode)
 
 void logManualWrite(uint32_t value)
 {
-    Serial.print(F("[SPI] target="));
+    Serial.print(F("[SPI] "));
     Serial.print(chipTargetName(getCurrentChipTarget()));
-    Serial.print(F(" value=0x"));
-    static const char hexDigits[] = "0123456789ABCDEF";
-    for (int shift = 28; shift >= 0; shift -= 4) {
-        const uint8_t nibble = static_cast<uint8_t>((value >> shift) & 0x0FU);
-        Serial.print(hexDigits[nibble]);
-    }
-    Serial.println();
+    Serial.print(F("=0x"));
+    Serial.println(value, HEX);
 }
 
 void printSelectedLoSnapshot(ChipTarget target)
@@ -95,18 +90,16 @@ void handleIfmodeCommand(const char* modeToken)
     }
     ConsoleState& state = consoleState();
     if (state.chipTarget == ChipTarget::LO1) {
-        Serial.println(F("LO1 injection mode is computed automatically from the frequency plan."));
+        Serial.println(F("LO1 ifmode is automatic."));
         return;
     }
     if (state.chipTarget != ChipTarget::LO2 && state.chipTarget != ChipTarget::LO3) {
-        Serial.println(F("Select lo2 or lo3 with 'chip' before using ifmode."));
+        Serial.println(F("Select lo2 or lo3 first."));
         return;
     }
     if ((state.chipTarget == ChipTarget::LO2 && state.lo2Manual) ||
         (state.chipTarget == ChipTarget::LO3 && state.lo3Manual)) {
-        Serial.print(chipTargetName(state.chipTarget));
-        Serial.println(F(" is under manual lofreq control; ifmode has no effect."));
-        Serial.println(F("Tune to a frequency (e.g. '1735.113') to restore automatic mode."));
+        Serial.println(F("Manual lofreq active; use RFin to restore auto."));
         return;
     }
     const LOInjectionMode requestedMode = highRequested ? LOInjectionMode::High : LOInjectionMode::Low;
@@ -132,7 +125,7 @@ void handleLofreqCommand(const char* valueToken)
     if (chipTarget != ChipTarget::LO1 &&
         chipTarget != ChipTarget::LO2 &&
         chipTarget != ChipTarget::LO3) {
-        Serial.println(F("Select lo1, lo2, or lo3 with 'chip' before using lofreq."));
+        Serial.println(F("Select lo1, lo2, or lo3 first."));
         return;
     }
     char* endPointer;
@@ -142,7 +135,7 @@ void handleLofreqCommand(const char* valueToken)
         return;
     }
     if (requestedMhz < LO_FREQUENCY_MIN_MHZ || requestedMhz > LO_FREQUENCY_MAX_MHZ) {
-        Serial.println(F("LO frequency out of range (23.5 to 6000 MHz)."));
+        Serial.println(F("lofreq out of range."));
         return;
     }
     uint32_t actual;
@@ -163,11 +156,6 @@ void handleLofreqCommand(const char* valueToken)
         consoleState().lo3Manual = true;
     }
 
-    Serial.print(F("LO frequency set for "));
-    Serial.print(chipTargetName(chipTarget));
-    Serial.print(F(" -> "));
-    Serial.print(actual / 1000.0, 3);
-    Serial.println(F(" MHz"));
     printSelectedLoSnapshot(chipTarget);
     printInjectionSummary();
     Serial.println();
@@ -191,18 +179,18 @@ void processSpiToken(const char* valueToken)
             state.pendingSpiConfirmation = true;
             state.pendingSpiValue        = value;
             state.pendingSpiTarget       = state.chipTarget;
-            Serial.println(F("Manual SPI writes locked. Re-enter the same command to arm manual writes."));
+            Serial.println(F("Repeat same SPI command to arm."));
             return;
         }
         if (state.pendingSpiValue != value || state.pendingSpiTarget != state.chipTarget) {
             state.pendingSpiValue  = value;
             state.pendingSpiTarget = state.chipTarget;
-            Serial.println(F("Confirmation mismatch. Re-enter desired value to arm manual writes."));
+            Serial.println(F("SPI mismatch; repeat desired command."));
             return;
         }
         state.pendingSpiConfirmation = false;
         state.manualSpiArmed         = true;
-        Serial.println(F("Manual SPI writes armed. Proceed with caution."));
+        Serial.println(F("Manual SPI writes armed."));
     }
 
     logManualWrite(value);
