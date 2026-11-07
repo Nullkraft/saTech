@@ -2,12 +2,15 @@
 
 ## Single-point foundation
 
+- [ ] Limit the initial measurement path to LO1, LO2, and ADC1; defer LO3, ADC2, fine tuning, calibration, and linearity.
 - [ ] Define one production measurement command and response.
 - [ ] Update the binary command executor to handle that command correctly.
-- [ ] Program the required LOs and attenuator.
-- [ ] Wait for PLL lock and the required analog settling time.
-- [ ] Read one ADC sample.
-- [ ] Return the frequency and measurement with an unambiguous completion boundary.
+- [ ] Program LO1, LO2, and the attenuator.
+- [ ] Select digital lock detect for the PLL being checked and tri-state the other PLL's MUXOUT.
+- [ ] Poll the wired-OR MUXOUT input on A2 for no more than 500 us.
+- [ ] Read the raw 16-bit ADC1 SPI response immediately when lock is detected.
+- [ ] If lock times out, still read ADC1 and report failure-to-lock with the raw response.
+- [ ] Return the frequency, raw ADC1 response, and lock status with an unambiguous completion boundary.
 - [ ] Repeat the transaction reliably before implementing sweep playback.
 
 ## Complete sweep playback
