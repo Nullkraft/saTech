@@ -26,6 +26,11 @@ constexpr uint32_t SerialAsciiWord = 0x000106FFUL;
 constexpr uint32_t SerialBinaryWord = 0x000206FFUL;
 constexpr uint8_t FlashReadStatusRegisterCommand = 0x0FU;
 constexpr uint32_t Max2871SpiHz = 8000000UL;
+constexpr uint32_t AdcSpiHz = 2000000UL;
+constexpr uint8_t PllMuxPin = A2;
+constexpr uint32_t PllLockTimeoutUs = 500UL;
+constexpr uint32_t MuxoutTriStateMask = 0xE3FFFFFFUL;
+constexpr uint32_t MuxoutDigitalLockDetect = 0x18000000UL;
 
 // Only Command mode supports 0xFF, FMNData and DirectRegisterData are guaranteed to never have 0xFF in their LSB's
 enum class SerialPayloadMode {
@@ -155,6 +160,51 @@ void writeLoRegister(ArduinoHAL& hal, ChipTarget target, uint32_t dataWord)
     SPI.endTransaction();
 }
 
+void selectLockDetect(MAX2871& selectedLo, ArduinoHAL& selectedHal, ChipTarget selectedTarget,
+                      MAX2871& otherLo, ArduinoHAL& otherHal, ChipTarget otherTarget)
+{
+    otherLo.Curr.Reg[2] &= MuxoutTriStateMask;
+    writeLoRegister(otherHal, otherTarget, otherLo.Curr.Reg[2]);
+    selectedLo.Curr.Reg[2] |= MuxoutDigitalLockDetect;
+    writeLoRegister(selectedHal, selectedTarget, selectedLo.Curr.Reg[2]);
+}
+
+bool waitForPllLock()
+{
+    const uint32_t start = micros();
+    while ((micros() - start) <= PllLockTimeoutUs) {
+        if (digitalRead(PllMuxPin) == HIGH) return true;
+    }
+    return false;
+}
+
+uint16_t readAdc1Raw()
+{
+    SPI.beginTransaction(SPISettings(AdcSpiHz, MSBFIRST, SPI_MODE1));
+    selectChip(ChipTarget::ADC_1);
+    const uint16_t raw = SPI.transfer16(0U);
+    selectChip(ChipTarget::Off);
+    SPI.endTransaction();
+    return raw;
+}
+
+void reportCoarseMeasurement()
+{
+    pinMode(PllMuxPin, INPUT);
+    selectLockDetect(lo1, halLo1, ChipTarget::LO1, lo2, halLo2, ChipTarget::LO2);
+    const bool lo1Locked = waitForPllLock();
+    selectLockDetect(lo2, halLo2, ChipTarget::LO2, lo1, halLo1, ChipTarget::LO1);
+    const bool lo2Locked = waitForPllLock();
+    const uint16_t raw = readAdc1Raw();
+
+    Serial.print(F("ADC1 lo1_lock="));
+    Serial.print(lo1Locked);
+    Serial.print(F(" lo2_lock="));
+    Serial.print(lo2Locked);
+    Serial.print(F(" raw="));
+    Serial.println(raw);
+}
+
 void handleControlWord(uint32_t word)
 {
     const uint16_t commandCode = static_cast<uint16_t>(word & 0xFFFFU);
@@ -248,7 +298,7 @@ void handleControlWord(uint32_t word)
         return;
     }
     if (commandCode == instructionWord(CmdGeneral, AddrAdc1)) {
-        selectChip(ChipTarget::ADC_1);
+        reportCoarseMeasurement();
         return;
     }
     if (commandCode == instructionWord(CmdGeneral, AddrAdc2)) {
