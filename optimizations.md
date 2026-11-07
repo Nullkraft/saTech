@@ -72,6 +72,13 @@ The final Uno test build used 769 of 2,048 SRAM bytes and 19,482 of 32,256 flash
 - The current W25N driver implements identification and status access; its NAND page, bad-block, and result-storage behavior is unfinished.
 - ADC-result buffering in NAND and final result-output optimization remain future work and are not part of the measurements above.
 
+## Future seamless sweep replacement
+
+- Continue playing the active sweep while generating its replacement in the next available IS66 region.
+- Switch playback to the replacement only after its complete instruction sequence has been written.
+- Track the next available IS66 address and wrap only when doing so cannot overwrite the active sweep.
+- Keep the initial implementation simpler: stop playback, overwrite from address zero, and restart.
+
 ## Measurement limits
 
 - The current benchmark measures divider handling and synthesizer programming.
