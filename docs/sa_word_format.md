@@ -158,6 +158,6 @@ How these words form a request is defined in `sa_command_protocol.md`.
 
 ## 5. Open Items
 
-- **Table ID recipe:** CRC polynomial vs calibration serial (24-bit width and echo placement are decided in `sa_command_protocol.md`).
-- **`REF_FLAGS` response framing:** tagged table-ID header then 375,001 packed bytes (bit order decided; byte-stream detail open).
 - **Spare status `0x0E`** and command spares `0x7`, `0xE`–`0xF`.
+
+Table ID is CRC-32 on the once-per-run `REF_FLAGS` path (`sa_command_protocol.md`, section 5), not a sweep-stream checksum.

@@ -11,7 +11,7 @@ The plan is built once per configuration. It is rebuilt only when the sweep requ
 - Frequencies are **integer kHz**, never floats, matching the controller. Floats would make lookups fragile.
 - The plan's frequency list is the **combined list** from the request: entry 0's points, then entry 1's, and so on (`sa_command_protocol.md`, section 3.2). That is the order the firmware walks within each segment, so the decoder needs nothing extra for sub-bands.
 - `entry_bounds` records where each entry starts in the combined list. **The PC keeps track of the sub-bands this way** for later plotting.
-- `ref2_flags` is the PC's copy of the unit's **Ref flags** (`sa_response_protocol.md`, section 3), read back from the unit and unpacked to one bool per kHz (`True` = ref 2). The table ID in the request echo confirms it matches the unit.
+- `ref2_flags` is the PC's copy of the unit's **Ref flags** (`sa_response_protocol.md`, section 3), read back once per program run with the CRC-32 table ID and unpacked to one bool per kHz (`True` = ref 2).
 - `seg_idx[0]` and `seg_idx[1]` are lookup tables from stream position to display position, one per segment. They handle interlaced references automatically, so decoded values land directly in frequency order. **No per-frame zip, merge, or sort is needed.**
 
 ```python
@@ -226,4 +226,4 @@ The error policy (`sa_response_protocol.md`, section 7) lights a red LED on the 
 ## 7. Open Items
 
 - **Live log file format** (request record, raw word records, timestamps).
-- **Ref flag cache:** where the PC stores read-back flags between sessions, keyed by table ID.
+- **Optional disk cache** of Ref flags between PC program runs, keyed by CRC-32 table ID (in-session cache after `REF_FLAGS` is required; cross-run cache is optional).

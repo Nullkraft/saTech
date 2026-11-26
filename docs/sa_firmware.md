@@ -96,7 +96,7 @@ Because the table is at 1 kHz resolution, **a request's start kHz is the table i
 - A new page is needed once per 512 entries at stride 1, once per about 102 points at stride 5, and every point at strides of 512 or more. Even the worst case adds only about 50 µs per point, which matters mainly in fast sweep, where there's no lock wait.
 - Measure the actual page-load time on the bench; the ~50 µs figure is from the datasheet's operation-flow diagram.
 
-**Ref flag read-back.** For the read-back command (`sa_command_protocol.md`, section 5), the firmware packs bit 7 of each entry into the 375,001-byte flag stream.
+**Ref flag read-back.** For the read-back command (`sa_command_protocol.md`, section 5), the firmware sends the stored CRC-32 of the LO2 calibration table (4 bytes, little-endian), then packs bit 7 of each entry into the 375,001-byte flag stream. The CRC-32 is computed at calibration time and stored with the table.
 
 ---
 

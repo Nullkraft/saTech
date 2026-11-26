@@ -30,7 +30,7 @@ Requests use the same 16-bit tagged words as the response stream, with the comma
 | Progress spacing | ≤ 4095 | 12 |
 | Squelch | 4095 ADC counts | 12 |
 
-Start, step, N, and table ID use **24 bits (two 12-bit payloads)**. Progress spacing and squelch fit in **one** 12-bit payload (`sa_word_format.md`, sections 2 and 4).
+Start, step, and N use **24 bits (two 12-bit payloads)**. Progress spacing and squelch fit in **one** 12-bit payload (`sa_word_format.md`, sections 2 and 4). The calibration **table ID** is a **CRC-32** exchanged only on Ref-flag read-back (section 5), not in the per-request echo.
 
 ### Start, step and N (not stop)
 
@@ -109,9 +109,9 @@ A corrupted request is the one error the response path can't see. The trailer's 
 
 So the firmware **echoes what it parsed**, using response tag `ECHO` (`0x0C`):
 
-- On a **valid** `REQ_END`, the firmware sends a fixed-order block of `ECHO` words: mode, squelch, progress spacing, **table ID lo/hi**, the entry count, then for each entry start lo/hi, step lo/hi, N lo/hi. That's **6 + 6 words per entry**.
+- On a **valid** `REQ_END`, the firmware sends a fixed-order block of `ECHO` words: mode, squelch, progress spacing, the entry count, then for each entry start lo/hi, step lo/hi, N lo/hi. That's **4 + 6 words per entry**.
 - The PC compares the block with what it sent before trusting the sweep.
-- The **table ID** is a **24-bit** value identifying the unit's calibration / Ref-flag table (see `sa_response_protocol.md`, section 3). The PC didn't send it; it compares it with the ID from the Ref-flag read-back (section 5). A mismatch means the PC would decode every sweep against the wrong Ref flags, so it must not trust the sweep. Exact ID recipe (CRC vs serial) is still open; width and echo placement are fixed.
+- The echo does **not** carry the calibration table ID. Table identity is established once per PC program run via `REF_FLAGS` (section 5).
 - The block is only compared, never decoded positionally, so one tag is enough.
 
 The echo goes out once per request. Continuous sweeps repeat from the stored request without re-echoing.
@@ -122,11 +122,18 @@ The echo goes out once per request. Continuous sweeps repeat from the stored req
 
 The PC needs the unit's per-frequency reference assignment, its **Ref flags** (see `sa_response_protocol.md`, section 3), and **reads them back from the unit** with command tag `REF_FLAGS` (`0x3`).
 
-- Only the flags are needed, one bit per kHz from 0 to 3,000,000 kHz: **375,001 bytes** packed, about 2 s at 2 Mbaud.
-- Packed bit order: the flag for _f_ kHz is bit (_f_ mod 8), LSB first, of byte ⌊_f_ / 8⌋. Value: 0 = ref 1, 1 = ref 2.
-- The read-back carries the **table ID** (24-bit, as two tagged words) before the packed bytes, so the PC can compare it with each request echo.
-- The PC can cache the flags by table ID and skip the read-back when the ID hasn't changed.
-- Exact framing of the byte blob after the table-ID header remains open (`sa_word_format.md`, section 5).
+**Once per PC program run** (at connect / startup), not every sweep:
+
+1. PC sends `REF_FLAGS`.
+2. Firmware replies with a binary header + flag blob (outside the normal per-point tagged sweep stream):
+   - **4 bytes:** CRC-32 table ID, **little-endian**.
+   - **375,001 bytes:** packed Ref flags.
+3. PC caches the flags and the CRC-32 for the rest of the session and builds its sweep plan from that cache.
+4. A mid-session recalibration is not detected until the PC restarts or issues `REF_FLAGS` again.
+
+**Table ID = CRC-32** of the unit's **LO2 calibration table** as stored in flash (divider fields and Ref flags together). Computed at calibration time and stored with the table so read-back does not re-hash the NAND. Polynomial: the common IEEE / zlib CRC-32 (`poly 0x04C11DB7`, reflected, init `0xFFFFFFFF`, final XOR `0xFFFFFFFF`).
+
+**Packed bit order:** the flag for _f_ kHz is bit (_f_ mod 8), LSB first, of byte ⌊_f_ / 8⌋. Value: 0 = ref 1, 1 = ref 2. About 2 s at 2 Mbaud for the flag bytes alone.
 
 ---
 
@@ -152,5 +159,4 @@ On `REQ_END` the firmware validates the assembled request.
 
 ## 7. Open Items
 
-- **Table ID recipe:** CRC of the Ref-flag / calibration table vs a calibration serial number (24-bit width is fixed).
-- **`REF_FLAGS` byte-stream framing** after the table-ID header.
+- None for the request / table-ID contract. Spare tags remain listed in `sa_word_format.md`.
