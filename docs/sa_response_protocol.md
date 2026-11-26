@@ -38,7 +38,7 @@ The response stream depends on it: the PC can only place a segment's words at th
 
 - A mismatch that changes how many frequencies each reference gets is caught by the trailer point count.
 - A mismatch that **keeps the counts equal** is not. If frequency A moves from ref 1 to ref 2 while frequency B moves the other way, both counts still pass, but every amplitude between A and B is drawn one slot off, in **every** sweep.
-- The guard is a **table ID**, which the firmware includes in the request echo (see `sa_command_protocol.md`, section 4). The PC compares it with the ID of the flags it read back before trusting any sweep. The ID covers the unit's whole calibration table, since a recalibration can change the tuning values as well as the Ref flags.
+- The guard is a **CRC-32 table ID** on the Ref-flag read-back (`sa_command_protocol.md`, section 5). The PC reads flags + CRC-32 **once per program run**, caches them, and builds every sweep plan from that cache. The CRC covers the unit's whole LO2 calibration table (tuning values and Ref flags), so a recalibration changes the ID. It is not repeated in the per-request echo.
 
 ---
 
@@ -92,7 +92,7 @@ So **a segment that contained any RLE_MULT word and fails a count check is treat
 - **Corrupted amplitude values.** These spoil one point each and are visible on the plot.
 - **Errors whose cursor effects cancel.** For example, one RLE count corrupted upward by _d_ and another in the same segment corrupted downward by _d_: the cursor still ends on the right total, but the points between the two are shifted by _d_. This needs two independent errors of exactly opposite size in one segment, so it is very rare.
 
-A Ref flag mismatch that keeps the counts equal would also pass the count checks. That one is guarded separately, by the table ID in the request echo (section 3).
+A Ref flag mismatch that keeps the counts equal would also pass the count checks. That one is guarded separately, by the session CRC-32 from Ref-flag read-back (section 3): the PC must not run sweeps until that read-back has succeeded for this program run.
 
 ---
 
