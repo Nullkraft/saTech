@@ -131,7 +131,7 @@ The PC needs the unit's per-frequency reference assignment, its **Ref flags** (s
 3. PC caches the flags and the CRC-32 for the rest of the session and builds its sweep plan from that cache.
 4. A mid-session recalibration is not detected until the PC restarts or issues `REF_FLAGS` again.
 
-**Table ID = CRC-32** of the unit's **LO2 calibration table** as stored in flash (divider fields and Ref flags together). Computed at calibration time and stored with the table so read-back does not re-hash the NAND. Polynomial: the common IEEE / zlib CRC-32 (`poly 0x04C11DB7`, reflected, init `0xFFFFFFFF`, final XOR `0xFFFFFFFF`).
+**Table ID = CRC-32** of the unit's **LO2 calibration table** as stored in flash (divider fields and Ref flags together). Computed at calibration time and stored in the calibration header (`sa_firmware.md`, section 2.1) so read-back does not re-hash the NAND. Polynomial: the common IEEE / zlib CRC-32 (`poly 0x04C11DB7`, reflected, init `0xFFFFFFFF`, final XOR `0xFFFFFFFF`).
 
 **Packed bit order:** the flag for _f_ kHz is bit (_f_ mod 8), LSB first, of byte ⌊_f_ / 8⌋. Value: 0 = ref 1, 1 = ref 2. About 2 s at 2 Mbaud for the flag bytes alone.
 
