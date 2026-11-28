@@ -147,9 +147,9 @@ Progress is defined in `sa_response_protocol.md`, section 5.
 
 Before each sweep:
 
-- Estimate the sweep time as N ÷ the measured point rate for the sweep mode. 732 points/s was the original measured rate without serial traffic; use the current measured rate for each mode.
+- Estimate the sweep time as N ÷ the measured point rate for the sweep mode. Bench rates with the full acquisition path (`sa_firmware.md`, section 4.1): **688 points/s** normal (lock + ADC), **1083 points/s** fast (no lock wait).
 - Under about 3 s: send a `PROGRESS` spacing of **0 (off)**. This covers normal sweeps up to the recommended 1,600 points.
-- Otherwise: send a spacing of about one second's worth of points, **never less than ⌈N_total / 4096⌉**, and **never more than 4095**. For a full-band sweep the minimum is 733. At 732 points/s that is 733 points; a faster mode (a fast sweep that skips the lock wait) gets a proportionally larger spacing.
+- Otherwise: send a spacing of about one second's worth of points, **never less than ⌈N_total / 4096⌉**, and **never more than 4095**. For a full-band sweep the minimum is 733. At 688 points/s that is about 688 points for a ~1 s beat; fast mode uses about 1083.
 
 ### 4.2 Progress display
 
@@ -208,7 +208,7 @@ A **GUI checkbox** enables live logging of the serial stream, so the technician 
 - **Log both directions.** Commands sent and words received, in order.
 - **Timestamp each serial read** (not each word) with the PC's monotonic clock. That is enough to see progress timing and reference-switch stalls.
 - **Make the log replayable.** The log holds both the plan and the raw words, so the same `decode_sweep()` can re-run any logged sweep offline. One decoder serves live data and review.
-- **Data rate:** worst case (squelch 0, continuous sweeping) is about 2 bytes per point at the measured point rate, about 1.5 KB/s at 732 points/s.
+- **Data rate:** worst case (squelch 0, continuous sweeping) is about 2 bytes per point at the measured point rate, about 1.4 KB/s at 688 points/s (normal) or about 2.2 KB/s at 1083 points/s (fast).
 
 ---
 
