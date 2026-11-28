@@ -229,6 +229,7 @@ void printTechnicianBanner()
     Serial.println(F(" idflash               Print the flash ID code"));
     Serial.println(F(" readStatReg           Print status register config"));
     Serial.println(F(" pageload [page]       Time W25N page-data-read busy"));
+    Serial.println(F(" pointrate <n|f> [n]   Time measure path; n=norm f=fast"));
     Serial.println();
 }
 
@@ -422,6 +423,25 @@ void handleTechnicianCommand(const char* line, uint16_t bufferSize)
         processReceivedWord(
             technicianInstructionWord(CmdFlashPageLoadTime, AddrFlash) |
             (static_cast<uint32_t>(page) << 16));
+        return;
+    }
+    if (strcmp_P(tokens[0], PSTR("pointrate")) == 0) {
+        if (count < 2U) {
+            printTechnicianBanner();
+            return;
+        }
+        const bool fast = (strcmp(tokens[1], "f") == 0) || (strcmp(tokens[1], "fast") == 0);
+        uint16_t points = 0U;
+        if (count >= 3U) {
+            points = static_cast<uint16_t>(atoi(tokens[2]));
+        }
+        uint16_t payload = static_cast<uint16_t>(points & 0x7FFFU);
+        if (fast) {
+            payload = static_cast<uint16_t>(payload | 0x8000U);
+        }
+        processReceivedWord(
+            technicianInstructionWord(CmdPointRate, AddrMessages) |
+            (static_cast<uint32_t>(payload) << 16));
         return;
     }
     printTechnicianBanner();

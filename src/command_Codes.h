@@ -33,6 +33,7 @@ const static uint8_t CmdResetHardwareReportPllStatus = 0x05U;
 const static uint8_t CmdBeginMacro = 0x06U;
 const static uint8_t CmdEndMacro = 0x07U;
 const static uint8_t CmdSquelchLevel = 0x08U;
+const static uint8_t CmdPointRate = 0x09U;
 
 const static uint8_t CmdFlashId = 0x01U;
 const static uint8_t CmdFlashRegisterReport = 0x02U;
