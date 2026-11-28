@@ -233,10 +233,20 @@ void progress_poll(void)                       /* call once per measured point *
 - `progress_poll()` runs once per **measured** point, so the counter carries across both reference segments.
 - `PROGRESS` words go out without disturbing the run counter, so a beat can fall in the middle of a run.
 
+### 4.1 Measured point rates (bench)
+
+Technician command `pointrate` (tag `measure-sweep-rate`) times the acquisition path over 100 RF points starting at 10 MHz with 7.5 MHz steps: sparse LO1, LO2 every point, ADC1. Normal waits for LO1 then LO2 lock (500 µs timeout each); fast skips lock.
+
+| Mode | Points | Total | Rate |
+| --- | ---: | ---: | ---: |
+| Normal (lock + ADC) | 100 | 145,196 µs | **688 points/s** |
+| Fast (ADC, no lock wait) | 100 | 92,260 µs | **1083 points/s** |
+
+The PC uses these rates to choose `PROGRESS` spacing (`sa_pc_software.md`, section 4.1). Re-run `pointrate n` / `pointrate f` after measure-path changes.
+
 ---
 
 ## 5. Open Items
 
 - **Bad blocks:** how the LO2 calibration table is placed and kept in good blocks of the W25N01GV (the table spans about 92 of its 128 KB blocks; page 0 is the calibration header).
-- **Measured point rate** for each sweep mode (normal, fast), with the full acquisition path (lock, settling, ADC). The PC uses it to set the `PROGRESS` spacing.
 - **Page-load time** of the W25N01GV, measured on the bench.
