@@ -153,6 +153,31 @@ uint8_t readFlashStatusRegister(uint8_t registerAddress)
     return value;
 }
 
+void reportFlashPageLoadTime(uint16_t pageAddress)
+{
+    SPI.beginTransaction(SPISettings(W25N_SPI_CLOCK_HZ, MSBFIRST, SPI_MODE0));
+    selectChip(ChipTarget::Flash);
+    flash.pageDataRead(pageAddress);
+    selectChip(ChipTarget::Off);
+
+    const uint32_t t0 = micros();
+    for (;;) {
+        selectChip(ChipTarget::Flash);
+        const bool busy = flash.isBusy();
+        selectChip(ChipTarget::Off);
+        if (!busy) {
+            break;
+        }
+    }
+    const uint32_t elapsedUs = micros() - t0;
+    SPI.endTransaction();
+
+    Serial.print(F("PAGELOAD page="));
+    Serial.print(pageAddress);
+    Serial.print(F(" us="));
+    Serial.println(elapsedUs);
+}
+
 void writeLoRegister(ArduinoHAL& hal, ChipTarget target, uint32_t dataWord)
 {
     SPI.beginTransaction(SPISettings(Max2871SpiHz, MSBFIRST, SPI_MODE0));
@@ -347,6 +372,10 @@ void handleControlWord(uint32_t word)
         Serial.print(F("Status register report: 0x"));
         Serial.println(status, HEX);
         Serial.println();
+        return;
+    }
+    if (commandCode == instructionWord(CmdFlashPageLoadTime, AddrFlash)) {
+        reportFlashPageLoadTime(static_cast<uint16_t>((word >> 16) & 0xFFFFU));
         return;
     }
     Serial.print(F("[WN2A] binary word 0x"));
