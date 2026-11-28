@@ -33,6 +33,9 @@ constexpr uint32_t MuxoutTriStateMask = 0xE3FFFFFFUL;
 constexpr uint32_t MuxoutDigitalLockDetect = 0x18000000UL;
 // shortcut: fixed 10 MHz smoke test, replace when the measurement command accepts a frequency.
 constexpr uint32_t CoarseTestRfKHz = 10000UL;
+constexpr uint32_t PointRateStartRfKHz = 10000UL;
+constexpr uint32_t PointRateStepRfKHz = 7500UL;
+constexpr uint16_t PointRateDefaultCount = 100U;
 
 // Only Command mode supports 0xFF, FMNData and DirectRegisterData are guaranteed to never have 0xFF in their LSB's
 enum class SerialPayloadMode {
@@ -241,6 +244,53 @@ void reportCoarseMeasurement()
     Serial.println(raw);
 }
 
+void reportPointRate(bool fast, uint16_t pointCount)
+{
+    if (pointCount == 0U) {
+        pointCount = PointRateDefaultCount;
+    }
+
+    pinMode(PllMuxPin, INPUT);
+    programAttenuatorDb(getCurrentAttenuatorDb());
+
+    uint32_t prevLo1KHz = 0U;
+    bool havePrevLo1 = false;
+
+    const uint32_t t0 = micros();
+    for (uint16_t i = 0U; i < pointCount; ++i) {
+        const uint32_t rfKHz = PointRateStartRfKHz + (static_cast<uint32_t>(i) * PointRateStepRfKHz);
+        freqCalc.compute_LO_frequencies(rfKHz, REF_KHZ, 1,
+                                        LOInjectionMode::High, LOInjectionMode::High);
+        if (!havePrevLo1 || freqCalc.FreqLO1 != prevLo1KHz) {
+            lo1.setFrequency(freqCalc.FreqLO1);
+            prevLo1KHz = freqCalc.FreqLO1;
+            havePrevLo1 = true;
+        }
+        lo2.setFrequency(freqCalc.FreqLO2);
+
+        if (!fast) {
+            selectLockDetect(lo1, halLo1, ChipTarget::LO1, lo2, halLo2, ChipTarget::LO2);
+            waitForPllLock();
+            selectLockDetect(lo2, halLo2, ChipTarget::LO2, lo1, halLo1, ChipTarget::LO1);
+            waitForPllLock();
+        }
+        readAdc1Raw();
+    }
+    const uint32_t elapsedUs = micros() - t0;
+    const uint32_t rate = (elapsedUs == 0U)
+                              ? 0U
+                              : (static_cast<uint32_t>(pointCount) * 1000000UL) / elapsedUs;
+
+    Serial.print(F("POINTRATE "));
+    Serial.print(fast ? F("fast") : F("norm"));
+    Serial.print(F(" n="));
+    Serial.print(pointCount);
+    Serial.print(F(" us="));
+    Serial.print(elapsedUs);
+    Serial.print(F(" rate="));
+    Serial.println(rate);
+}
+
 void handleControlWord(uint32_t word)
 {
     const uint16_t commandCode = static_cast<uint16_t>(word & 0xFFFFU);
@@ -264,6 +314,13 @@ void handleControlWord(uint32_t word)
         commandCode == instructionWord(CmdBeginMacro, AddrMessages) ||
         commandCode == instructionWord(CmdEndMacro, AddrMessages) ||
         commandCode == instructionWord(CmdSquelchLevel, AddrMessages)) {
+        return;
+    }
+    if (commandCode == instructionWord(CmdPointRate, AddrMessages)) {
+        const uint16_t payload = static_cast<uint16_t>((word >> 16) & 0xFFFFU);
+        const bool fast = (payload & 0x8000U) != 0U;
+        const uint16_t count = static_cast<uint16_t>(payload & 0x7FFFU);
+        reportPointRate(fast, count);
         return;
     }
     if (commandCode == instructionWord(CmdResetHardwareReportPllStatus, AddrMessages)) {
