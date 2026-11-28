@@ -40,7 +40,12 @@ void ref_settle(uint32_t f_a, uint32_t f_b, uint32_t timeout_us)
 ```
 
 - **Toggle frequencies:** the segment's first point and its neighbor. The loop ends near the target, so the final hop is small.
-- **Timeout:** **calibrated per unit** and stored with the unit's calibration data. Before calibration, use 12 ms (10 ms worst-case start-up plus relock margin).
+- **Timeout (`ref_settle_us`):** calibrated per unit and stored in the calibration header (section 2.1). Before calibration, use **12 ms** (10 ms worst-case oscillator start-up plus relock margin).
+- **Calibration procedure:**
+  1. With the unit otherwise calibrated (or using provisional dividers), run many ref1↔ref2 switches through the toggle-lock `ref_settle` loop.
+  2. Record time from the switch to the first verified lock on each trial.
+  3. Set `ref_settle_us` to the **maximum observed time plus a fixed margin** (margin chosen on the bench so rare slow starts still settle inside the timeout).
+  4. Write `ref_settle_us` into the calibration header with the CRC-32.
 - **Optional stricter check:** if a single lock proves premature on the bench (the PLL locking while the oscillator is still pulling onto frequency), require two consecutive locks, one on each toggle frequency, before exiting.
 - **If spurious content appears at the switch,** fall back to quietly waiting out the calibrated delay instead of toggling.
 
@@ -69,6 +74,19 @@ Also:
 - LO2's output divider is a constant ÷1 for this instrument (register value **DIVA = 0**), so it isn't stored.
 - The reference reaches the PFD undivided, so with LO2's VCO at 3–6 GHz and a reference of about 66 MHz, N stays within about 45–91, inside 7 bits.
 
+### 2.1 Calibration header
+
+Page 0 of the W25N01GV holds a small **calibration header**. The LO2 table begins at page 1 so index 0 does not overwrite the header.
+
+| Offset | Size | Field |
+| --- | ---: | --- |
+| 0 | 4 | `magic` — `0x53414C32` (`SAL2`) |
+| 4 | 4 | `version` — header format version (`1`) |
+| 8 | 4 | `crc32` — IEEE/zlib CRC-32 of the LO2 table bytes (little-endian) |
+| 12 | 4 | `ref_settle_us` — calibrated `ref_settle()` timeout (little-endian) |
+
+Remaining bytes in page 0 are reserved (write as 0xFF). Firmware loads `crc32` and `ref_settle_us` from this page at start-up and for `REF_FLAGS` read-back.
+
 **Table layout:**
 
 | Property | Value |
@@ -77,13 +95,13 @@ Also:
 | Entries | 3,000,001 (0–3,000,000 kHz) |
 | Index | the frequency in kHz |
 | Size | 4 bytes per entry: 12,000,004 bytes |
-| Base address | 0 (block 0, page 0, byte 0) |
+| Base address | 2048 (block 0, page 1, byte 0) |
 | Entries per page | 512 (no entry crosses a page boundary) |
 
 **Addressing uses only shifts, ORs and masks:**
 
 ```c
-uint32_t addr   = TABLE_BASE | (index << 2);   /* 4 bytes per entry */
+uint32_t addr   = TABLE_BASE | (index << 2);   /* TABLE_BASE = 2048; 4 bytes per entry */
 uint16_t page   = addr >> 11;                   /* 2,048-byte pages */
 uint16_t column = addr & 0x7FF;                 /* byte within the page */
 ```
@@ -96,7 +114,7 @@ Because the table is at 1 kHz resolution, **a request's start kHz is the table i
 - A new page is needed once per 512 entries at stride 1, once per about 102 points at stride 5, and every point at strides of 512 or more. Even the worst case adds only about 50 µs per point, which matters mainly in fast sweep, where there's no lock wait.
 - Measure the actual page-load time on the bench; the ~50 µs figure is from the datasheet's operation-flow diagram.
 
-**Ref flag read-back.** For the read-back command (`sa_command_protocol.md`, section 5), the firmware sends the stored CRC-32 of the LO2 calibration table (4 bytes, little-endian), then packs bit 7 of each entry into the 375,001-byte flag stream. The CRC-32 is computed at calibration time and stored with the table.
+**Ref flag read-back.** For the read-back command (`sa_command_protocol.md`, section 5), the firmware sends the header's `crc32` (4 bytes, little-endian), then packs bit 7 of each entry into the 375,001-byte flag stream. The CRC-32 is computed at calibration time and stored in the header with `ref_settle_us`.
 
 ---
 
@@ -178,7 +196,7 @@ void sweep_segment(uint8_t seg_id, const entry_t *entries, uint8_t n_entries, ui
  *   ref_LO()  (ready for next sweep; settled at the start of the next one)
  *
  *   f1_first / f2_first = the first ref 1 / ref 2 frequency in the combined list.
- *   settle_us = the unit's calibrated value (12 ms before calibration).
+ *   settle_us = header ref_settle_us (12 ms before calibration).
  *   SEG_REF1 = 0, SEG_REF2 = 1, so seg_id matches the entry's Ref bit.
  */
 ```
@@ -219,7 +237,6 @@ void progress_poll(void)                       /* call once per measured point *
 
 ## 5. Open Items
 
-- **Bad blocks:** how the LO2 calibration table is placed and kept in good blocks of the W25N01GV (the table spans about 92 of its 128 KB blocks).
-- **`ref_settle()` timeout:** the calibration procedure that sets it per unit, and where it is stored.
+- **Bad blocks:** how the LO2 calibration table is placed and kept in good blocks of the W25N01GV (the table spans about 92 of its 128 KB blocks; page 0 is the calibration header).
 - **Measured point rate** for each sweep mode (normal, fast), with the full acquisition path (lock, settling, ADC). The PC uses it to set the `PROGRESS` spacing.
 - **Page-load time** of the W25N01GV, measured on the bench.
