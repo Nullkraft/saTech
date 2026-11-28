@@ -228,6 +228,7 @@ void printTechnicianBanner()
     Serial.println(F(" spi <hex32>           Send raw 32-bit word to selected LO"));
     Serial.println(F(" idflash               Print the flash ID code"));
     Serial.println(F(" readStatReg           Print status register config"));
+    Serial.println(F(" pageload [page]       Time W25N page-data-read busy"));
     Serial.println();
 }
 
@@ -411,6 +412,16 @@ void handleTechnicianCommand(const char* line, uint16_t bufferSize)
     }
     if (strcmp_P(tokens[0], PSTR("readstatreg")) == 0) {
         processReceivedWord(technicianInstructionWord(CmdFlashRegisterReport, AddrFlash));
+        return;
+    }
+    if (strcmp_P(tokens[0], PSTR("pageload")) == 0) {
+        uint16_t page = 0U;
+        if (count >= 2U) {
+            page = static_cast<uint16_t>(atoi(tokens[1]));
+        }
+        processReceivedWord(
+            technicianInstructionWord(CmdFlashPageLoadTime, AddrFlash) |
+            (static_cast<uint32_t>(page) << 16));
         return;
     }
     printTechnicianBanner();
